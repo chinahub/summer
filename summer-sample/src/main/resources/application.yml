@@ -1,0 +1,35 @@
+server:
+  port: 8080
+  host: 0.0.0.0
+app:
+  greeting: Hello from summer
+
+logging:
+  level:
+    root: INFO
+    io.summer: INFO
+  console:
+    enabled: true
+  file:
+    enabled: true
+    path: logs
+    name: summer
+    rolling-policy: time
+    max-size: 10MB
+    max-history: 7
+  format:
+    single-line: true
+
+summer:
+  datasource:
+    url: jdbc:postgresql://aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres?prepareThreshold=0
+    username: postgres.feodqkgqrxzvcnmuvjgt
+    password: 'MjpeDL+s=DY7D@|q'
+    driver-class-name: org.postgresql.Driver
+    pool-size: 4
+    dialect: postgresql
+    connection-timeout: 30000
+    leak-detection-threshold: 60000
+    idle-timeout: 600000
+    max-lifetime: 1800000
+    keepalive-query: "SELECT 1"

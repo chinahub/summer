@@ -1,0 +1,16 @@
+﻿# IDE配置
+.idea/
+*.iml
+*.ipr
+*.iws
+# 编译产物
+target/
+*.class
+# 日志
+logs/
+*.log
+# 临时文件
+*.tmp
+*.swp
+# build-test编译产物
+build-test/*.class

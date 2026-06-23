@@ -1,0 +1,1 @@
+aws-0-ap-southeast-1.pooler.supabase.com 52.74.252.201
