@@ -13,7 +13,7 @@ public class HelloController {
         return Map.of(
                 "message", "Hello " + name,
                 "framework", "summer",
-                "runtime", "JDK 25 / virtual threads / JPMS"
+                "runtime", "JDK 25 / virtual threads / json / yaml"
         );
     }
 

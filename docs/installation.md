@@ -1,4 +1,4 @@
-﻿# 安装
+# 安装
 
 ## 环境要求
 
@@ -55,36 +55,15 @@ mvn -s E:\summer_workspace\settings.xml -o clean package
 - 用 PowerShell 写 Java 文件时，统一用 `.NET` 的 `UTF8Encoding(false)`（无 BOM）写入。
 - 编译器开启 `-parameters`（父 POM 已配置 `<parameters>true</parameters>`），用于按参数名做依赖注入与查询参数绑定。
 
-## JPMS 反射要求（重要）
-
-框架用反射做 IoC 注入、参数绑定与 JSON 序列化。业务模块必须把含 bean/模型/控制器的包 `opens` 给框架，否则会抛 `InaccessibleObjectException`：
-
-```java
-module summer.sample {
-    requires summer.boot;
-    requires summer.web;
-    requires summer.core;
-
-    opens cn.jiebaba.summer.sample to summer.core, summer.web;
-    opens cn.jiebaba.summer.sample.controller to summer.core, summer.web;
-    opens cn.jiebaba.summer.sample.service to summer.core, summer.web;
-    opens cn.jiebaba.summer.sample.model to summer.core, summer.web;
-    opens cn.jiebaba.summer.sample.config to summer.core, summer.web;
-    opens cn.jiebaba.summer.sample.advice to summer.core, summer.web;
-}
-```
-
-> 这是 JPMS 的强封装契约（类似 Spring 要求 `opens ... to spring.core`）。`opens` 不递归，需逐包声明。
-
 ## 验证
 
 ```powershell
 # 全量构建
 mvn -s E:\summer_workspace\settings.xml -o clean package
-# 启动示例（模块化）
-java -p summer-core/target/summer-core-1.0.0-SNAPSHOT.jar;summer-web/target/summer-web-1.0.0-SNAPSHOT.jar;summer-boot/target/summer-boot-1.0.0-SNAPSHOT.jar;summer-sample/target/summer-sample-1.0.0-SNAPSHOT.jar -m summer.sample/cn.jiebaba.summer.sample.Application
-# 进程内冒烟测试（同进程 loopback，规避沙箱进程间网络限制）
-java -p <同上> -m summer.sample/cn.jiebaba.summer.sample.SmokeTest
+# 启动示例（可执行 jar）
+java -jar summer-sample\target\summer-sample-1.0.0-SNAPSHOT-boot.jar
+# 进程内冒烟测试（类路径方式，见 build-test\test.ps1）
+java -cp summer-core\target\summer-core-1.0.0-SNAPSHOT.jar;summer-web\target\summer-web-1.0.0-SNAPSHOT.jar;summer-data\target\summer-data-1.0.0-SNAPSHOT.jar;summer-boot\target\summer-boot-1.0.0-SNAPSHOT.jar;summer-sample\target\summer-sample-1.0.0-SNAPSHOT.jar cn.jiebaba.summer.sample.SmokeTest
 ```
 
 实测：4 模块 BUILD SUCCESS；服务器 `started on 0.0.0.0:8080 (virtual threads, 8 routes)`；SmokeTest 全部路由返回正确状态码与 JSON。

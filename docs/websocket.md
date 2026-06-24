@@ -1,4 +1,4 @@
-﻿# WebSocket（summer-web）
+# WebSocket（summer-web）
 
 基于 `ServerSocket` + 虚拟线程实现的纯 JDK WebSocket 服务端，遵循 RFC 6455，零第三方依赖。握手复用 HTTP 服务器，握手后同一 TCP 连接转为全双工帧通信。
 
@@ -92,14 +92,6 @@ RawHttpRequest.parse()
 - **帧头**：FIN(1) + RSV(3) + opcode(4) + masked(1) + payload-len(7/16/64) + masking-key(0/4)；
 - **opcode**：0x1 text、0x2 binary、0x8 close、0x9 ping、0xA pong、0x0 continuation；
 - 客户端→服务端帧必须 masked，payload 用 4 字节掩码 XOR 解码。
-
-## 模块要求
-
-业务模块需 `opens` WebSocket 端点包给 `summer.web`（反射调用回调方法需要）：
-
-```java
-opens cn.jiebaba.summer.sample.websocket to summer.web;
-```
 
 ## 验证
 

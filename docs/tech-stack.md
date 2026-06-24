@@ -7,7 +7,6 @@
 | 语言/JDK | JDK 25（LTS，最低要求 JDK 25） | 虚拟线程稳定、record/模式匹配成熟 |
 | HTTP 服务器 | `java.net.ServerSocket` + 手写 HTTP/1.1 | 纯 JDK、无 NIO selector 依赖、契合虚拟线程阻塞 IO 模式 |
 | 协程/多线程 | `Executors.newVirtualThreadPerTaskExecutor()` | Loom 虚拟线程，每个连接一个虚拟线程，海量并发、阻塞友好 |
-| 模块系统 | JPMS（`module-info.java`） | 强封装、清晰依赖，通过 `java -p ... -m ...` 运行 |
 | JSON | 纯 JDK 反射手写 | 支持 record/JavaBean/集合/数组/泛型，零第三方依赖 |
 | 日志 | `java.util.logging`（JUL） | JDK 内置，自研 `DailyRollingFileHandler` 支持按天/按大小滚动（见[日志方案](logging.md)） |
 | 配置 | `application.yml` / `.properties` | 自研 `YamlParser`，YML 优先，支持 `${key:default}` 占位符 |
@@ -17,7 +16,7 @@
 | AOP | JDK 动态代理 + 拦截器链 | `@Aspect` + `execution()` 切点，环绕/前置/后置通知 |
 | 定时任务 | `ScheduledThreadPoolExecutor` + 虚拟线程 | `@Scheduled`：cron 5 段 + fixedRate/fixedDelay |
 | 参数校验 | 手写 Bean Validation 子集 | `@Valid` + 约束注解，递归校验，400 违规列表 |
-| 构建 | Maven（pom modelVersion 4.0.0） | 多模块 + JPMS；离线模式 |
+| 构建 | Maven（pom modelVersion 4.0.0） | 多模块；离线模式 |
 | 测试 | 进程内冒烟测试（`SmokeTest`/`OrmSmokeTest`/`DbSmokeTest`） | 沙箱限制进程间 loopback，用同进程自验证全链路 |
 
 ## 零第三方依赖原则
@@ -25,7 +24,7 @@
 - 框架核心（core/web/data/boot）运行期**不依赖任何第三方库**，只 `requires` JDK 模块（`java.base`、`java.logging`、`java.sql`）；
 - HTTP 服务器用 `java.net.ServerSocket` + 阻塞 IO 自研，不开 `com.sun.net.httpserver`（其 NIO selector 的 loopback 管道在受限沙箱里被阻断）；
 - 反射、注解处理、字节码读取均用 JDK 内置 API；
-- 组件扫描直接读模块路径/类路径的 `.class`/`.jar` 文件，绕开 JPMS 资源封装；
+- 组件扫描直接读类路径的 `.class`/`.jar` 文件；
 - 唯一运行期外部依赖是 **JDBC 驱动**（由使用者自备，如 `postgresql`、`mysql-connector-j`）。
 
 ## 为什么不用 Servlet

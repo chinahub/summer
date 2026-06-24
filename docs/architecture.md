@@ -1,4 +1,4 @@
-﻿# 架构设计
+# 架构设计
 
 ## 模块划分
 
@@ -33,7 +33,7 @@ summer-boot  ──requires──>  summer-data ──requires──>  summer-co
 | `cn.jiebaba.summer.core.annotation` | 构造型与 DI 注解：`@Component/@Service/@Repository/@Controller/@Configuration`、`@Bean/@Autowired/@Value/@Scope/@Qualifier/@Primary/@Lazy/@PostConstruct/@PreDestroy/@ComponentScan/@Order` |
 | `cn.jiebaba.summer.core.context` | `ApplicationContext` 接口、`DefaultApplicationContext`（IoC 容器实现）、`BeanDefinition`、生命周期接口 |
 | `cn.jiebaba.summer.core.env` | `Environment`：属性加载、`${key:default}` 占位符解析、类型转换；`YamlParser` 解析 `application.yml` |
-| `cn.jiebaba.summer.core.scanner` | `ClassPathScanner`（兼容 JPMS/类路径的类扫描）、`AnnotationUtils`（元注解递归查找） |
+| `cn.jiebaba.summer.core.scanner` | `ClassPathScanner`（类路径类扫描）、`AnnotationUtils`（元注解递归查找） |
 | `cn.jiebaba.summer.core.aop` | `@Aspect/@Pointcut/@Around/@Before/@After/@AfterReturning/@AfterThrowing`、`PointcutMatcher`（`execution()` 表达式）、`AdvisedProxyFactory`（JDK 动态代理 + 拦截器链）、`JoinPoint/ProceedingJoinPoint` |
 | `cn.jiebaba.summer.core.scheduling` | `@Scheduled`（cron/fixedRate/fixedDelay）、`CronExpression`（5 段表达式 + 下次触发计算）、`ScheduledTaskRegistrar`（定时线程池触发 + 虚拟线程执行任务体） |
 | `cn.jiebaba.summer.core.logging` | `LoggingInitializer`、`DailyRollingFileHandler`（按天/按天+大小滚动 + 历史清理）、`SingleLineFormatter`、`LogProperties` |
@@ -132,7 +132,7 @@ WebResponse.commit（写状态行+头+body 到 socket）
 
 ## 运行时模型
 
-- 启动：`java -p summer-core.jar;summer-web.jar;summer-data.jar;summer-boot.jar;summer-sample.jar -m summer.sample/cn.jiebaba.summer.sample.Application`
+- 启动：`java -jar summer-sample\target\summer-sample-1.0.0-SNAPSHOT-boot.jar`
 - 每个连接一个虚拟线程，阻塞 IO 不占平台线程；
 - 定时任务体在虚拟线程上执行；
 - 单进程、单 JVM，无外部容器。

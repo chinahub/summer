@@ -2,10 +2,6 @@ package cn.jiebaba.summer.core.scanner;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.module.ModuleReader;
-import java.lang.module.ModuleReference;
-import java.net.URI;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,10 +14,8 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 /**
- * Scans the running module-path and class-path for class files under the given
- * base packages. This works for JPMS ({@code java -p ... -m ...}) as well as
- * classic classpath launches because it reads the archive entries directly
- * rather than going through the module system's resource encapsulation.
+ * Scans the class-path for class files under the given base packages,
+ * reading directory and jar entries directly from {@code java.class.path}.
  */
 public final class ClassPathScanner {
     private ClassPathScanner() {}
@@ -31,7 +25,6 @@ public final class ClassPathScanner {
         if (basePackages == null || basePackages.isEmpty()) return classes;
         if (classLoader == null) classLoader = Thread.currentThread().getContextClassLoader();
 
-        scanModules(basePackages, classLoader, classes);
         for (Path root : collectRoots()) {
             for (String pkg : basePackages) {
                 String path = pkg.replace('.', '/');
@@ -45,69 +38,10 @@ public final class ClassPathScanner {
         return classes;
     }
 
-    private static void scanModules(Set<String> basePackages, ClassLoader classLoader, Set<Class<?>> classes) {
-        try {
-            ModuleLayer layer = ModuleLayer.boot();
-            for (Module module : layer.modules()) {
-                scanModule(module, basePackages, classLoader, classes);
-            }
-        } catch (Exception e) {
-            // module system not available; fall through to filesystem scan
-        }
-    }
-
-    private static void scanModule(Module module, Set<String> basePackages, ClassLoader classLoader, Set<Class<?>> classes) {
-        ModuleReference ref = module.getLayer().configuration().findModule(module.getName())
-                .map(java.lang.module.ResolvedModule::reference).orElse(null);
-        if (ref == null) return;
-        String modName = module.getName();
-        if (modName == null) return;
-        try (ModuleReader reader = ref.open()) {
-            for (String pkg : basePackages) {
-                String pkgPath = pkg.replace('.', '/');
-                reader.list().filter(name -> name.endsWith(".class"))
-                        .filter(name -> !name.startsWith("module-info") && !name.startsWith("package-info"))
-                        .filter(name -> {
-                            String pkgOf = name.indexOf('/') < 0 ? "" : name.substring(0, name.lastIndexOf('/'));
-                            return pkgOf.equals(pkgPath) || pkgOf.startsWith(pkgPath + "/");
-                        })
-                        .forEach(name -> {
-                            String className = name.replace('/', '.').substring(0, name.length() - ".class".length());
-                            tryLoad(className, classLoader, classes);
-                        });
-            }
-        } catch (IOException e) {
-            // skip unreadable module
-        }
-    }
-
     private static List<Path> collectRoots() {
         List<Path> roots = new ArrayList<>();
-        addModulePathRoots(roots, System.getProperty("jdk.module.path"));
         addClassPathRoots(roots, System.getProperty("java.class.path"));
         return roots;
-    }
-
-    private static void addModulePathRoots(List<Path> roots, String modulePath) {
-        if (modulePath == null || modulePath.isBlank()) return;
-        for (String entry : modulePath.split(File.pathSeparator)) {
-            Path p = Paths.get(entry);
-            if (Files.isDirectory(p)) {
-                try (DirectoryStream<Path> ds = Files.newDirectoryStream(p)) {
-                    for (Path child : ds) {
-                        if (Files.isDirectory(child)) {
-                            roots.add(child);
-                        } else if (child.toString().endsWith(".jar")) {
-                            roots.add(child);
-                        }
-                    }
-                } catch (IOException e) {
-                    // skip unreadable entry
-                }
-            } else if (Files.exists(p)) {
-                roots.add(p);
-            }
-        }
     }
 
     private static void addClassPathRoots(List<Path> roots, String classPath) {

@@ -8,25 +8,38 @@ $env:Path = "D:\jdk\jdk-25.0.2\bin;D:\mvnd-1.0.5\mvn\bin;" + $env:Path
 mvn -s E:\summer_workspace\settings.xml -o clean package
 ```
 
-产出各模块 `target/*.jar`（JPMS 模块 jar）。
+产出各模块 `target/*.jar`。
 
-## 运行（模块化方式）
+## 运行（可执行 jar / java -jar）
 
-```powershell
-java -p summer-core/target/summer-core-1.0.0-SNAPSHOT.jar `
-        ;summer-web/target/summer-web-1.0.0-SNAPSHOT.jar `
-        ;summer-data/target/summer-data-1.0.0-SNAPSHOT.jar `
-        ;summer-boot/target/summer-boot-1.0.0-SNAPSHOT.jar `
-        ;summer-sample/target/summer-sample-1.0.0-SNAPSHOT.jar `
-     -m summer.sample/cn.jiebaba.summer.sample.Application
+summer 打成 Spring Boot 风格的可执行 jar：依赖以**整 jar 形式**嵌在 `BOOT-INF/lib/`，应用类放在 `BOOT-INF/classes/`，jar 根放启动器，`META-INF/MANIFEST.MF` 写入 `Main-Class` 与 `Start-Class`。与 `maven-shade-plugin` 把所有 class 爆开进一个 jar 不同，这里保留依赖 jar 不拆解。
+
+布局：
+```
+summer-sample-1.0.0-SNAPSHOT-boot.jar
+├─ cn/jiebaba/summer/loader/JarLauncher.class   # 启动器（jar 根）
+├─ BOOT-INF/classes/...                          # 应用类与资源（application.yml）
+├─ BOOT-INF/lib/*.jar                            # 依赖 jar（summer-* / postgresql 等）
+└─ META-INF/MANIFEST.MF                          # Main-Class / Start-Class
 ```
 
-- `-p` 指定模块路径（Windows 用 `;` 分隔）；
-- `-m summer.sample/...` 指定主模块与主类；
-- 默认监听 `0.0.0.0:8080`，可用 `server.port` 等覆盖。
+构建（`mvn package` 自动触发 `summer-pack-maven-plugin` 的 `repackage`，一步产出可执行 jar）：
+```powershell
+$env:JAVA_HOME='D:\jdk\jdk-25.0.2'
+$env:Path = "D:\jdk\jdk-25.0.2\bin;" + $env:Path
+mvn -s E:\summer_workspace\settings.xml -o clean package
+```
+产出 `summer-sample/target/summer-sample-1.0.0-SNAPSHOT-boot.jar`。
 
-> 注意：业务模块需 `opens` 业务包给 `summer.core, summer.web, summer.data`（见 [安装](installation.md)）。若用到数据库，需把 JDBC 驱动 jar 加到模块路径或类路径上。
+运行：
+```powershell
+java -jar summer-sample\target\summer-sample-1.0.0-SNAPSHOT-boot.jar
+```
 
+> 打包插件：`summer-sample` 的 `pom.xml` 绑定了 `summer-pack-maven-plugin:repackage`（绑定 `package` 阶段），故 `mvn package` 自动产出 `*-boot.jar`，无需额外脚本。`startClass` 在 `pom.xml` 的 `<configuration>` 中配置。
+
+> 原理：`summer-loader` 的 `JarLauncher` 是 `Main-Class`，启动时把 `BOOT-INF/classes`、`BOOT-INF/lib/*.jar` 解压到临时目录，重建 `java.class.path`，再用 `URLClassLoader` 加载并调用 `Start-Class` 的 `main`。之所以解压而非用 `jar:...!/BOOT-INF/...` 嵌套 URL，是因为 summer 的 `ClassPathScanner` 直接读 `java.class.path` 系统属性来枚举类，不遍历 ClassLoader 的 URL。
+> 数据库驱动：把 JDBC 驱动（如 `postgresql`）声明为 `summer-sample` 的依赖即可，它会被自动收入 `BOOT-INF/lib`，无需在命令行手动拼接。
 ## 配置
 
 优先加载 `application.yml`，其次 `application.properties`。`application.yml`：

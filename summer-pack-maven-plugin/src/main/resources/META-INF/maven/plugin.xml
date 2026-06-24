@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+  <name>summer-pack-maven-plugin</name>
+  <description>Repackages a summer application into a Spring Boot-style executable jar (BOOT-INF/classes + BOOT-INF/lib).</description>
+  <groupId>cn.jiebaba.summer</groupId>
+  <artifactId>summer-pack-maven-plugin</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <goalPrefix>summer-pack</goalPrefix>
+  <isolatedRealm>false</isolatedRealm>
+  <inheritedByDefault>true</inheritedByDefault>
+  <mojos>
+    <mojo>
+      <goal>repackage</goal>
+      <description>Repackage the application into an executable jar with nested BOOT-INF layout.</description>
+      <requiresDependencyResolution>runtime</requiresDependencyResolution>
+      <requiresDirectInvocation>false</requiresDirectInvocation>
+      <requiresProject>true</requiresProject>
+      <requiresReports>false</requiresReports>
+      <aggregator>false</aggregator>
+      <requiresOnline>false</requiresOnline>
+      <inheritedByDefault>true</inheritedByDefault>
+      <phase>package</phase>
+      <implementation>cn.jiebaba.summer.pack.RepackageMojo</implementation>
+      <language>java</language>
+      <instantiationStrategy>per-lookup</instantiationStrategy>
+      <parameters>
+        <parameter>
+          <name>project</name>
+          <type>org.apache.maven.project.MavenProject</type>
+          <required>true</required>
+          <editable>false</editable>
+          <description>The Maven project being built.</description>
+        </parameter>
+        <parameter>
+          <name>mainClass</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Launcher main class written as Main-Class in the manifest.</description>
+        </parameter>
+        <parameter>
+          <name>startClass</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Application start class written as Start-Class in the manifest.</description>
+        </parameter>
+        <parameter>
+          <name>classifier</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Classifier appended to the repackaged jar name.</description>
+        </parameter>
+        <parameter>
+          <name>loaderArtifactId</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>ArtifactId of summer-loader, whose classes are placed at the jar root.</description>
+        </parameter>
+      </parameters>
+      <configuration>
+        <project implementation="org.apache.maven.project.MavenProject">${project}</project>
+        <mainClass implementation="java.lang.String">cn.jiebaba.summer.loader.JarLauncher</mainClass>
+        <classifier implementation="java.lang.String">boot</classifier>
+        <loaderArtifactId implementation="java.lang.String">summer-loader</loaderArtifactId>
+      </configuration>
+    </mojo>
+  </mojos>
+  <dependencies/>
+</plugin>

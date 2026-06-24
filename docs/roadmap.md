@@ -2,7 +2,7 @@
 
 ## 第一阶段：核心可用版 ✅
 
-- [x] 工具链验证（JDK 25 + 离线 Maven + JPMS）
+- [x] 工具链验证（JDK 25 + 离线 Maven）
 - [x] summer-core：IoC/DI/扫描/配置
 - [x] summer-web：ServerSocket + 虚拟线程 + 路由 + JSON + 绑定 + 全局异常
 - [x] summer-boot：启动器 + 自动配置 + 关闭钩子
