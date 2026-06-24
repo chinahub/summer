@@ -13,7 +13,7 @@
     <packaging>jar</packaging>
     <description>Maven plugin that repackages a summer application into a Spring Boot-style executable jar (BOOT-INF/classes + BOOT-INF/lib).</description>
     <properties>
-        <maven.version>3.0.5</maven.version>
+        <maven.version>3.8.1</maven.version>
         <maven.plugin.api.version>3.2.5</maven.plugin.api.version>
     </properties>
     <dependencies>
