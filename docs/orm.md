@@ -4,7 +4,7 @@
 
 ## 模块
 
-`summer-data`（依赖 `summer-core`，`requires java.sql`），由 `summer-boot` 自动配置装配。
+`summer-data`（依赖 `summer-core`，用 JDK 的 `java.sql`），由 `summer-boot` 自动配置装配。
 
 ## 实体注解
 
@@ -179,8 +179,8 @@ summer:
 
 summer 仅使用 JDK 动态代理（零第三方依赖，不引入 CGLIB）。`@Transactional` 和 `@Aspect` 切面通过代理织入，因此：
 
-- **目标类必须实现至少一个接口**才能被代理；
-- 若目标类需要代理（有 `@Transactional` 方法或命中切面）但未实现接口，框架**抛出 `BeansException`**（而非静默失效）；
+- 代理策略自动判断：**有接口**走 JDK 动态代理；**无接口且非 `final`**走手写字节码子类代理（`SubclassProxyFactory`，零依赖），事务/AOP 生效；`final` 类或工厂方法产生的无接口 bean 仍抛 `BeansException`（而非静默失效）；
+
 
 ```java
 // ✅ 正确：Service 实现接口，@Transactional 生效

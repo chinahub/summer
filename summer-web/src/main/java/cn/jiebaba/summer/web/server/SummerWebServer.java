@@ -3,8 +3,10 @@ package cn.jiebaba.summer.web.server;
 import cn.jiebaba.summer.core.context.ApplicationContext;
 import cn.jiebaba.summer.core.env.Environment;
 import cn.jiebaba.summer.web.bind.HandlerMethodInvoker;
+import cn.jiebaba.summer.web.bind.HandlerMethodAccessChecker;
 import cn.jiebaba.summer.web.convert.JsonMessageConverter;
 import cn.jiebaba.summer.web.convert.MessageConverter;
+import cn.jiebaba.summer.web.filter.Filter;
 import cn.jiebaba.summer.web.http.HttpStatus;
 import cn.jiebaba.summer.web.http.MediaType;
 import cn.jiebaba.summer.web.http.RawHttpRequest;
@@ -23,6 +25,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -32,7 +35,7 @@ import java.util.logging.Logger;
 /**
  * Embedded HTTP/1.1 server built on {@link java.net.ServerSocket}. Each accepted
  * connection is handled on its own virtual thread (Java coroutines via Loom),
- * using blocking IO — the canonical virtual-thread server pattern. No servlet,
+ * using blocking IO -- the canonical virtual-thread server pattern. No servlet,
  * no NIO selector, no third-party dependencies.
  */
 public final class SummerWebServer {
@@ -44,6 +47,8 @@ public final class SummerWebServer {
     private final MessageConverter converter;
     private final ApplicationContext context;
     private WebSocketRegistry webSocketRegistry;
+    private List<Filter> securityFilters = List.of();
+    private HandlerMethodAccessChecker accessChecker;
 
     private ServerSocket serverSocket;
     private ExecutorService executor;
@@ -52,12 +57,23 @@ public final class SummerWebServer {
 
     public SummerWebServer(ApplicationContext context, Router router, ExceptionHandlerRegistry exceptions,
                            MessageConverter converter, WebServerProperties properties) {
+        this(context, router, exceptions, converter, properties, List.of(), null);
+    }
+
+    public SummerWebServer(ApplicationContext context, Router router, ExceptionHandlerRegistry exceptions,
+                           MessageConverter converter, WebServerProperties properties,
+                           List<Filter> securityFilters, HandlerMethodAccessChecker accessChecker) {
         this.context = context;
         this.router = router;
         this.exceptions = exceptions;
         this.converter = converter;
         this.properties = properties;
+        this.securityFilters = securityFilters == null ? List.of() : securityFilters;
+        this.accessChecker = accessChecker;
     }
+
+    public void setSecurityFilters(List<Filter> filters) { this.securityFilters = filters == null ? List.of() : filters; }
+    public void setAccessChecker(HandlerMethodAccessChecker checker) { this.accessChecker = checker; }
 
     public void start() {
         try {
@@ -71,13 +87,15 @@ public final class SummerWebServer {
         // every connection runs on its own virtual thread
         executor = Executors.newVirtualThreadPerTaskExecutor();
         HandlerMethodInvoker invoker = new HandlerMethodInvoker(context, converter);
-        RequestDispatcher dispatcher = new RequestDispatcher(router, invoker, converter, exceptions, properties.contextPath());
+        RequestDispatcher dispatcher = new RequestDispatcher(router, invoker, converter, exceptions,
+                properties.contextPath(), securityFilters, accessChecker);
 
         acceptThread = Thread.ofPlatform().name("summer-accept").daemon(false).start(() -> acceptLoop(dispatcher));
 
         LOG.info("summer web server started on " + properties.host() + ":" + serverSocket.getLocalPort()
                 + " (virtual threads, " + router.routes().size() + " routes)"
-                + (properties.contextPath().isEmpty() ? "" : " context-path=" + properties.contextPath()));
+                + (properties.contextPath().isEmpty() ? "" : " context-path=" + properties.contextPath())
+                + (securityFilters.isEmpty() ? "" : " security-filters=" + securityFilters.size()));
     }
 
     private void acceptLoop(RequestDispatcher dispatcher) {
@@ -114,7 +132,7 @@ public final class SummerWebServer {
                 try {
                     raw = RawHttpRequest.parse(in, properties.maxHeaderSize(), properties.maxRequestSize());
                 } catch (IOException e) {
-                    // client closed or timeout — normal for keep-alive
+                    // client closed or timeout -- normal for keep-alive
                     return;
                 }
                 requestCount++;
@@ -126,6 +144,8 @@ public final class SummerWebServer {
                 }
 
                 WebRequest request = new WebRequest(raw);
+                request.remoteAddress(socket.getRemoteSocketAddress() == null ? "tcp"
+                        : socket.getRemoteSocketAddress().toString());
                 WebResponse response = new WebResponse(out);
                 response.keepAlive(properties.keepAlive()
                         && requestCount < properties.maxRequestsPerConnection()

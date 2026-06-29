@@ -1,6 +1,5 @@
 package cn.jiebaba.summer.sample.repository;
 
-import cn.jiebaba.summer.core.annotation.Autowired;
 import cn.jiebaba.summer.core.annotation.Service;
 import cn.jiebaba.summer.data.conditions.LambdaQueryWrapper;
 import cn.jiebaba.summer.data.page.Page;
@@ -11,11 +10,6 @@ import cn.jiebaba.summer.sample.mapper.ProductMapper;
 
 @Service
 public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> implements ProductService {
-
-    @Autowired
-    public void setMapper(ProductMapper mapper) {
-        this.baseMapper = mapper;
-    }
 
     @Override
     public Page<Product> searchByName(String keyword, int current, int size) {

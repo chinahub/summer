@@ -16,6 +16,14 @@ import java.util.jar.JarFile;
 /**
  * Scans the class-path for class files under the given base packages,
  * reading directory and jar entries directly from {@code java.class.path}.
+ *
+ * <p><b>Note:</b> only the application class path ({@code java.class.path})
+ * is scanned. On JDK 9+ the platform/JDK classes live on the module path and
+ * are never enumerated here, so JDK internals are not traversed.
+ *
+ * <p>Jar scanning is optimized with an O(1) probe: a jar that has no entry
+ * for the requested package directory is skipped without iterating its entries,
+ * so unrelated dependencies (drivers, libs) are not walked.
  */
 public final class ClassPathScanner {
     private ClassPathScanner() {}
@@ -71,6 +79,11 @@ public final class ClassPathScanner {
 
     private static void scanJar(Path jarPath, String pkgPath, String pkg, ClassLoader classLoader, Set<Class<?>> classes) {
         try (JarFile jar = new JarFile(jarPath.toFile())) {
+            // Fast path: a single O(1) probe for the package directory entry. If the jar has no
+            // entry under pkgPath/ it cannot contain any class in the target package, so skip
+            // iterating its (potentially thousands of) entries entirely. This keeps unrelated
+            // jars (e.g. JDBC drivers, JSON libs) from being walked when scanning app packages.
+            if (!pkgPath.isEmpty() && jar.getJarEntry(pkgPath + "/") == null) return;
             Enumeration<JarEntry> entries = jar.entries();
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();

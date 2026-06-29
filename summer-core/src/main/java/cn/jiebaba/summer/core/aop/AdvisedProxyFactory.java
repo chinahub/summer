@@ -51,8 +51,9 @@ public final class AdvisedProxyFactory {
                 handler);
     }
 
-    private static List<MethodInterceptor> buildChain(Class<?> targetClass, Method method,
-                                                       List<MethodInterceptor> interceptors, List<Advice> advices) {
+    /** Builds the interceptor chain (built-in interceptors + matching advice), sorted by order. */
+    static List<MethodInterceptor> buildChain(Class<?> targetClass, Method method,
+                                              List<MethodInterceptor> interceptors, List<Advice> advices) {
         List<MethodInterceptor> chain = new ArrayList<>(interceptors);
         for (Advice a : advices) {
             if (!PointcutMatcher.matches(a.pointcut(), targetClass, method)) continue;
@@ -96,19 +97,31 @@ public final class AdvisedProxyFactory {
         }
     }
 
-    /** Reflective chain invocation terminating at the target method. */
+    /** Tail of the interceptor chain: invokes the target method with the given args. */
+    @FunctionalInterface
+    interface TailInvoker {
+        Object invoke(Object[] args) throws Throwable;
+    }
+
+    /** Reflective chain invocation terminating at the target method (or a custom tail). */
     static final class ReflectiveMethodInvocation implements ProceedingJoinPoint {
         private final Object proxy;
         private final Object target;
         private final Method method;
         private Object[] args;
         private final List<MethodInterceptor> chain;
+        private final TailInvoker tail;
         private int current = 0;
 
         ReflectiveMethodInvocation(Object proxy, Object target, Method method, Object[] args,
                                    List<MethodInterceptor> chain) {
+            this(proxy, target, method, args, chain, null);
+        }
+
+        ReflectiveMethodInvocation(Object proxy, Object target, Method method, Object[] args,
+                                   List<MethodInterceptor> chain, TailInvoker tail) {
             this.proxy = proxy; this.target = target; this.method = method;
-            this.args = args; this.chain = chain;
+            this.args = args; this.chain = chain; this.tail = tail;
         }
 
         @Override
@@ -117,6 +130,7 @@ public final class AdvisedProxyFactory {
                 MethodInterceptor next = chain.get(current++);
                 return next.invoke(this);
             }
+            if (tail != null) return tail.invoke(this.args);
             try {
                 method.setAccessible(true);
                 return method.invoke(target, args);

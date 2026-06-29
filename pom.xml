@@ -5,9 +5,12 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>cn.jiebaba.summer</groupId>
     <artifactId>summer-parent</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>3.0.0</version>
     <packaging>pom</packaging>
     <name>summer</name>
+    <url>https://jiebaba.cn</url>
+    <description>summer is a lightweight Java microservice framework, hoping to help developers use it like Spring, which is also the origin of the name.</description>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>25</maven.compiler.release>
@@ -16,17 +19,46 @@
         <maven.jar.plugin.version>3.5.0</maven.jar.plugin.version>
         <maven.surefire.plugin.version>3.5.3</maven.surefire.plugin.version>
         <maven.shade.plugin.version>3.6.0</maven.shade.plugin.version>
-        <summer.version>1.0.0-SNAPSHOT</summer.version>
+        <summer.version>3.0.0</summer.version>
     </properties>
     <modules>
         <module>summer-core</module>
         <module>summer-web</module>
         <module>summer-data</module>
+        <module>summer-security</module>
         <module>summer-boot</module>
         <module>summer-loader</module>
         <module>summer-pack-maven-plugin</module>
         <module>summer-sample</module>
+        <module>build-test</module>
     </modules>
+
+    <!-- for publishing: open source license -->
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+    <!-- for publishing: developer info -->
+    <developers>
+        <developer>
+            <!-- corresponds to the server id in maven settings -->
+            <id>ossrh</id>
+            <name>swc4lN</name>
+            <email>jiebaba01@gmail.com</email>
+            <roles>
+                <role>Project Manager</role>
+                <role>Developer</role>
+            </roles>
+        </developer>
+    </developers>
+    <!-- for publishing: project links -->
+    <scm>
+        <connection>https://github.com/chinahub/summer.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com:chinahub/summer.git</developerConnection>
+        <url>https://github.com/chinahub/summer</url>
+    </scm>
     <build>
         <pluginManagement>
             <plugins>
@@ -62,6 +94,82 @@
             </plugins>
         </pluginManagement>
     </build>
+
+    <profiles>
+        <!-- release profile: activate with -Prelease when publishing to Maven Central; local install skips sources/javadoc/gpg -->
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <!-- central publishing plugin -->
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.11.0</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>ossrh</publishingServerId>
+                        </configuration>
+                    </plugin>
+                    <!-- source plugin -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>3.4.0</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <!-- javadoc plugin -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>3.12.0</version>
+                        <configuration>
+                            <charset>UTF-8</charset>
+                            <encoding>UTF-8</encoding>
+                            <docencoding>UTF-8</docencoding>
+                            <additionalJOption>-Xdoclint:none</additionalJOption>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <!-- gpg sign plugin -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.2.8</version>
+                        <configuration>
+                            <!-- path to the GPG executable -->
+                            <executable>D:\Git\usr\bin\gpg.exe</executable>
+                            <!-- GPG key name used for signing -->
+                            <keyname>cn.jiebaba.summer</keyname>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+
 </project>
-
-

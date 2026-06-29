@@ -1,9 +1,11 @@
 package cn.jiebaba.summer.data.service;
 
+import cn.jiebaba.summer.core.annotation.Autowired;
 import cn.jiebaba.summer.data.mapper.BaseMapper;
 
 public abstract class ServiceImpl<M extends BaseMapper<T>, T> implements IService<T> {
 
+    @Autowired
     protected M baseMapper;
 
     public void setBaseMapper(M baseMapper) { this.baseMapper = baseMapper; }

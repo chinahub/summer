@@ -45,7 +45,7 @@ $env:Path = "D:\jdk\jdk-25.0.2\bin;D:\mvnd-1.0.5\mvn\bin;" + $env:Path
 ### 3. 构建命令
 
 ```powershell
-# 全量离线构建（4 模块全部 SUCCESS）
+# 全量构建（7 模块全部 SUCCESS）
 mvn -s E:\summer_workspace\settings.xml -o clean package
 ```
 
@@ -61,10 +61,11 @@ mvn -s E:\summer_workspace\settings.xml -o clean package
 # 全量构建
 mvn -s E:\summer_workspace\settings.xml -o clean package
 # 启动示例（可执行 jar）
-java -jar summer-sample\target\summer-sample-1.0.0-SNAPSHOT-boot.jar
-# 进程内冒烟测试（类路径方式，见 build-test\test.ps1）
-java -cp summer-core\target\summer-core-1.0.0-SNAPSHOT.jar;summer-web\target\summer-web-1.0.0-SNAPSHOT.jar;summer-data\target\summer-data-1.0.0-SNAPSHOT.jar;summer-boot\target\summer-boot-1.0.0-SNAPSHOT.jar;summer-sample\target\summer-sample-1.0.0-SNAPSHOT.jar cn.jiebaba.summer.sample.SmokeTest
+java -jar summer-sample\target\summer-sample-3.0.0-boot.jar
+# 进程内冒烟测试（用 build-test 的 test classpath）
+mvn -s E:\summer_workspace\settings.xml -pl build-test -am test-compile -q
+java -cp "build-test\target\classes;summer-core\target\classes;summer-web\target\classes;summer-data\target\classes;summer-boot\target\classes;summer-sample\target\classes;C:\Users\Administrator\.m2\repository\org\postgresql\postgresql\42.7.8\postgresql-42.7.8.jar;C:\Users\Administrator\.m2\repository\org\slf4j\slf4j-api\1.7.36\slf4j-api-1.7.36.jar;C:\Users\Administrator\.m2\repository\com\fasterxml\jackson\core\jackson-core\2.16.1\jackson-core-2.16.1.jar;C:\Users\Administrator\.m2\repository\com\fasterxml\jackson\core\jackson-databind\2.16.1\jackson-databind-2.16.1.jar;C:\Users\Administrator\.m2\repository\com\fasterxml\jackson\core\jackson-annotations\2.16.1\jackson-annotations-2.16.1.jar" cn.jiebaba.summer.test.SmokeTest
 ```
 
-实测：4 模块 BUILD SUCCESS；服务器 `started on 0.0.0.0:8080 (virtual threads, 8 routes)`；SmokeTest 全部路由返回正确状态码与 JSON。
+实测：8 模块 BUILD SUCCESS；mvn package 自动产出 summer-sample-3.0.0-boot.jar；服务器 started on 0.0.0.0:8080 (virtual threads, 13 routes)；SmokeTest 全部路由返回正确状态码与 JSON。
 

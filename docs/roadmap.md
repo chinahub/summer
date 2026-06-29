@@ -29,6 +29,7 @@
 - [x] 多 SQL 方言分页（MySQL/PostgreSQL/Oracle/SqlServer，`Dialect.of`）
 - [x] AOP（`@Aspect` + `@Around/@Before/@After/@AfterReturning/@AfterThrowing`，JDK 动态代理 + 拦截器链）
 - [x] 声明式事务 `@Transactional`（ThreadLocal 连接栈，嵌套加入，提交/回滚实测）
+- [x] 无接口子类代理（手写字节码 SubclassProxyFactory，零依赖 CGLIB 替代，桥接方法破自调用递归）
 - [x] 定时任务 `@Scheduled`（cron 5 段表达式 + fixedRate/fixedDelay，虚拟线程执行）
 - [x] 参数校验 `@Valid`（`@NotNull/@NotBlank/@NotEmpty/@Min/@Max/@Size/@Pattern/@Email`，递归嵌套，400 违规列表）
 - [x] DbSmokeTest 16 项断言全过（连接真实 PostgreSQL）
@@ -38,7 +39,7 @@
 > 详细可行性分析与实现方案见 [高级特性研究](research-advanced.md)。
 
 ### P0 — 稳定性与安全性
-- [ ] CGLIB 缺失时显式报错（消除 `@Transactional`/AOP 静默失效隐患，~15 行）
+- [x] ~~CGLIB 缺失时显式报错~~ → 已由自研子类代理取代（无接口 bean 自动走 SubclassProxyFactory，final/工厂方法 bean 仍显式报错）
 - [ ] 连接池借出超时（`pool.poll(timeout)`，避免池满永久阻塞）
 - [x] 连接池泄漏检测（后台虚拟线程扫描 + WARN 日志 + 借出栈）
 
@@ -55,4 +56,24 @@
 - [ ] 静态资源（当前定位微服务框架，暂不实现）
 
 ### 不实现
-- CGLIB 子类代理（违反零第三方依赖原则；面向接口编程可规避，研究见 [高级特性研究](research-advanced.md#四不支持-cglib-代理对-mvc-开发的影响)）
+- 引入 ASM/ByteBuddy 等字节码第三方库（违反零第三方依赖原则；子类代理已用纯 JDK 手写字节码实现）
+## 第六阶段：安全模块 ✅
+
+- [x] summer-security：纯 JDK 安全模块（参考 Spring Security）
+- [x] JWT 无状态认证（HS256，javax.crypto.Mac，base64url）
+- [x] /login 登录端点 + AuthenticationManager/UserDetailsService/DaoAuthenticationProvider
+- [x] BCrypt 密码编码（纯 JDK Blowfish/EksBlowfish，$2a$ 格式，与 Spring 兼容）
+- [x] URL 级授权（HttpSecurity DSL + AuthorizationFilter，permitAll/authenticated/hasRole/hasAuthority）
+- [x] 方法级授权（@PreAuthorize/@PermitAll/@DenyAll，dispatcher 路由匹配后强制）
+- [x] @AuthenticationPrincipal 参数注入（UserDetails 自动重载）
+- [x] SecurityContextHolder（ThreadLocal，虚拟线程友好，请求结束清理）
+- [x] SecurityAutoConfiguration（opt-in，默认关闭，零影响现有应用）
+- [x] SecuritySmokeTest 18 项全通过（登录/URL授权/方法授权/篡改token/404回归）
+- [x] ClassPathScanner 优化（O(1) jar 包探测跳过无关依赖）
+
+### 后续扩展
+- [ ] 服务层方法级安全（需增强 SubclassProxyFactory 复制方法注解）
+- [ ] JWT refresh token
+- [ ] 多 SecurityFilterChain（多链匹配）
+- [ ] CSRF / CORS 过滤器
+- [ ] OAuth2 / OIDC 集成

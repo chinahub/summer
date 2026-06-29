@@ -26,13 +26,15 @@ import java.util.List;
 public final class HandlerMethodInvoker {
     private final ApplicationContext context;
     private final MessageConverter converter;
+    private final List<HandlerMethodArgumentResolver> resolvers;
 
     public HandlerMethodInvoker(ApplicationContext context, MessageConverter converter) {
         this.context = context;
         this.converter = converter;
+        this.resolvers = new ArrayList<>(context.getBeansOfType(HandlerMethodArgumentResolver.class).values());
     }
 
-    public Object invoke(RouteMatch match, WebRequest request, WebResponse response) {
+    public Object invoke(RouteMatch match, WebRequest request, WebResponse response) throws Exception {
         Method method = match.mapping().handlerMethod();
         Object bean = match.mapping().handlerBean();
         Parameter[] params = method.getParameters();
@@ -52,7 +54,12 @@ public final class HandlerMethodInvoker {
     }
 
     private Object bindParameter(Parameter param, Type genericType, RouteMatch match,
-                                 WebRequest request, WebResponse response) {
+                                 WebRequest request, WebResponse response) throws Exception {
+        for (HandlerMethodArgumentResolver resolver : resolvers) {
+            if (resolver.supportsParameter(param)) {
+                return resolver.resolveArgument(param, genericType, match, request, response);
+            }
+        }
         Class<?> type = param.getType();
         if (type == WebRequest.class) return request;
         if (type == WebResponse.class) return response;

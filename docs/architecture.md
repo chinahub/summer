@@ -4,27 +4,30 @@
 
 ```
 summer-parent (pom)
-├── summer-core      IoC 容器 / 依赖注入 / 组件扫描 / 配置环境 / 日志 / AOP / 定时任务
-├── summer-web       嵌入式 HTTP 服务器（ServerSocket+虚拟线程）/ 路由 / JSON / 参数绑定 / 异常 / 校验
-├── summer-data      ORM：BaseMapper/Wrapper/分页/IService/事务/多方言，纯 JDBC，零第三方依赖
-├── summer-boot      SummerApplication.run() 启动器 / 自动配置 / 数据源 / Mapper装配 / 关闭钩子
-└── summer-sample    示例应用 + SmokeTest，端到端验证
+├── summer-core            IoC 容器 / 依赖注入 / 组件扫描 / 配置环境 / 日志 / AOP / 定时任务 / 自研测试微框架（core.test 包）
+├── summer-web             嵌入式 HTTP 服务器（ServerSocket+虚拟线程）/ 路由 / JSON / 参数绑定 / 异常 / 校验
+├── summer-data            ORM：BaseMapper/Wrapper/分页/IService/事务/多方言，纯 JDBC，零第三方依赖
+├── summer-boot            SummerApplication.run() 启动器 / 自动配置 / 数据源 / Mapper装配 / 关闭钩子
+├── summer-loader          可执行 jar 启动器 JarLauncher（java -jar 入口，BOOT-INF 解压+类路径重建）
+├── summer-pack-maven-plugin  repackage goal：mvn package 自动产出 BOOT-INF 可执行 jar
+├── summer-sample          示例应用（Application + controller/service/repository/aspect），端到端验证
+└── build-test              集中式测试：AOP 单测/集成测试 + sample 冒烟测试（依赖 summer-sample）
 ```
 
 ## 依赖关系（自底向上）
 
 ```
-summer-boot  ──requires──>  summer-data ──requires──>  summer-core
-     └──requires──>  summer-web  ──requires──>  summer-core
-     │                          │                          │
-     └─ java.logging             └─ java.logging            └─ java.logging
+summer-sample ──depends──> summer-boot ──depends──> summer-data ──depends──> summer-core
+                                └──depends──> summer-web  ──depends──> summer-core
+summer-sample ──depends──> summer-loader          （可执行 jar 启动器）
+build-test ──depends──> summer-sample / summer-boot / summer-data / summer-core  （集中式测试）
 ```
 
-- `summer-core` 是地基，只依赖 JDK 模块；
+- `summer-core` 是地基，零第三方依赖；
 - `summer-web` 依赖 `summer-core`（不再依赖 `jdk.httpserver`，改用 `java.net`）；
-- `summer-data` 依赖 `summer-core` + `java.sql`；
-- `summer-boot` 组装 core + web + data，提供启动入口；
-- `summer-sample` 是使用者，依赖 boot，需 `opens` 业务包给框架做反射。
+- `summer-data` 依赖 `summer-core`（用 JDK 的 `java.sql`）；
+- `summer-boot` 组装 core + web + data，提供启动入口；`summer-loader` 提供可执行 jar 启动器；`summer-pack-maven-plugin` 负责打包；
+- `summer-sample` 是使用者，依赖 boot + loader，业务包无需额外声明（classpath 模式，反射不受强封装限制）。
 
 ## summer-core 职责
 
@@ -34,7 +37,7 @@ summer-boot  ──requires──>  summer-data ──requires──>  summer-co
 | `cn.jiebaba.summer.core.context` | `ApplicationContext` 接口、`DefaultApplicationContext`（IoC 容器实现）、`BeanDefinition`、生命周期接口 |
 | `cn.jiebaba.summer.core.env` | `Environment`：属性加载、`${key:default}` 占位符解析、类型转换；`YamlParser` 解析 `application.yml` |
 | `cn.jiebaba.summer.core.scanner` | `ClassPathScanner`（类路径类扫描）、`AnnotationUtils`（元注解递归查找） |
-| `cn.jiebaba.summer.core.aop` | `@Aspect/@Pointcut/@Around/@Before/@After/@AfterReturning/@AfterThrowing`、`PointcutMatcher`（`execution()` 表达式）、`AdvisedProxyFactory`（JDK 动态代理 + 拦截器链）、`JoinPoint/ProceedingJoinPoint` |
+| `cn.jiebaba.summer.core.aop` | `@Aspect/@Pointcut/@Around/@Before/@After/@AfterReturning/@AfterThrowing`、`PointcutMatcher`（`execution()` 表达式）、`AdvisedProxyFactory`（JDK 动态代理 + 拦截器链）、`SubclassProxyFactory`（手写字节码子类代理，无接口 bean 走此路径）、`SummerProxy`（子类代理标记）、`JoinPoint/ProceedingJoinPoint` |
 | `cn.jiebaba.summer.core.scheduling` | `@Scheduled`（cron/fixedRate/fixedDelay）、`CronExpression`（5 段表达式 + 下次触发计算）、`ScheduledTaskRegistrar`（定时线程池触发 + 虚拟线程执行任务体） |
 | `cn.jiebaba.summer.core.logging` | `LoggingInitializer`、`DailyRollingFileHandler`（按天/按天+大小滚动 + 历史清理）、`SingleLineFormatter`、`LogProperties` |
 | `cn.jiebaba.summer.core.util` | `ReflectionUtils` |
@@ -48,7 +51,7 @@ summer-boot  ──requires──>  summer-data ──requires──>  summer-co
 - **集合/数组注入**：把同类型所有 bean 注入为 `List`/数组；
 - **`@Qualifier/@Primary`**：多候选消歧；
 - **生命周期**：`@PostConstruct` → `InitializingBean` → `initMethod`；销毁逆序 `@PreDestroy` → `DisposableBean` → `destroyMethod`；
-- **AOP 集成**：`preInstantiateSingletons` 先实例化 `@Aspect` 并收集 advisor，单例创建后 `maybeWrapInProxy()` 按切点生成代理；`@Transactional` 的 `TransactionInterceptor` 同属拦截器链。
+- **AOP 集成**：`preInstantiateSingletons` 先实例化 `@Aspect` 并收集 advisor；单例创建时按需代理——有接口走 JDK 动态代理（`AdvisedProxyFactory`），无接口且非 final 走手写字节码子类代理（`SubclassProxyFactory`，桥接方法 `$$summer$super$` 破自调用递归）；`@Transactional` 的 `TransactionInterceptor` 同属拦截器链。
 
 ## summer-web 职责
 
@@ -132,7 +135,7 @@ WebResponse.commit（写状态行+头+body 到 socket）
 
 ## 运行时模型
 
-- 启动：`java -jar summer-sample\target\summer-sample-1.0.0-SNAPSHOT-boot.jar`
+- 启动：`java -jar summer-sample\target\summer-sample-3.0.0-boot.jar`
 - 每个连接一个虚拟线程，阻塞 IO 不占平台线程；
 - 定时任务体在虚拟线程上执行；
 - 单进程、单 JVM，无外部容器。

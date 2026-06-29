@@ -1,6 +1,6 @@
-﻿# AOP 面向切面（summer-core）
+# AOP 面向切面（summer-core）
 
-基于 JDK 动态代理 + 拦截器链实现的最小 AOP，零第三方依赖。对被代理 Bean 的方法调用织入通知（advice），支持 `@Around/@Before/@After/@AfterReturning/@AfterThrowing`。
+基于 JDK 动态代理与手写字节码子类代理 + 拦截器链实现的最小 AOP，零第三方依赖。对被代理 Bean 的方法调用织入通知（advice），支持 `@Around/@Before/@After/@AfterReturning/@AfterThrowing`。
 
 ## 注解
 
@@ -73,12 +73,14 @@ public class LoggingAspect {
 ## 实现原理
 
 - 容器在 `preInstantiateSingletons` 阶段**先**实例化所有 `@Aspect` bean 并收集通知为 `ProxyAdvisor`；
-- 每个单例 bean 创建后调用 `maybeWrapInProxy()`：若其任一方法命中某切点，则用 `AdvisedProxyFactory` 生成 JDK 动态代理（要求目标类实现接口），把匹配的 advisor 组成拦截器链；
+- 每个单例 bean 创建时判断是否需要代理：若其任一方法命中某切点或 `ProxyAdvisor`，则自动选择代理策略——目标类实现了接口用 `AdvisedProxyFactory` 生成 JDK 动态代理；未实现接口且可被继承（非 `final`、通过构造器实例化）时用 `SubclassProxyFactory` 手写字节码生成子类代理（`$$summer$super$<方法>` 桥接方法以 `invokespecial super` 破解自调用递归），把匹配的 advisor/通知组成拦截器链；
 - 调用代理方法时按 `Around → Before → 目标 → AfterReturning/AfterThrowing → After` 顺序执行；
 - `@Transactional` 即基于同一拦截器链注册 `TransactionInterceptor` 实现。
 
 ## 限制
 
-- 仅 JDK 动态代理（目标类须实现接口）；暂不支持 CGLIB 子类代理；
+- 代理策略自动二选一：目标类实现接口走 JDK 动态代理；无接口走手写字节码子类代理（零依赖，非 CGLIB）；
+- 子类代理要求目标类非 `final`、通过构造器实例化（`@Bean` 工厂方法 / `instanceSupplier` 产生的无接口 bean 暂不支持子类代理，需提取接口）；仅拦截 public/protected 非 final 方法（private、static、final 方法不拦截）；`final` 类无法子类代理；
+- 子类代理为单对象模型（代理实例即 bean 本身），`getThis()` 与 `getTarget()` 指向同一代理；方法内的自调用会被拦截；应避免在构造器中调用可被拦截的方法（构造期拦截尚未就绪）；
 - 切点表达式仅支持 `execution()`，不支持 `@annotation`、`bean()` 等；
 - 通知方法需与切点签名兼容（`@Around`/`@AfterReturning` 可绑定参数）。

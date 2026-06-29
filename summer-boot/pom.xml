@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -6,7 +6,7 @@
     <parent>
         <groupId>cn.jiebaba.summer</groupId>
         <artifactId>summer-parent</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>3.0.0</version>
     </parent>
     <artifactId>summer-boot</artifactId>
     <name>summer-boot</name>
@@ -25,6 +25,11 @@
         <dependency>
             <groupId>cn.jiebaba.summer</groupId>
             <artifactId>summer-data</artifactId>
+            <version>${summer.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-security</artifactId>
             <version>${summer.version}</version>
         </dependency>
     </dependencies>

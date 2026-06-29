@@ -21,6 +21,17 @@ logging:
     single-line: true
 
 summer:
+  # Security is opt-in: flip to true to activate JWT auth + URL/method authorization.
+  security:
+    enabled: true
+    jwt:
+      # At least 32 bytes (256 bits) for HS256. Change this in production.
+      secret: summer-demo-jwt-secret-change-me-please-32bytes!
+      access-token-ttl: 3600
+      login-url: /login
+    password:
+      bcrypt:
+        strength: 10
   datasource:
     url: jdbc:postgresql://aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres?prepareThreshold=0
     username: postgres.feodqkgqrxzvcnmuvjgt

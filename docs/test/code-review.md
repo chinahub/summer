@@ -2,6 +2,7 @@
 
 > 审查时间: 2026-06-23
 > 范围: summer-boot / summer-core / summer-data / summer-web 全部模块
+> 注: 审查时项目使用 JPMS 模块化，后续已移除 JPMS，改为 classpath + 可执行 jar 方式运行（见 usage.md）
 > 目标: 找出 bug、性能问题、线程安全风险
 
 整体评价: 作为学习/玩具项目完成度相当高 (零依赖、JPMS、虚拟线程、自动装配、AOP、ORM、WebSocket 都齐了),距离生产可用主要差在几个会出事故的点上。
@@ -212,7 +213,7 @@ List<MethodInterceptor> chain = buildChain(target.getClass(), method, intercepto
 ```
 
 - 每次方法调用都执行 `buildChain`,扫描所有 advices + 正则匹配。**对一个有 N 个 advice 的 bean 来说单次方法调用是 O(N × advices)**。
-- **修复**: 在 `maybeWrapInProxy` 里按 `Method` 预构建 chain,或者缓存最近 N 个方法。
+- **修复**: 在 `needsSubclassProxy`/`maybeWrapInJdkProxy` 里按 `Method` 预构建 chain,或者缓存最近 N 个方法。
 
 ---
 

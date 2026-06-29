@@ -16,6 +16,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -175,6 +181,50 @@ public final class SqlExecutor {
             if (targetType == short.class || targetType == Short.class) return bi.shortValue();
             if (targetType == byte.class || targetType == Byte.class) return bi.byteValue();
             if (targetType == String.class) return bi.toString();
+        }
+        // temporal / date cross-type mapping (e.g. TIMESTAMP -> LocalDateTime)
+        if (value instanceof java.sql.Timestamp ts) {
+            if (targetType == LocalDateTime.class) return ts.toLocalDateTime();
+            if (targetType == Instant.class) return ts.toInstant();
+            if (targetType == LocalDate.class) return ts.toLocalDateTime().toLocalDate();
+            if (targetType == LocalTime.class) return ts.toLocalDateTime().toLocalTime();
+            if (targetType == OffsetDateTime.class) return ts.toInstant().atOffset(ZoneOffset.UTC);
+            if (targetType == java.sql.Date.class) return new java.sql.Date(ts.getTime());
+        }
+        if (value instanceof java.sql.Date sd) {
+            if (targetType == LocalDate.class) return sd.toLocalDate();
+            if (targetType == java.sql.Timestamp.class) return new java.sql.Timestamp(sd.getTime());
+        }
+        if (value instanceof java.sql.Time st) {
+            if (targetType == LocalTime.class) return st.toLocalTime();
+            if (targetType == java.sql.Timestamp.class) return new java.sql.Timestamp(st.getTime());
+        }
+        if (value instanceof java.util.Date d) {
+            if (targetType == LocalDateTime.class) return new java.sql.Timestamp(d.getTime()).toLocalDateTime();
+            if (targetType == LocalDate.class) return new java.sql.Date(d.getTime()).toLocalDate();
+            if (targetType == Instant.class) return d.toInstant();
+            if (targetType == java.sql.Timestamp.class) return new java.sql.Timestamp(d.getTime());
+        }
+        if (value instanceof OffsetDateTime odt) {
+            if (targetType == LocalDateTime.class) return odt.toLocalDateTime();
+            if (targetType == Instant.class) return odt.toInstant();
+        }
+        if (value instanceof LocalDateTime ldt) {
+            if (targetType == java.sql.Timestamp.class) return java.sql.Timestamp.valueOf(ldt);
+            if (targetType == LocalDate.class) return ldt.toLocalDate();
+        }
+        if (value instanceof LocalDate ld) {
+            if (targetType == java.sql.Date.class) return java.sql.Date.valueOf(ld);
+        }
+        if (targetType == BigDecimal.class) {
+            if (value instanceof Number n) {
+                if (value instanceof Long || value instanceof Integer
+                        || value instanceof Short || value instanceof Byte) {
+                    return BigDecimal.valueOf(n.longValue());
+                }
+                return BigDecimal.valueOf(n.doubleValue());
+            }
+            if (value instanceof String str) return new BigDecimal(str);
         }
         String s = value.toString();
         if (targetType == String.class) return s;

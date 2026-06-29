@@ -12,6 +12,8 @@ import cn.jiebaba.summer.core.aop.Aspect;
 import cn.jiebaba.summer.core.aop.AspectRegistry;
 import cn.jiebaba.summer.core.aop.MethodInterceptor;
 import cn.jiebaba.summer.core.aop.ProxyAdvisor;
+import cn.jiebaba.summer.core.aop.SubclassProxyFactory;
+import cn.jiebaba.summer.core.aop.SummerProxy;
 import cn.jiebaba.summer.core.env.Environment;
 import cn.jiebaba.summer.core.scanner.AnnotationUtils;
 import cn.jiebaba.summer.core.scanner.ClassPathScanner;
@@ -21,9 +23,11 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -177,8 +181,18 @@ public class DefaultApplicationContext implements ApplicationContext {
     }
 
     private Object doCreateBean(String name, BeanDefinition def) {
+        Class<?> beanClass = def.getBeanClass();
+        if (needsSubclassProxy(beanClass, def)) {
+            Object proxy = createSubclassProxy(name, def, beanClass);
+            if (def.isSingleton()) {
+                earlySingletonObjects.put(name, proxy);
+            }
+            populateBean(proxy, def);
+            initializeBean(name, proxy, def);
+            return proxy;
+        }
         Object target = instantiate(name, def);
-        Object exposed = maybeWrapInProxy(name, target);
+        Object exposed = maybeWrapInJdkProxy(name, target);
         if (def.isSingleton()) {
             earlySingletonObjects.put(name, exposed);
         }
@@ -187,25 +201,52 @@ public class DefaultApplicationContext implements ApplicationContext {
         return exposed;
     }
 
-    private Object maybeWrapInProxy(String name, Object target) {
-        Class<?> beanClass = target.getClass();
+    /** A no-interface, non-final, constructor-instantiated bean that needs interception is proxied via subclassing. */
+    private boolean needsSubclassProxy(Class<?> beanClass, BeanDefinition def) {
+        if (beanClass.getInterfaces().length > 0) return false;
+        if (def.getFactoryMethod() != null || def.getInstanceSupplier() != null) return false;
+        if (Modifier.isFinal(beanClass.getModifiers())) return false;
+        if (!collectInterceptors(beanClass).isEmpty()) return true;
+        return aspectRegistry.hasAdviceFor(beanClass);
+    }
+
+    private List<MethodInterceptor> collectInterceptors(Class<?> beanClass) {
         List<MethodInterceptor> interceptors = new ArrayList<>();
         for (ProxyAdvisor advisor : advisors) {
             if (advisor.advises(beanClass)) interceptors.addAll(advisor.interceptors());
         }
+        return interceptors;
+    }
+
+    private Object createSubclassProxy(String name, BeanDefinition def, Class<?> beanClass) {
+        List<MethodInterceptor> interceptors = collectInterceptors(beanClass);
+        Constructor<?> ctor = def.getConstructor();
+        if (ctor == null) ctor = chooseConstructor(beanClass);
+        Object[] args = resolveExecutableArgs(ctor.getParameters(), ctor.getGenericParameterTypes());
+        return SubclassProxyFactory.create(beanClass, ctor, args, interceptors, aspectRegistry.advices());
+    }
+
+    private Object maybeWrapInJdkProxy(String name, Object target) {
+        Class<?> beanClass = target.getClass();
+        List<MethodInterceptor> interceptors = collectInterceptors(beanClass);
         boolean aspectMatch = aspectRegistry.hasAdviceFor(beanClass);
         if (interceptors.isEmpty() && !aspectMatch) return target;
         if (beanClass.getInterfaces().length == 0) {
             throw new BeansException("Bean '" + name + "' (" + beanClass.getName()
                     + ") requires an AOP proxy (matched by @Transactional or @Aspect advice)"
-                    + " but implements no interface. summer uses JDK dynamic proxies only"
-                    + " (no CGLIB, zero third-party deps). Either extract an interface for this"
-                    + " class or remove the proxy-requiring annotation.");
+                    + " but implements no interface and cannot be subclassed (it is final or"
+                    + " created via a factory method). Either extract an interface, make the"
+                    + " class non-final with a constructor, or remove the proxy-requiring annotation.");
         }
         Object proxy = AdvisedProxyFactory.createProxy(
                 target, beanClass.getInterfaces(), interceptors, aspectRegistry.advices());
         targetObjects.put(name, target);
         return proxy;
+    }
+
+    /** For annotation scanning, a subclass proxy exposes its user class via the superclass. */
+    private Class<?> effectiveType(Object bean) {
+        return (bean instanceof SummerProxy) ? bean.getClass().getSuperclass() : bean.getClass();
     }
 
     private Object instantiate(String name, BeanDefinition def) {
@@ -265,7 +306,9 @@ public class DefaultApplicationContext implements ApplicationContext {
                 boolean required = field.getAnnotation(Autowired.class).required();
                 Qualifier qualifier = field.getAnnotation(Qualifier.class);
                 String q = qualifier != null ? qualifier.value() : null;
-                Object value = resolveDependency(field.getType(), field.getGenericType(), q, field.getName(), required);
+                Class<?> fieldType = resolveActualType(field.getGenericType(), bean.getClass());
+                if (fieldType == null) fieldType = field.getType();
+                Object value = resolveDependency(fieldType, field.getGenericType(), q, field.getName(), required);
                 if (value == null) continue;
                 ReflectionUtils.makeAccessible(field);
                 try {
@@ -275,7 +318,7 @@ public class DefaultApplicationContext implements ApplicationContext {
                 }
             }
         }
-        for (Method method : bean.getClass().getMethods()) {
+        for (Method method : effectiveType(bean).getMethods()) {
             if (method.isAnnotationPresent(Autowired.class) && method.getParameterCount() > 0) {
                 ReflectionUtils.makeAccessible(method);
                 Object[] args = resolveExecutableArgs(method.getParameters(), method.getGenericParameterTypes());
@@ -286,7 +329,7 @@ public class DefaultApplicationContext implements ApplicationContext {
 
     private void initializeBean(String name, Object bean, BeanDefinition def) {
         try {
-            for (Method m : bean.getClass().getMethods()) {
+            for (Method m : effectiveType(bean).getMethods()) {
                 if (m.isAnnotationPresent(PostConstruct.class)) {
                     ReflectionUtils.invokeMethod(m, bean);
                 }
@@ -295,7 +338,7 @@ public class DefaultApplicationContext implements ApplicationContext {
                 ib.afterPropertiesSet();
             }
             if (def.getInitMethodName() != null && !def.getInitMethodName().isEmpty()) {
-                Method m = bean.getClass().getMethod(def.getInitMethodName());
+                Method m = effectiveType(bean).getMethod(def.getInitMethodName());
                 ReflectionUtils.invokeMethod(m, bean);
             }
         } catch (BeansException e) {
@@ -350,6 +393,7 @@ public class DefaultApplicationContext implements ApplicationContext {
         if (def == null) return null;
         if (targetObjects.containsKey(name)) return def.getBeanClass();
         Object singleton = singletonObjects.get(name);
+        if (singleton instanceof SummerProxy) return def.getBeanClass();
         if (singleton != null && !singleton.getClass().getName().contains("$Proxy")) return singleton.getClass();
         return def.getFactoryMethod() != null ? def.getFactoryMethod().getReturnType() : def.getBeanClass();
     }
@@ -509,6 +553,47 @@ public class DefaultApplicationContext implements ApplicationContext {
         if (genericType instanceof ParameterizedType pt) {
             Type arg = pt.getActualTypeArguments()[0];
             if (arg instanceof Class<?> c) return c;
+        }
+        return null;
+    }
+
+    /**
+     * Resolves a generic type — including type variables such as {@code M} in
+     * {@code ServiceImpl<M, T>} — to a concrete {@link Class} by walking the bean's
+     * class hierarchy. Returns {@code null} when the type cannot be resolved to a
+     * concrete class, in which case callers fall back to the erased type.
+     */
+    private Class<?> resolveActualType(Type genericType, Class<?> contextClass) {
+        if (genericType instanceof Class<?> c) return c;
+        if (genericType instanceof TypeVariable<?> tv) {
+            Type resolved = resolveTypeVariable(tv, contextClass);
+            if (resolved != null) return resolveActualType(resolved, contextClass);
+        }
+        if (genericType instanceof ParameterizedType pt && pt.getRawType() instanceof Class<?> raw) {
+            return raw;
+        }
+        return null;
+    }
+
+    private Type resolveTypeVariable(TypeVariable<?> variable, Class<?> contextClass) {
+        Class<?> current = contextClass;
+        while (current != null && current != Object.class) {
+            Type genericSuper = current.getGenericSuperclass();
+            if (genericSuper instanceof ParameterizedType pt && pt.getRawType() instanceof Class<?> raw) {
+                TypeVariable<?>[] params = raw.getTypeParameters();
+                Type[] args = pt.getActualTypeArguments();
+                for (int i = 0; i < params.length; i++) {
+                    if (variable.getGenericDeclaration() == raw
+                            && params[i].getName().equals(variable.getName())) {
+                        return args[i];
+                    }
+                }
+                current = raw;
+            } else if (genericSuper instanceof Class<?> c) {
+                current = c;
+            } else {
+                current = current.getSuperclass();
+            }
         }
         return null;
     }

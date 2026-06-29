@@ -4,8 +4,11 @@ import cn.jiebaba.summer.core.scanner.AnnotationUtils;
 import cn.jiebaba.summer.web.annotation.ResponseBody;
 import cn.jiebaba.summer.web.annotation.ResponseStatus;
 import cn.jiebaba.summer.web.bind.HandlerException;
+import cn.jiebaba.summer.web.bind.HandlerMethodAccessChecker;
 import cn.jiebaba.summer.web.bind.HandlerMethodInvoker;
 import cn.jiebaba.summer.web.convert.MessageConverter;
+import cn.jiebaba.summer.web.filter.Filter;
+import cn.jiebaba.summer.web.filter.FilterChain;
 import cn.jiebaba.summer.web.http.HttpMethod;
 import cn.jiebaba.summer.web.http.HttpStatus;
 import cn.jiebaba.summer.web.validation.ValidationException;
@@ -33,31 +36,55 @@ public final class RequestDispatcher {
     private final MessageConverter converter;
     private final ExceptionHandlerRegistry exceptions;
     private final String contextPath;
+    private final List<Filter> securityFilters;
+    private final HandlerMethodAccessChecker accessChecker;
 
+    /** Backward-compatible constructor: no security filters, no access checker. */
     public RequestDispatcher(Router router, HandlerMethodInvoker invoker, MessageConverter converter,
                              ExceptionHandlerRegistry exceptions, String contextPath) {
+        this(router, invoker, converter, exceptions, contextPath, List.of(), null);
+    }
+
+    public RequestDispatcher(Router router, HandlerMethodInvoker invoker, MessageConverter converter,
+                             ExceptionHandlerRegistry exceptions, String contextPath,
+                             List<Filter> securityFilters, HandlerMethodAccessChecker accessChecker) {
         this.router = router;
         this.invoker = invoker;
         this.converter = converter;
         this.exceptions = exceptions;
         this.contextPath = contextPath == null ? "" : contextPath;
+        this.securityFilters = securityFilters == null ? List.of() : securityFilters;
+        this.accessChecker = accessChecker;
     }
 
     public void dispatch(WebRequest request, WebResponse response) {
         try {
-            String path = stripContext(request.path());
-            Optional<RouteMatch> match = router.match(request.method(), path);
-            if (match.isEmpty()) {
-                writeNoRoute(response, request.method(), path);
-                return;
+            if (securityFilters.isEmpty()) {
+                dispatchInternal(request, response);
+            } else {
+                FilterChain chain = new FilterChain(securityFilters, this::dispatchInternal);
+                chain.doFilter(request, response);
             }
-            RouteMatch route = match.get();
-            route.pathVariables().forEach(request::putPathVariable);
-            Object result = invoker.invoke(route, request, response);
-            writeResult(route, result, response);
         } catch (Throwable t) {
             handleException(t, request, response);
         }
+    }
+
+    /** Terminal handler: route match -> method access check -> invoke -> write result. */
+    private void dispatchInternal(WebRequest request, WebResponse response) throws Exception {
+        String path = stripContext(request.path());
+        Optional<RouteMatch> match = router.match(request.method(), path);
+        if (match.isEmpty()) {
+            writeNoRoute(response, request.method(), path);
+            return;
+        }
+        RouteMatch route = match.get();
+        route.pathVariables().forEach(request::putPathVariable);
+        if (accessChecker != null) {
+            accessChecker.check(route.mapping().handlerMethod());
+        }
+        Object result = invoker.invoke(route, request, response);
+        writeResult(route, result, response);
     }
 
     private String stripContext(String path) {
@@ -117,6 +144,18 @@ public final class RequestDispatcher {
     }
 
     private void handleException(Throwable t, WebRequest request, WebResponse response) {
+        if (response.committed()) {
+            LOG.log(Level.FINE, "Exception after response committed for " + request.method() + " " + request.path(), t);
+            return;
+        }
+        if (t instanceof ResponseStatusException rse) {
+            int status = rse.status();
+            response.status(status);
+            response.contentType(MediaType.APPLICATION_JSON_UTF8);
+            response.body(errorBody(status, request.path(), HttpStatus.valueOf(status).reason(),
+                    rse.reason() == null ? "" : rse.reason()));
+            return;
+        }
         if (t instanceof ValidationException ve) {
             response.status(HttpStatus.BAD_REQUEST.code());
             response.contentType(MediaType.APPLICATION_JSON_UTF8);
@@ -150,6 +189,8 @@ public final class RequestDispatcher {
     private static String reason(int status) {
         return switch (status) {
             case 400 -> "Bad Request";
+            case 401 -> "Unauthorized";
+            case 403 -> "Forbidden";
             case 404 -> "Not Found";
             case 405 -> "Method Not Allowed";
             case 500 -> "Internal Server Error";

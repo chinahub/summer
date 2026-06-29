@@ -233,6 +233,19 @@ public final class Json {
         return (T) bind(parse(json), type, type);
     }
 
+    /**
+     * Parses JSON into a generic type, e.g. {@code List<User>}. Capture the type
+     * with {@link TypeReference} or build a {@link Type} by other means.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T parse(String json, Type type) {
+        return (T) bind(parse(json), erase(type), type);
+    }
+
+    public static <T> T parse(String json, TypeReference<T> typeRef) {
+        return parse(json, typeRef.getType());
+    }
+
     @SuppressWarnings("unchecked")
     public static Object bind(Object value, Class<?> rawType, Type genericType) {
         if (value == null) return defaultValue(rawType);

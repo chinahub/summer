@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 public final class WebRequest {
     private final HttpMethod method;
@@ -14,6 +15,8 @@ public final class WebRequest {
     private final Map<String, List<String>> headers;
     private final byte[] body;
     private final Map<String, String> pathVariables = new LinkedHashMap<>();
+    private String remoteAddress = "tcp";
+    private final Map<String, Object> attributes = new HashMap<>();
 
     public WebRequest(RawHttpRequest raw) {
         this.method = HttpMethod.from(raw.method());
@@ -67,5 +70,10 @@ public final class WebRequest {
     public byte[] bodyBytes() { return body; }
     public String body() { return new String(body, StandardCharsets.UTF_8); }
 
-    public String remoteAddress() { return "tcp"; }
+    public String remoteAddress() { return remoteAddress; }
+    public WebRequest remoteAddress(String remoteAddress) { this.remoteAddress = remoteAddress; return this; }
+
+    public Object getAttribute(String name) { return attributes.get(name); }
+    public void setAttribute(String name, Object value) { attributes.put(name, value); }
+    public void removeAttribute(String name) { attributes.remove(name); }
 }

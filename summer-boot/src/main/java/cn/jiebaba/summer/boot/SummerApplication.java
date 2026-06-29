@@ -15,9 +15,14 @@ import cn.jiebaba.summer.web.server.SummerWebServer;
 import cn.jiebaba.summer.web.server.WebServerProperties;
 import cn.jiebaba.summer.web.support.ExceptionHandlerRegistry;
 import cn.jiebaba.summer.boot.data.DataAutoConfiguration;
+import cn.jiebaba.summer.boot.security.SecurityAutoConfiguration;
 import cn.jiebaba.summer.boot.data.MapperRegistrar;
 import cn.jiebaba.summer.core.context.BeanDefinition;
 import cn.jiebaba.summer.web.support.WebRouteRegistrar;
+import cn.jiebaba.summer.web.bind.HandlerMethodAccessChecker;
+import cn.jiebaba.summer.web.filter.Filter;
+import java.util.List;
+import cn.jiebaba.summer.security.web.SecurityFilterChain;
 import cn.jiebaba.summer.web.websocket.WebSocketRegistry;
 
 import java.util.LinkedHashSet;
@@ -62,8 +67,10 @@ public final class SummerApplication {
         ExceptionHandlerRegistry exceptions = registration.exceptionHandlers();
 
         MessageConverter converter = resolveConverter(context);
+        List<Filter> securityFilters = resolveSecurityFilters(context);
+        HandlerMethodAccessChecker accessChecker = resolveAccessChecker(context);
         SummerWebServer server = new SummerWebServer(context, router, exceptions, converter,
-                WebServerProperties.from(environment));
+                WebServerProperties.from(environment), securityFilters, accessChecker);
         WebSocketRegistry wsRegistry = new WebSocketRegistry();
         wsRegistry.scan(context);
         server.setWebSocketRegistry(wsRegistry);
@@ -101,7 +108,7 @@ public final class SummerApplication {
     }
 
     private static final java.util.List<Class<?>> AUTO_CONFIG_CLASSES =
-            java.util.List.of(DataAutoConfiguration.class);
+            java.util.List.of(DataAutoConfiguration.class, SecurityAutoConfiguration.class);
 
     private static Set<String> resolveBasePackages(Class<?> primarySource) {
         Set<String> packages = new LinkedHashSet<>();
@@ -145,12 +152,30 @@ public final class SummerApplication {
         Runtime.getRuntime().addShutdownHook(hook);
     }
 
+    private static List<Filter> resolveSecurityFilters(ApplicationContext context) {
+        try {
+            SecurityFilterChain chain = context.getBean(SecurityFilterChain.class);
+            return chain.filters();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    private static HandlerMethodAccessChecker resolveAccessChecker(ApplicationContext context) {
+        try {
+            return context.getBean(HandlerMethodAccessChecker.class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private static void printBanner() {
         LOG.info("""
             \n ___ _   _ _ __ ___  _ __ ___   ___ _ __\s
             / __| | | | '_ ` _ \\| '_ ` _ \\ / _ \\ '__|
             \\__ \\ |_| | | | | | | | | | | |  __/ |  \s
             |___/\\__,_|_| |_| |_|_| |_| |_|\\___|_|  \s
+            :: v3.0.0 ::
                 """);
     }
 }
