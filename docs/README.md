@@ -15,6 +15,7 @@
 | [AOP](aop.md) | `@Aspect` 切面、`execution()` 切点、环绕/前置/后置通知、JDK 动态代理 + 无接口子类代理 |
 | [定时任务](scheduling.md) | `@Scheduled`：cron 表达式 + fixedRate/fixedDelay，虚拟线程执行 |
 | [参数校验](validation.md) | `@Valid` + 约束注解，递归校验，400 违规列表 |
+| [工具集](utils.md) | StringUtil/DateUtil/JsonUtil/SecurityUtil/SummerUtil：纯 JDK 工具类，参考 commons-lang3 与 hutool |
 | [开发路线图](roadmap.md) | 分阶段开发计划与后续扩展项 |
 | [高级特性研究](research-advanced.md) | WebSocket / 异步控制器 / 连接池增强 / 自研子类代理（无 CGLIB 依赖） |
 

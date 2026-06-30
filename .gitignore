@@ -20,3 +20,5 @@ logs/
 build-test/*.class
 # build-test编译产物
 build-test/*.class
+# SSH keys (do not commit)
+.ssh/

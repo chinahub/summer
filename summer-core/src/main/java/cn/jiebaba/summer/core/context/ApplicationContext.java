@@ -18,4 +18,19 @@ public interface ApplicationContext {
     Environment getEnvironment();
     boolean isRunning();
     void close();
+
+    /**
+     * Register an existing object as a singleton bean under the given name so it can be
+     * resolved by {@link #getBean(String)} and discovered by {@link #containsBean(String)}.
+     * A {@link cn.jiebaba.summer.core.context.BeansException} is thrown if a bean with the
+     * same name already exists; unregister it first to replace it.
+     */
+    void registerBean(String name, Object bean);
+
+    /**
+     * Remove the bean definition and singleton instance registered under the given name,
+     * invoking its destroy lifecycle callbacks (PreDestroy / DisposableBean / destroy method).
+     * Returns {@code true} if a bean was removed, {@code false} if no such bean existed.
+     */
+    boolean unregisterBean(String name);
 }

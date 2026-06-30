@@ -637,6 +637,40 @@ public class DefaultApplicationContext implements ApplicationContext {
         beanDefinitions.put(name, def);
     }
 
+    @Override
+    public void registerBean(String name, Object bean) {
+        if (name == null || name.isEmpty()) {
+            throw new BeansException("Cannot register bean with empty name");
+        }
+        if (bean == null) {
+            throw new BeansException("Cannot register null bean under name '" + name + "'");
+        }
+        if (beanDefinitions.containsKey(name) || singletonObjects.containsKey(name)) {
+            throw new BeansException("Bean already registered under name '" + name
+                    + "'; unregister it first to replace it");
+        }
+        BeanDefinition def = new BeanDefinition(name, bean.getClass());
+        def.setSynthetic(true);
+        def.setInstanceSupplier(() -> bean);
+        beanDefinitions.put(name, def);
+        singletonObjects.put(name, bean);
+        destructionOrder.add(name);
+    }
+
+    @Override
+    public boolean unregisterBean(String name) {
+        BeanDefinition def = beanDefinitions.remove(name);
+        Object bean = singletonObjects.remove(name);
+        earlySingletonObjects.remove(name);
+        targetObjects.remove(name);
+        inCreation.remove(name);
+        destructionOrder.remove(name);
+        if (bean != null) {
+            destroyBean(name, bean, def);
+        }
+        return bean != null || def != null;
+    }
+
     private static String readStereotypeName(Class<?> clazz) {
         for (Annotation a : clazz.getAnnotations()) {
             Class<? extends Annotation> t = a.annotationType();

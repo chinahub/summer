@@ -4,6 +4,7 @@ import cn.jiebaba.summer.boot.annotation.SummerBootApplication;
 import cn.jiebaba.summer.core.annotation.ComponentScan;
 import cn.jiebaba.summer.core.context.ApplicationContext;
 import cn.jiebaba.summer.core.context.DefaultApplicationContext;
+import cn.jiebaba.summer.core.util.SummerUtil;
 import cn.jiebaba.summer.core.env.Environment;
 import cn.jiebaba.summer.core.logging.LoggingInitializer;
 import cn.jiebaba.summer.core.scheduling.ScheduledTaskRegistrar;
@@ -61,6 +62,7 @@ public final class SummerApplication {
         registerAutoConfigurations(context);
         MapperRegistrar.registerDefinitions(context, basePackages);
         context.refresh();
+        SummerUtil.setContext(context);
 
         WebRouteRegistrar.Registration registration = WebRouteRegistrar.build(context);
         Router router = registration.router();
