@@ -169,6 +169,58 @@ server:
 
 详见 [数据访问 ORM](orm.md)。
 
+## 工具集（summer-core utils）
+
+summer 在 `cn.jiebaba.summer.core.util` 下提供纯 JDK 工具类，API 风格参考 commons-lang3 与 hutool，业务代码可直接静态调用。详见 [工具集](utils.md)。
+
+| 工具类 | 参考 | 说明 |
+| --- | --- | --- |
+| `StringUtil` | commons-lang3 `StringUtils` | 判空、截取、split/join、填充、替换、大小写、判断（全 `null` 容错） |
+| `DateUtil` | hutool `DateUtil` | 格式化/解析、偏移、区间、边界、字段提取（基于 `java.time`） |
+| `JsonUtil` | hutool `JSONUtil` | 序列化/解析/类型绑定，含 `JSONObject`/`JSONArray` |
+| `SecurityUtil` | hutool `SecureUtil` | 摘要、HMAC、AES/DES/RSA 加解密、签名验签、Base64/Hex、UUID |
+| `SummerUtil` | — | IoC 容器静态门面：获取 / 注册 / 注销 Bean |
+
+```java
+// StringUtil —— 参考 commons-lang3，全 null 容错
+StringUtil.isBlank("   ");                    // true
+StringUtil.split("a,b,c", ",");               // ["a","b","c"]
+StringUtil.join(List.of("a","b","c"), "-");   // a-b-c
+StringUtil.capitalize("hello");               // Hello
+StringUtil.leftPad("1", 3, '0');              // 001
+StringUtil.substringBeforeLast("a.b.c", "."); // a.b
+
+// DateUtil —— 参考 hutool，底层 java.time
+DateUtil.now();                               // 2024-06-15 10:20:30
+DateUtil.parseDateTime("2024-06-15 10:20:30");// Date
+DateUtil.offsetDay(date, 1);                  // 加一天
+DateUtil.betweenDay(begin, end);              // 相差天数
+DateUtil.beginOfMonth(date);                  // 月初 00:00:00
+DateUtil.isWeekend(date);                     // 是否周末
+
+// JsonUtil —— 参考 hutool JSONUtil，纯 JDK
+JsonUtil.toJsonStr(obj);                      // 紧凑 JSON
+JsonUtil.toJsonPrettyStr(obj);                // 带缩进
+JsonUtil.parseObj("{\"a\":1}");               // JSONObject
+JsonUtil.toBean(json, User.class);            // 反序列化为对象
+JsonUtil.toList(json, User.class);            // 反序列化为 List
+
+// SecurityUtil —— 参考 hutool SecureUtil，java.security/javax.crypto
+SecurityUtil.md5Hex("abc");                   // 900150983cd24fb0d6963f7d28e17f72
+String enc = SecurityUtil.encryptAES("明文", "key");
+SecurityUtil.decryptAES(enc, "key");          // 明文
+KeyPair kp = SecurityUtil.generateRSAKeyPair();
+SecurityUtil.signBase64(kp.getPrivate(), "msg");
+
+// SummerUtil —— IoC 容器静态门面（SummerApplication.run() 自动绑定上下文）
+SummerUtil.getBean(MyService.class);
+SummerUtil.containsBean("myService");
+SummerUtil.registerBean("custom", new MyService());  // 注册单例
+SummerUtil.unregisterBean("custom");                 // 注销（触发 @PreDestroy / DisposableBean）
+SummerUtil.unregisterBean(MyService.class);          // 按类型批量注销
+```
+
+> `registerBean` 在同名 Bean 已存在时抛 `BeansException`，需先 `unregisterBean` 再注册以替换。
 ## 示例（summer-sample）
 
 ```java

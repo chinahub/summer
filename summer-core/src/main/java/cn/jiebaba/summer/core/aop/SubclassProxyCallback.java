@@ -1,5 +1,6 @@
 package cn.jiebaba.summer.core.aop;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 
@@ -30,7 +31,13 @@ final class SubclassProxyCallback {
         Method method = targetMethods[methodIndex];
         List<MethodInterceptor> chain = AdvisedProxyFactory.buildChain(targetClass, method, interceptors, advices);
         Method bridge = bridgeMethods[methodIndex];
-        AdvisedProxyFactory.TailInvoker tail = a -> bridge.invoke(proxy, a);
+        AdvisedProxyFactory.TailInvoker tail = a -> {
+            try {
+                return bridge.invoke(proxy, a);
+            } catch (InvocationTargetException e) {
+                throw e.getCause();
+            }
+        };
         AdvisedProxyFactory.ReflectiveMethodInvocation inv = new AdvisedProxyFactory.ReflectiveMethodInvocation(proxy, proxy, method, args, chain, tail);
         return inv.proceed();
     }

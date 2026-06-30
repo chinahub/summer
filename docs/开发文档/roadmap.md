@@ -71,6 +71,19 @@
 - [x] SecuritySmokeTest 18 项全通过（登录/URL授权/方法授权/篡改token/404回归）
 - [x] ClassPathScanner 优化（O(1) jar 包探测跳过无关依赖）
 
+## 第七阶段：工具集 utils ✅
+
+- [x] `StringUtil`（参考 commons-lang3 StringUtils）：判空/截取/split/join/填充/替换/大小写/判断等 ~90 个方法，全 `null` 容错
+- [x] `DateUtil`（参考 hutool DateUtil）：基于 `java.time` 的格式化/解析/偏移/区间/边界/字段提取，`Date`↔`LocalDateTime` 互转
+- [x] `JsonUtil`（参考 hutool JSONUtil）：纯 JDK 序列化/解析/类型绑定，含 `JSONObject`/`JSONArray`，支持 record/Bean/Map/集合/枚举/`Optional`/`java.time`
+- [x] `SecurityUtil`（参考 hutool SecureUtil）：MD5/SHA 摘要、HMAC、AES/DES 对称、RSA 非对称+签名验签、Base64/Hex、UUID
+- [x] `SummerUtil`：IoC 容器静态门面，`getBean`/`registerBean`/`unregisterBean`（触发销毁回调）
+- [x] IoC 容器扩展：`ApplicationContext` 新增 `registerBean`/`unregisterBean`，`SummerApplication.run()` 自动绑定上下文
+- [x] 53 项工具集单测全通过（`StringUtilTest`/`DateUtilTest`/`JsonUtilTest`/`SecurityUtilTest`/`SummerUtilTest`）
+- [x] 修正 `orm.md`「AOP 代理要求」：summer 同时支持 JDK 动态代理与子类代理（CGLIB 风格），无接口非 final 类 `@Transactional` 生效
+- [x] 修复子类代理异常解包：`SubclassProxyCallback` 桥接调用抛出的 `InvocationTargetException` 未解包，导致调用方收到包装异常且 `@Transactional` 回滚规则失效；现已与 JDK 代理路径一致解包
+- [x] 新增 `CglibTransactionalProxyTest`（6 项）：无接口 `@Transactional` 走子类代理、提交/回滚/`rollbackFor`/`noRollbackFor`/final 类报错
+
 ### 后续扩展
 - [ ] 服务层方法级安全（需增强 SubclassProxyFactory 复制方法注解）
 - [ ] JWT refresh token

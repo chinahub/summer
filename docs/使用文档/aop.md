@@ -81,6 +81,6 @@ public class LoggingAspect {
 
 - 代理策略自动二选一：目标类实现接口走 JDK 动态代理；无接口走手写字节码子类代理（零依赖，非 CGLIB）；
 - 子类代理要求目标类非 `final`、通过构造器实例化（`@Bean` 工厂方法 / `instanceSupplier` 产生的无接口 bean 暂不支持子类代理，需提取接口）；仅拦截 public/protected 非 final 方法（private、static、final 方法不拦截）；`final` 类无法子类代理；
-- 子类代理为单对象模型（代理实例即 bean 本身），`getThis()` 与 `getTarget()` 指向同一代理；方法内的自调用会被拦截；应避免在构造器中调用可被拦截的方法（构造期拦截尚未就绪）；
+- 子类代理为单对象模型（代理实例即 bean 本身），`getThis()` 与 `getTarget()` 指向同一代理；方法内的自调用会被拦截；应避免在构造器中调用可被拦截的方法（构造期拦截尚未就绪）；`@Transactional`/切面在无接口类上同样生效；`@AfterThrowing` 绑定的异常为真实异常（子类代理桥接调用抛出的 `InvocationTargetException` 已自动解包）；
 - 切点表达式仅支持 `execution()`，不支持 `@annotation`、`bean()` 等；
 - 通知方法需与切点签名兼容（`@Around`/`@AfterReturning` 可绑定参数）。

@@ -8,7 +8,7 @@
 | HTTP 服务器 | `java.net.ServerSocket` + 手写 HTTP/1.1 | 纯 JDK、无 NIO selector 依赖、契合虚拟线程阻塞 IO 模式 |
 | 协程/多线程 | `Executors.newVirtualThreadPerTaskExecutor()` | Loom 虚拟线程，每个连接一个虚拟线程，海量并发、阻塞友好 |
 | JSON | 纯 JDK 反射手写 | 支持 record/JavaBean/集合/数组/泛型，零第三方依赖 |
-| 日志 | `java.util.logging`（JUL） | JDK 内置，自研 `DailyRollingFileHandler` 支持按天/按大小滚动（见[日志方案](logging.md)） |
+| 日志 | `java.util.logging`（JUL） | JDK 内置，自研 `DailyRollingFileHandler` 支持按天/按大小滚动（见[日志方案](../使用文档/logging.md)） |
 | 配置 | `application.yml` / `.properties` | 自研 `YamlParser`，YML 优先，支持 `${key:default}` 占位符 |
 | ORM | 纯 JDBC（`java.sql`） | MyBatis-Plus 风格 BaseMapper/Wrapper/分页/IService，零第三方依赖 |
 | SQL 方言 | `Dialect.of(name)` | MySQL/PostgreSQL/Oracle/SqlServer 多方言分页 |
@@ -16,6 +16,7 @@
 | AOP | JDK 动态代理 + 拦截器链 | `@Aspect` + `execution()` 切点，环绕/前置/后置通知 |
 | 定时任务 | `ScheduledThreadPoolExecutor` + 虚拟线程 | `@Scheduled`：cron 5 段 + fixedRate/fixedDelay |
 | 参数校验 | 手写 Bean Validation 子集 | `@Valid` + 约束注解，递归校验，400 违规列表 |
+| 工具集（utils） | 纯 JDK 手写 | `StringUtil`/`DateUtil`/`JsonUtil`/`SecurityUtil`/`SummerUtil`，参考 commons-lang3 与 hutool，详见 [工具集](../使用文档/utils.md) |
 | 构建 | Maven（pom modelVersion 4.0.0） | 多模块；离线模式 |
 | 测试 | 进程内冒烟测试（`SmokeTest`/`OrmSmokeTest`/`DbSmokeTest`） | 沙箱限制进程间 loopback，用同进程自验证全链路 |
 

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>cn.jiebaba.summer</groupId>
+        <artifactId>summer-parent</artifactId>
+        <version>3.0.0</version>
+    </parent>
+    <artifactId>build-test</artifactId>
+    <name>build-test</name>
+    <description>summer 自研测试微框架与集中式测试用例（@Test 单测 + main() 冒烟测试）。</description>
+
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
+
+    <dependencies>
+        <!-- 测试框架 + 单测覆盖的核心能力 -->
+        <dependency>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-core</artifactId>
+            <version>${summer.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-data</artifactId>
+            <version>${summer.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-boot</artifactId>
+            <version>${summer.version}</version>
+        </dependency>
+        <!-- SmokeTest 依赖 sample 的 entity/mapper/service -->
+        <dependency>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-sample</artifactId>
+            <version>${summer.version}</version>
+        </dependency>
+        <!-- 真实数据库驱动（DbSmokeTest / OrmSmokeTest） -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.8</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- summer 自带测试 runner，跳过 surefire -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>run-tests</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>${java.home}/bin/java</executable>
+                            <classpathScope>test</classpathScope>
+                            <arguments>
+                                <argument>-classpath</argument>
+                                <classpath/>
+                                <argument>cn.jiebaba.summer.core.test.TestRunner</argument>
+                                <argument>cn.jiebaba.summer</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -174,7 +174,40 @@ summer:
 - 借出时校验 `isValid(2)`，失效连接自动重建；
 - 泄漏检测：后台守护虚拟线程定期扫描未归还连接，超阈值打 WARN（含借出栈），帮助定位忘记 `close()` 的连接；
 - 驱动需在模块/类路径上（如 `postgresql`、`mysql-connector-j`），由使用者添加依赖。
+## AOP 代理要求（重要）
 
+summer 同时支持两种代理策略（零第三方依赖，不引入 CGLIB 第三方库——子类代理为手写字节码的自研实现）。`@Transactional` 与 `@Aspect` 切面通过代理织入，代理策略自动判断：
+
+- **有接口** → JDK 动态代理（`AdvisedProxyFactory`）；
+- **无接口且非 `final`**（且通过构造器实例化）→ 手写字节码子类代理（`SubclassProxyFactory`，CGLIB 风格，零依赖），事务/AOP 同样生效；
+- **`final` 类**或**工厂方法 / `instanceSupplier`** 产生的无接口 bean 无法子类代理，仍抛 `BeansException`（而非静默失效）；
+
+
+```java
+// ✅ 方式一：Service 实现接口，走 JDK 动态代理，@Transactional 生效
+public interface OrderService { void placeOrder(Order order); }
+@Service
+public class OrderServiceImpl implements OrderService {
+    @Transactional
+    public void placeOrder(Order order) { ... }
+}
+
+// ✅ 方式二：无接口但非 final，走子类代理（CGLIB 风格），@Transactional 同样生效
+@Service
+public class OrderService {
+    @Transactional
+    public void placeOrder(Order order) { ... }
+}
+
+// ❌ 错误：final 类无法子类代理，启动时报 BeansException
+@Service
+public final class FinalOrderService {
+    @Transactional
+    public void placeOrder(Order order) { ... }
+}
+```
+
+> 控制器（`@RestController`）不经过代理，不受此限制。子类代理仅拦截 public/protected 非 final 方法（private/static/final 方法不拦截）；方法内自调用也会被拦截（桥接方法 `$$summer$super$` 破递归）。
 ## AOP 代理要求（重要）
 
 summer 仅使用 JDK 动态代理（零第三方依赖，不引入 CGLIB）。`@Transactional` 和 `@Aspect` 切面通过代理织入，因此：

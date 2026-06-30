@@ -4,7 +4,7 @@
 
 ```
 summer-parent (pom)
-├── summer-core            IoC 容器 / 依赖注入 / 组件扫描 / 配置环境 / 日志 / AOP / 定时任务 / 自研测试微框架（core.test 包）
+├── summer-core            IoC 容器 / 依赖注入 / 组件扫描 / 配置环境 / 日志 / AOP / 定时任务 / 工具集（utils） / 自研测试微框架（core.test 包）
 ├── summer-web             嵌入式 HTTP 服务器（ServerSocket+虚拟线程）/ 路由 / JSON / 参数绑定 / 异常 / 校验
 ├── summer-data            ORM：BaseMapper/Wrapper/分页/IService/事务/多方言，纯 JDBC，零第三方依赖
 ├── summer-boot            SummerApplication.run() 启动器 / 自动配置 / 数据源 / Mapper装配 / 关闭钩子
@@ -40,7 +40,7 @@ build-test ──depends──> summer-sample / summer-boot / summer-data / summ
 | `cn.jiebaba.summer.core.aop` | `@Aspect/@Pointcut/@Around/@Before/@After/@AfterReturning/@AfterThrowing`、`PointcutMatcher`（`execution()` 表达式）、`AdvisedProxyFactory`（JDK 动态代理 + 拦截器链）、`SubclassProxyFactory`（手写字节码子类代理，无接口 bean 走此路径）、`SummerProxy`（子类代理标记）、`JoinPoint/ProceedingJoinPoint` |
 | `cn.jiebaba.summer.core.scheduling` | `@Scheduled`（cron/fixedRate/fixedDelay）、`CronExpression`（5 段表达式 + 下次触发计算）、`ScheduledTaskRegistrar`（定时线程池触发 + 虚拟线程执行任务体） |
 | `cn.jiebaba.summer.core.logging` | `LoggingInitializer`、`DailyRollingFileHandler`（按天/按天+大小滚动 + 历史清理）、`SingleLineFormatter`、`LogProperties` |
-| `cn.jiebaba.summer.core.util` | `ReflectionUtils` |
+| `cn.jiebaba.summer.core.util` | `ReflectionUtils`；工具集：`StringUtil`（参考 commons-lang3）、`DateUtil`（参考 hutool，java.time）、`JsonUtil`（参考 hutool JSONUtil）、`SecurityUtil`（加解密/摘要/HMAC/签名）、`SummerUtil`（IoC 容器静态门面，获取/注册/注销 Bean） |
 
 ### IoC 关键机制
 
