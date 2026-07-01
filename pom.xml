@@ -27,7 +27,7 @@
         <module>summer-data</module>
         <module>summer-security</module>
         <module>summer-boot</module>
-        <module>summer-loader</module>
+        <module>summer-boot-loader</module>
         <module>summer-pack-maven-plugin</module>
         <module>summer-sample</module>
         <module>build-test</module>

@@ -8,7 +8,7 @@
         <artifactId>summer-parent</artifactId>
         <version>3.0.0</version>
     </parent>
-    <artifactId>summer-loader</artifactId>
-    <name>summer-loader</name>
-    <description>Executable-jar launcher: Spring Boot style BOOT-INF/classes + BOOT-INF/lib layout for summer applications.</description>
+    <artifactId>summer-boot-loader</artifactId>
+    <name>summer-boot-loader</name>
+    <description>Executable-jar launcher: Spring Boot style BOOT-INF/classes + BOOT-INF/lib layout for summer applications. Bundled by summer-pack-maven-plugin so application projects need not declare it.</description>
 </project>

@@ -41,7 +41,7 @@
         <parameter>
           <name>startClass</name>
           <type>java.lang.String</type>
-          <required>false</required>
+          <required>true</required>
           <editable>true</editable>
           <description>Application start class written as Start-Class in the manifest.</description>
         </parameter>
@@ -50,21 +50,13 @@
           <type>java.lang.String</type>
           <required>false</required>
           <editable>true</editable>
-          <description>Classifier appended to the repackaged jar name.</description>
-        </parameter>
-        <parameter>
-          <name>loaderArtifactId</name>
-          <type>java.lang.String</type>
-          <required>false</required>
-          <editable>true</editable>
-          <description>ArtifactId of summer-loader, whose classes are placed at the jar root.</description>
+          <description>Classifier appended to the repackaged jar name. Defaults to boot, producing a separate &lt;finalName&gt;-boot.jar and leaving the main artifact (thin jar) intact for use as a dependency; when blank the executable jar replaces the main artifact and the original is backed up as &lt;finalName&gt;.jar.original.</description>
         </parameter>
       </parameters>
       <configuration>
         <project implementation="org.apache.maven.project.MavenProject">${project}</project>
         <mainClass implementation="java.lang.String">cn.jiebaba.summer.loader.JarLauncher</mainClass>
         <classifier implementation="java.lang.String">boot</classifier>
-        <loaderArtifactId implementation="java.lang.String">summer-loader</loaderArtifactId>
       </configuration>
     </mojo>
   </mojos>

@@ -8,7 +8,7 @@ summer-parent (pom)
 ├── summer-web             嵌入式 HTTP 服务器（ServerSocket+虚拟线程）/ 路由 / JSON / 参数绑定 / 异常 / 校验
 ├── summer-data            ORM：BaseMapper/Wrapper/分页/IService/事务/多方言，纯 JDBC，零第三方依赖
 ├── summer-boot            SummerApplication.run() 启动器 / 自动配置 / 数据源 / Mapper装配 / 关闭钩子
-├── summer-loader          可执行 jar 启动器 JarLauncher（java -jar 入口，BOOT-INF 解压+类路径重建）
+├── summer-boot-loader     可执行 jar 启动器 JarLauncher（java -jar 入口，BOOT-INF 解压+类路径重建），由 summer-pack-maven-plugin 内置打包
 ├── summer-pack-maven-plugin  repackage goal：mvn package 自动产出 BOOT-INF 可执行 jar
 ├── summer-sample          示例应用（Application + controller/service/repository/aspect），端到端验证
 └── build-test              集中式测试：AOP 单测/集成测试 + sample 冒烟测试（依赖 summer-sample）
@@ -19,15 +19,15 @@ summer-parent (pom)
 ```
 summer-sample ──depends──> summer-boot ──depends──> summer-data ──depends──> summer-core
                                 └──depends──> summer-web  ──depends──> summer-core
-summer-sample ──depends──> summer-loader          （可执行 jar 启动器）
+summer-pack-maven-plugin ──depends──> summer-boot-loader  （可执行 jar 启动器，插件内置）
 build-test ──depends──> summer-sample / summer-boot / summer-data / summer-core  （集中式测试）
 ```
 
 - `summer-core` 是地基，零第三方依赖；
 - `summer-web` 依赖 `summer-core`（不再依赖 `jdk.httpserver`，改用 `java.net`）；
 - `summer-data` 依赖 `summer-core`（用 JDK 的 `java.sql`）；
-- `summer-boot` 组装 core + web + data，提供启动入口；`summer-loader` 提供可执行 jar 启动器；`summer-pack-maven-plugin` 负责打包；
-- `summer-sample` 是使用者，依赖 boot + loader，业务包无需额外声明（classpath 模式，反射不受强封装限制）。
+- `summer-boot` 组装 core + web + data，提供启动入口；`summer-boot-loader` 提供可执行 jar 启动器，作为 `summer-pack-maven-plugin` 的依赖被内置打包，应用项目无需单独声明；
+- `summer-sample` 是使用者，仅需依赖 boot，打包由 `summer-pack-maven-plugin` 内置 loader，业务包无需额外声明（classpath 模式，反射不受强封装限制）。
 
 ## summer-core 职责
 

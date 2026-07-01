@@ -56,5 +56,14 @@
                 <exclusion><groupId>*</groupId><artifactId>*</artifactId></exclusion>
             </exclusions>
         </dependency>
+        <!-- The launcher (JarLauncher) is bundled into the repackaged jar's root by this
+             plugin, so application projects do NOT need to declare summer-boot-loader.
+             Mirrors spring-boot-maven-plugin bundling spring-boot-loader. Zero transitive
+             dependencies, so it stays offline-resolvable. -->
+        <dependency>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-boot-loader</artifactId>
+            <version>${summer.version}</version>
+        </dependency>
     </dependencies>
 </project>

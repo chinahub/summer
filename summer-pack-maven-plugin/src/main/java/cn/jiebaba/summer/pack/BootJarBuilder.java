@@ -18,7 +18,7 @@ import java.util.jar.Manifest;
 /**
  * Assembles a Spring Boot-style executable jar with nested layout:
  * <pre>
- *   &lt;root&gt;/cn/jiebaba/summer/loader/JarLauncher.class   launcher (from summer-loader)
+ *   &lt;root&gt;/cn/jiebaba/summer/loader/JarLauncher.class   launcher (from summer-boot-loader, bundled by the plugin)
  *   BOOT-INF/classes/...                                  application classes &amp; resources
  *   BOOT-INF/lib/*.jar                                    dependency jars (unexploded)
  *   META-INF/MANIFEST.MF                                  Main-Class / Start-Class

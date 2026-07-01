@@ -14,6 +14,7 @@
 | [数据访问 ORM](使用文档/orm.md) | MyBatis-Plus 风格 ORM：BaseMapper/Wrapper/分页/IService/事务/多方言 |
 | [AOP](使用文档/aop.md) | `@Aspect` 切面、`execution()` 切点、环绕/前置/后置通知、JDK 动态代理 + 无接口子类代理 |
 | [定时任务](使用文档/scheduling.md) | `@Scheduled`：cron 表达式 + fixedRate/fixedDelay，虚拟线程执行 |
+| [ApplicationRunner](使用文档/application-runner.md) | 启动就绪回调：上下文启动 + 端口监听后执行初始化（缓存预热/字典加载），按 `@Order` 排序 |
 | [参数校验](使用文档/validation.md) | `@Valid` + 约束注解，递归校验，400 违规列表 |
 | [工具集](使用文档/utils.md) | StringUtil/DateUtil/JsonUtil/SecurityUtil/SummerUtil：纯 JDK 工具类，参考 commons-lang3 与 hutool |
 | [开发路线图](开发文档/roadmap.md) | 分阶段开发计划与后续扩展项 |
@@ -27,7 +28,7 @@ summer-parent (pom)
 ├── summer-web             嵌入式 HTTP 服务器(ServerSocket+虚拟线程)/路由/JSON/绑定/异常/校验/WebSocket
 ├── summer-data            ORM：BaseMapper/Wrapper/分页/IService/事务/多方言/多数据源，纯 JDBC，零第三方依赖
 ├── summer-boot            SummerApplication.run() 启动器/自动配置/数据源/Mapper装配/关闭钩子
-├── summer-loader          可执行 jar 启动器 JarLauncher（java -jar 入口）
+├── summer-boot-loader     可执行 jar 启动器 JarLauncher（java -jar 入口），由插件内置打包
 ├── summer-pack-maven-plugin  mvn package 自动产出 BOOT-INF 可执行 jar
 ├── summer-sample          示例应用（Application + controller/service/repository/aspect）
 └── build-test              集中式测试：AOP 单测/集成测试 + sample 冒烟测试（测试微框架在 summer-core 的 core.test 包）
