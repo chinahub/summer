@@ -109,6 +109,10 @@
                         <extensions>true</extensions>
                         <configuration>
                             <publishingServerId>ossrh</publishingServerId>
+                            <!-- build-test 是本地测试框架, 不发布到 Maven Central -->
+                            <excludeArtifacts>
+                                <exclude>build-test</exclude>
+                            </excludeArtifacts>
                         </configuration>
                     </plugin>
                     <!-- source plugin -->

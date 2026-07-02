@@ -3,7 +3,7 @@ package cn.jiebaba.summer.data.support;
 import cn.jiebaba.summer.core.env.Environment;
 
 public record DataProperties(String url, String username, String password,
-                             String driver, int poolSize, String dialect,
+                             String driver, int poolSize,
                              long connectionTimeoutMillis, long leakDetectionThresholdMillis,
                              long idleTimeoutMillis, long maxLifetimeMillis, String keepaliveQuery) {
 
@@ -14,7 +14,6 @@ public record DataProperties(String url, String username, String password,
                 env.getProperty("summer.datasource.password", ""),
                 env.getProperty("summer.datasource.driver-class-name", ""),
                 env.getProperty("summer.datasource.pool-size", Integer.class, 8),
-                env.getProperty("summer.datasource.dialect", "mysql"),
                 env.getProperty("summer.datasource.connection-timeout", Long.class, 30000L),
                 env.getProperty("summer.datasource.leak-detection-threshold", Long.class, 0L),
                 env.getProperty("summer.datasource.idle-timeout", Long.class, 600000L),

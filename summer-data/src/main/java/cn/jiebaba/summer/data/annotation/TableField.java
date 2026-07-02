@@ -1,5 +1,7 @@
 package cn.jiebaba.summer.data.annotation;
 
+import cn.jiebaba.summer.data.support.TypeHandler;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -14,4 +16,6 @@ public @interface TableField {
     boolean exist() default true;
     String insertStrategy() default "DEFAULT";
     String updateStrategy() default "DEFAULT";
+    /** Custom TypeHandler for this column (e.g. JsonTypeHandler). Defaults to none. */
+    Class<? extends TypeHandler> typeHandler() default TypeHandler.class;
 }

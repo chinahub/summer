@@ -45,7 +45,7 @@ public final class SqlBuilder {
             }
             if (value == null) continue;
             columns.add(f.column());
-            params.add(value);
+            params.add(wrap(f, value));
         }
         String sql = "INSERT INTO " + table.qualifiedTableName()
                 + " (" + String.join(", ", columns) + ")"
@@ -62,7 +62,7 @@ public final class SqlBuilder {
             Object value = f.getValue(entity);
             if (value == null) continue;
             sets.add(f.column() + " = ?");
-            params.add(value);
+            params.add(wrap(f, value));
         }
         params.add(table.idField().getValue(entity));
         String sql = "UPDATE " + table.qualifiedTableName()
@@ -186,6 +186,10 @@ public final class SqlBuilder {
         List<String> cols = new ArrayList<>();
         for (TableFieldInfo f : table.fields()) cols.add(f.column());
         return String.join(", ", cols);
+    }
+
+    private static Object wrap(TableFieldInfo f, Object value) {
+        return f.typeHandler() != null ? new JdbcValue(value, f.typeHandler()) : value;
     }
 
     private static String placeholders(int count) {

@@ -1,5 +1,7 @@
 package cn.jiebaba.summer.data.metadata;
 
+import cn.jiebaba.summer.data.support.TypeHandler;
+
 import java.lang.reflect.Field;
 
 public class TableFieldInfo {
@@ -13,10 +15,11 @@ public class TableFieldInfo {
     private final boolean logicDelete;
     private final String logicNotDeleteValue;
     private final String logicDeleteValue;
+    private final TypeHandler typeHandler;
 
     public TableFieldInfo(String property, String column, Field field, boolean isId,
                           boolean insertable, boolean updatable, boolean logicDelete,
-                          String logicNotDeleteValue, String logicDeleteValue) {
+                          String logicNotDeleteValue, String logicDeleteValue, TypeHandler typeHandler) {
         this.property = property;
         this.column = column;
         this.field = field;
@@ -27,6 +30,7 @@ public class TableFieldInfo {
         this.logicDelete = logicDelete;
         this.logicNotDeleteValue = logicNotDeleteValue;
         this.logicDeleteValue = logicDeleteValue;
+        this.typeHandler = typeHandler;
         field.setAccessible(true);
     }
 
@@ -40,6 +44,7 @@ public class TableFieldInfo {
     public boolean isLogicDelete() { return logicDelete; }
     public String logicNotDeleteValue() { return logicNotDeleteValue; }
     public String logicDeleteValue() { return logicDeleteValue; }
+    public TypeHandler typeHandler() { return typeHandler; }
 
     public Object getValue(Object entity) {
         try {

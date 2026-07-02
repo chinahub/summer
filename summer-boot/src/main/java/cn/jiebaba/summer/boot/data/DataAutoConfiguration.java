@@ -48,8 +48,8 @@ public class DataAutoConfiguration {
     }
 
     @Bean
-    public SqlExecutor sqlExecutor(DataSource dataSource) {
-        return new SqlExecutor(dataSource);
+    public SqlExecutor sqlExecutor(DataSource dataSource, Dialect dialect) {
+        return new SqlExecutor(dataSource, dialect);
     }
 
     @Bean
@@ -60,7 +60,7 @@ public class DataAutoConfiguration {
     @Bean
     public Dialect dialect(Environment env) {
         DataProperties props = DataProperties.from(env);
-        return Dialect.of(props.dialect());
+        return Dialect.detect(props.driver(), props.url());
     }
 
     @Bean
@@ -135,7 +135,6 @@ public class DataAutoConfiguration {
                 env.getProperty(prefix + ".password", ""),
                 env.getProperty(prefix + ".driver-class-name", ""),
                 env.getProperty(prefix + ".pool-size", Integer.class, 8),
-                env.getProperty(prefix + ".dialect", "mysql"),
                 env.getProperty(prefix + ".connection-timeout", Long.class, 30000L),
                 env.getProperty(prefix + ".leak-detection-threshold", Long.class, 0L),
                 env.getProperty(prefix + ".idle-timeout", Long.class, 600000L),

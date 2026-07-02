@@ -5,6 +5,7 @@ import cn.jiebaba.summer.data.annotation.TableField;
 import cn.jiebaba.summer.data.annotation.TableId;
 import cn.jiebaba.summer.data.annotation.TableLogic;
 import cn.jiebaba.summer.data.annotation.TableName;
+import cn.jiebaba.summer.data.support.TypeHandler;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -59,7 +60,8 @@ public final class MetadataParser {
             TableFieldInfo fi = new TableFieldInfo(field.getName(), column, field, isId,
                     insertable, updatable, logic != null,
                     logic != null ? logic.value() : "0",
-                    logic != null ? logic.delval() : "1");
+                    logic != null ? logic.delval() : "1",
+                    typeHandlerOf(tf));
             info.addField(fi);
 
             if (isId) {
@@ -94,5 +96,14 @@ public final class MetadataParser {
             current = current.getSuperclass();
         }
         return fields;
+    }
+
+    private static TypeHandler typeHandlerOf(TableField tf) {
+        if (tf == null || tf.typeHandler() == TypeHandler.class) return null;
+        try {
+            return tf.typeHandler().getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            throw new IllegalStateException("Cannot instantiate typeHandler " + tf.typeHandler().getName(), e);
+        }
     }
 }

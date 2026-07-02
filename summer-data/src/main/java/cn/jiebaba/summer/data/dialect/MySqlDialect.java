@@ -1,5 +1,7 @@
 package cn.jiebaba.summer.data.dialect;
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.List;
 
 public final class MySqlDialect implements Dialect {
@@ -10,4 +12,8 @@ public final class MySqlDialect implements Dialect {
         params.add(offset);
     }
     @Override public String quote(String identifier) { return "`" + identifier + "`"; }
+    @Override public String jsonColumnType() { return "json"; }
+    @Override public void setJsonParameter(PreparedStatement ps, int index, String json) throws SQLException {
+        ps.setString(index, json);
+    }
 }

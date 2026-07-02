@@ -1,4 +1,4 @@
-# 架构设计
+﻿﻿# 架构设计
 
 ## 模块划分
 
@@ -110,15 +110,36 @@ WebResponse.commit（写状态行+头+body 到 socket）
 
 | 包 | 内容 |
 | --- | --- |
-| `cn.jiebaba.summer.data.annotation` | `@TableName/@TableId/@TableField/@TableLogic`、`IdType` |
+| `cn.jiebaba.summer.data.annotation` | `@TableName/@TableId/@TableField/@TableLogic`、`IdType`；`@TableField(typeHandler=...)` 绑定自定义类型处理器 |
 | `cn.jiebaba.summer.data.metadata` | `MetadataParser`、`TableInfo/TableFieldInfo`、`NamingUtils`（驼峰转下划线） |
 | `cn.jiebaba.summer.data.conditions` | `AbstractWrapper`、`QueryWrapper`（字符串列）、`LambdaQueryWrapper`（方法引用列）、`LambdaUtils`、`SFunction` |
 | `cn.jiebaba.summer.data.mapper` | `BaseMapper`、`MapperProxyFactory`（JDK 动态代理）、`MapperSupport`（SQL 执行胶水） |
 | `cn.jiebaba.summer.data.page` | `Page`、`IPage` |
 | `cn.jiebaba.summer.data.service` | `IService`、`ServiceImpl` |
-| `cn.jiebaba.summer.data.dialect` | `Dialect` 接口 + `MySql/PostgreSql/Oracle/SqlServer` 方言，`Dialect.of(name)` |
+| `cn.jiebaba.summer.data.dialect` | `Dialect` 接口 + 四方言；`fromDriver(driver)` 按驱动类名映射、`detect(driver,url)` 驱动优先空则按 URL 推断、`of(name)` 通用按名取；含 `jsonColumnType()`/`setJsonParameter()`/`getJsonResult()` 方言级 JSON 类型绑定 |
 | `cn.jiebaba.summer.data.transaction` | `@Transactional`、`TransactionManager`（ThreadLocal 连接栈）、`TransactionInterceptor`（AOP 织入） |
-| `cn.jiebaba.summer.data.support` | `SqlBuilder`（持方言字段）、`SqlExecutor`（事务感知）、`DataSourceFactory`（轻量连接池）、`DataProperties`、`IdGenerator`、`DataAccessException` |
+| `cn.jiebaba.summer.data.support` | `SqlBuilder`（持方言字段）、`SqlExecutor`（事务感知，接 TypeHandler）、`DataSourceFactory`（轻量连接池）、`DataProperties`、`IdGenerator`、`DataAccessException`、`TypeHandler`/`JdbcValue`/`JsonTypeHandler` |
+
+### TypeHandler 与方言驱动的 JSON 类型
+
+MyBatis 的 `TypeHandler<T>` 负责逐参数的 Java↔JDBC 绑定（`ParameterMapping` 带 `javaType/jdbcType/typeHandler`），summer-data 对齐此设计但简化为两层职责切分：
+
+- **`TypeHandler`**（`summer-data.support`）：`setParameter()`/`getResult()`，负责 **Java 对象 ↔ JSON 文本**（序列化用 summer-core `JsonUtil`，零第三方依赖）。
+- **`Dialect`**：`jsonColumnType()`/`setJsonParameter()`/`getJsonResult()` 负责 **JSON 文本 ↔ 原生列类型**，按方言实现：
+  - PostgreSQL → `jsonb`，用 `PGobject(type="jsonb")`（反射构建并缓存，不硬依赖驱动类，summer-data 编译期无需 pg 驱动）；
+  - MySQL → `json`，`setString` 即可；Oracle → `CLOB`，`setString`；SQL Server → `nvarchar(max)`，`setString`。
+
+内置 `JsonTypeHandler` 一个声明即可让读写双向按当前方言出 `jsonb`/`json`/`CLOB`：
+
+```java
+@TableField(typeHandler = JsonTypeHandler.class)
+private Map<String, Object> config;
+```
+
+- **写路径**：`SqlBuilder` 把带 handler 的字段值包成 `JdbcValue(value, handler)`（仅持引用，不碰 JDBC，保持可单测），`SqlExecutor.bind()` 遇 `JdbcValue` 调 `handler.setParameter(ps, i, value, dialect)`，否则原 `setObject`。
+- **读路径**：`SqlExecutor.mapRows()` 字段有 handler 时调 `handler.getResult(rs, i, javaType, dialect)`，否则原 `getObject()` + `coerce()`。无需 MyBatis-Plus 的 `autoResultMap`——直接反射赋值，handler 自动对读/写生效。
+
+> 边界：`WHERE` 条件值（`AbstractWrapper.params`）仍为裸 `Object`，JSON 列条件查询暂不套 handler（与 MyBatis-Plus 同理，需后续增强）；多数据源按数据源各自解析方言（per-DS dialect）为第二阶段，当前为「单 dialect + URL 推断」。
 
 ## summer-boot 职责
 
@@ -131,7 +152,7 @@ WebResponse.commit（写状态行+头+body 到 socket）
   6. `SummerWebServer.createDefault(...).start()`；
   7. `ScheduledTaskRegistrar.scheduleAll(context)` 调度定时任务；
   8. 注册 JVM 关闭钩子：停定时任务 + 停服务器 + `context.close()`。
-- `DataAutoConfiguration`（`@Configuration`）：配置了 `summer.datasource.url` 时创建 `DataSource/SqlExecutor/Dialect` + 事务组件，并注册 Mapper 代理。
+- `DataAutoConfiguration`（`@Configuration`）：配置了 `summer.datasource.url` 时创建 `DataSource/SqlExecutor/Dialect` + 事务组件，并注册 Mapper 代理；`Dialect` 由 `Dialect.detect(driver, url)` 自动映射（按 JDBC 驱动类名，如 `org.postgresql.Driver`→PostgreSQL；驱动为空则按 URL 推断），无需配置 `dialect`，`SqlExecutor` 注入该方言供读写时透传 TypeHandler。
 
 ## 运行时模型
 

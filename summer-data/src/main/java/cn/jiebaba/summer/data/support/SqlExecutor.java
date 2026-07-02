@@ -1,6 +1,7 @@
 package cn.jiebaba.summer.data.support;
 
 import cn.jiebaba.summer.data.annotation.IdType;
+import cn.jiebaba.summer.data.dialect.Dialect;
 import cn.jiebaba.summer.data.metadata.TableFieldInfo;
 import cn.jiebaba.summer.data.metadata.TableInfo;
 import cn.jiebaba.summer.data.transaction.TransactionManager;
@@ -37,10 +38,18 @@ import java.util.Map;
 public final class SqlExecutor {
 
     private final DataSource dataSource;
+    private final Dialect dialect;
 
     public SqlExecutor(DataSource dataSource) {
-        this.dataSource = dataSource;
+        this(dataSource, Dialect.of(null));
     }
+
+    public SqlExecutor(DataSource dataSource, Dialect dialect) {
+        this.dataSource = dataSource;
+        this.dialect = dialect;
+    }
+
+    public Dialect dialect() { return dialect; }
 
     /** A connection handle that closes only non-transactional connections. */
     private static final class Handle implements AutoCloseable {
@@ -126,7 +135,12 @@ public final class SqlExecutor {
 
     private void bind(PreparedStatement ps, List<Object> params) throws SQLException {
         for (int i = 0; i < params.size(); i++) {
-            ps.setObject(i + 1, params.get(i));
+            Object param = params.get(i);
+            if (param instanceof JdbcValue jv) {
+                jv.handler().setParameter(ps, i + 1, jv.value(), dialect);
+            } else {
+                ps.setObject(i + 1, param);
+            }
         }
     }
 
@@ -145,9 +159,14 @@ public final class SqlExecutor {
                 for (TableFieldInfo f : table.fields()) {
                     Integer idx = columnIndex.get(f.column().toLowerCase());
                     if (idx == null) continue;
-                    Object value = rs.getObject(idx);
+                    Object value;
+                    if (f.typeHandler() != null) {
+                        value = f.typeHandler().getResult(rs, idx, f.javaType(), dialect);
+                    } else {
+                        value = rs.getObject(idx);
+                        if (value != null) value = coerce(value, f.javaType());
+                    }
                     if (value != null) {
-                        value = coerce(value, f.javaType());
                         f.setValue(entity, value);
                     }
                 }

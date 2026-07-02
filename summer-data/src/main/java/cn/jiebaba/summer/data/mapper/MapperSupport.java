@@ -1,7 +1,6 @@
 package cn.jiebaba.summer.data.mapper;
 
 import cn.jiebaba.summer.data.conditions.AbstractWrapper;
-import cn.jiebaba.summer.data.dialect.PostgreSqlDialect;
 import cn.jiebaba.summer.data.metadata.TableInfo;
 import cn.jiebaba.summer.data.page.IPage;
 import cn.jiebaba.summer.data.support.IdGenerator;
@@ -22,7 +21,7 @@ public class MapperSupport<T> {
     private final SqlExecutor executor;
 
     public MapperSupport(TableInfo table, SqlExecutor executor) {
-        this(table, executor, new PostgreSqlDialect());
+        this(table, executor, executor.dialect());
     }
 
     public MapperSupport(TableInfo table, SqlExecutor executor, Dialect dialect) {

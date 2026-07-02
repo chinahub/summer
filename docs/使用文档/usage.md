@@ -1,4 +1,4 @@
-# 使用
+﻿﻿# 使用
 
 ## 构建
 
@@ -111,9 +111,8 @@ summer:
     url: jdbc:postgresql://host:5432/postgres
     username: postgres
     password: 'secret'
-    driver-class-name: org.postgresql.Driver
+    driver-class-name: org.postgresql.Driver   # 方言由驱动类名自动映射，无需配置 dialect
     pool-size: 4
-    dialect: postgresql
 
 logging:
   level:
@@ -312,6 +311,45 @@ public class ProductController {
 }
 ```
 
+## JSON 字段（JSONB）
+
+summer-data 的 `TypeHandler` + 方言驱动 JSON 类型绑定，一个 `@TableField(typeHandler=...)` 声明即可让读写双向按当前方言出 `jsonb`/`json`/`CLOB`。设计细节见 [开发文档 - TypeHandler 与方言驱动的 JSON 类型](../开发文档/architecture.md)。
+
+**建表**（PostgreSQL）：
+
+```sql
+CREATE TABLE summer_widget (
+    id     BIGINT PRIMARY KEY,
+    name   VARCHAR(128) NOT NULL,
+    attrs  JSONB NOT NULL
+);
+```
+
+**实体**：
+
+```java
+@TableName("summer_widget")
+public class Widget {
+    @TableId(type = IdType.ASSIGN_ID)
+    private Long id;
+    @NotBlank
+    private String name;
+    @TableField(typeHandler = JsonTypeHandler.class)
+    private Map<String, Object> attrs;
+    // 构造器 / getter / setter 省略
+}
+```
+
+**读写**：写入时 `Map` 经 `JsonUtil` 序列化成 JSON 文本，再由方言包成 `PGobject(type="jsonb")` 绑定；读取时反向取回文本并反序列化成 `Map`，对调用方完全透明。
+
+```java
+widgetService.save(widget);                      // attrs → JSONB 列
+Widget loaded = widgetService.getById(widget.getId());
+loaded.getAttrs().get("color");                 // 自动反序列化回 Map
+```
+
+**方言适配**：同一实体在 MySQL 上写 `json` 列（`setString`）、Oracle 写 `CLOB`、SQL Server 写 `nvarchar(max)`，无需改代码。方言由 `summer.datasource.dialect` 显式指定或按 JDBC URL 自动推断（见下）。
+
 ## 测试结果
 
 | 测试 | 断言 | 覆盖 |
@@ -319,6 +357,7 @@ public class ProductController {
 | `SmokeTest` | 11 路由 | Web 全链路（路由/绑定/JSON/异常/`@Value`） |
 | `OrmSmokeTest` | 28 项 | ORM 纯逻辑（元数据/SQL/Wrapper/Lambda/分页） |
 | `DbSmokeTest` | 16 项 | 真实 PostgreSQL：CRUD/分页/事务提交回滚/校验 |
+| `JsonTypeHandlerTest` | 8 项 | TypeHandler + 方言驱动 JSON：`JdbcValue` 包装、PG `PGobject(jsonb)`、MySQL `setString`、读路径反序列化、URL 推断 |
 
 校验失败示例：`POST /products {"name":null,"price":-5}` → `400` + `{"violations":["name: name must not be blank","price: price must be non-negative"]}`。
 

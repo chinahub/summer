@@ -38,10 +38,10 @@ public final class DataSourceFactory {
     private DataSourceFactory() {}
 
     public static DataSource create(String url, String username, String password, String driver,
-                                    int poolSize, String dialect,
+                                    int poolSize,
                                     long connectionTimeout, long leakThreshold,
                                     long idleTimeout, long maxLifetime, String keepaliveQuery) {
-        DataProperties props = new DataProperties(url, username, password, driver, poolSize, dialect,
+        DataProperties props = new DataProperties(url, username, password, driver, poolSize,
                 connectionTimeout, leakThreshold, idleTimeout, maxLifetime, keepaliveQuery);
         if (!props.isConfigured()) {
             throw new IllegalStateException("summer.datasource.url is not configured");

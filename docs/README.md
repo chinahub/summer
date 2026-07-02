@@ -9,6 +9,7 @@
 | [技术栈](开发文档/tech-stack.md) | 技术选型：JDK 25、虚拟线程、ServerSocket、JUL、Maven、零第三方依赖 |
 | [架构设计](开发文档/architecture.md) | 模块划分、依赖关系、运行时模型、启动流程 |
 | [安装](使用文档/installation.md) | 环境准备、纯离线 Maven 配置、编码注意 |
+| [发布到 Maven Central](开发文档/publishing.md) | release profile、GPG 签名（Git Bash）、Central Portal 上传、build-test 排除发布 |
 | [使用](使用文档/usage.md) | 构建/运行、配置（YML/properties）、注解速查、工具集、示例、测试结果 |
 | [日志方案](使用文档/logging.md) | JUL 滚动实测 + summer 双通道日志（控制台+文件按天/按大小滚动） |
 | [数据访问 ORM](使用文档/orm.md) | MyBatis-Plus 风格 ORM：BaseMapper/Wrapper/分页/IService/事务/多方言 |
