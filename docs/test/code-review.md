@@ -247,7 +247,9 @@ for (String name : others) getBean(name);
 
 ---
 
-### #14 `DataSourceFactory.PooledDataSource` housekeeping 可能把池抽干
+### #14 ✅ `DataSourceFactory.PooledDataSource` housekeeping 可能把池抽干（已修复）
+
+> ✅ 已修复（HikariCP 风格重写）：max-lifetime 每条连接随机抖动 ±2.5%、housekeeper 关闭后按 `minimum-idle` 补建、`borrow()` 池空时按需懒创建——池不再被抽干到零、无需重启。详见 `DataSourceFactory.java`。下为原始分析。
 
 **文件:** `summer-data/.../DataSourceFactory.java:168-189`
 
@@ -508,7 +510,7 @@ if (list.isEmpty()) {
 |---|---|---|
 | P0 | #2 JSON BigDecimal 处理 | 数据丢失/查询失败 |
 | P0 | #1 SqlBuilder 错误替换 | SQL 注入风险 + 性能浪费 |
-| P0 | #14 连接池抽干 | 生产事故 |
+| ✅ | #14 连接池抽干 | 已修复（HikariCP 风格：抖动+补建+懒创建） |
 | P1 | #6 DailyRolling 删除 | 数据丢失 |
 | P1 | #17 WebSocket mask/fragment | 协议合规 |
 | P1 | #3 Connection 头 | 客户端兼容 |
@@ -521,4 +523,4 @@ if (list.isEmpty()) {
 
 ## 总结
 
-作为零依赖的 Spring Boot 极简替代,summer 项目在结构设计、模块拆分、虚拟线程友好性上完成度相当高,主要差距在数据完整性、连接池鲁棒性、协议合规性这三块。要进入生产,优先修复 P0 三项即可消除最致命的事故源。
+作为零依赖的 Spring Boot 极简替代,summer 项目在结构设计、模块拆分、虚拟线程友好性上完成度相当高,连接池鲁棒性已通过 HikariCP 风格重写基本解决（#14 已修复：max-lifetime 抖动 + minimum-idle 保活补建 + 借出懒创建自愈 + keepalive 探活），当前主要差距在数据完整性、协议合规性这两块。要进入生产,优先修复剩余 P0 两项即可消除最致命的事故源。

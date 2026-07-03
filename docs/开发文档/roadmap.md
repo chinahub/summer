@@ -40,12 +40,13 @@
 
 ### P0 — 稳定性与安全性
 - [x] ~~CGLIB 缺失时显式报错~~ → 已由自研子类代理取代（无接口 bean 自动走 SubclassProxyFactory，final/工厂方法 bean 仍显式报错）
-- [ ] 连接池借出超时（`pool.poll(timeout)`，避免池满永久阻塞）
+- [x] 连接池借出超时（`pool.poll(timeout)`，避免池满永久阻塞）
 - [x] 连接池泄漏检测（后台虚拟线程扫描 + WARN 日志 + 借出栈）
 
 ### P1 — 常用能力
 - [ ] 异步控制器（`CompletableFuture` 返回，虚拟线程下 `join()` 方案，~5 行）
 - [x] 连接池空闲保活 + 最大生存期回收
+- [x] 连接池鲁棒性增强（HikariCP 风格：max-lifetime ±2.5% 抖动、minimum-idle 保活补建、借出懒创建自愈、keepalive 探活；修复 #14 抽干事故）
 - [ ] 切点表达式扩展（`@annotation`、`bean()`、`within` 等）
 
 ### P2 — 协议与扩展

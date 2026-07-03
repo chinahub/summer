@@ -21,7 +21,7 @@ summer:
     url: jdbc:postgresql://host:5432/db
     username: postgres
     password: secret
-    dialect: postgresql
+    driver-class-name: org.postgresql.Driver   # 方言由驱动类名自动映射，无需配置 dialect
 ```
 
 多数据源（使用 `summer.datasources.<name>.*`）：
@@ -37,21 +37,18 @@ summer:
       password: secret
       driver-class-name: org.postgresql.Driver
       pool-size: 8
-      dialect: postgresql
     slave:
       url: jdbc:postgresql://slave-host:5432/db
       username: postgres
       password: secret
       driver-class-name: org.postgresql.Driver
       pool-size: 4
-      dialect: postgresql
     log-db:
       url: jdbc:mysql://log-host:3306/logs
       username: root
       password: secret
       driver-class-name: com.mysql.cj.jdbc.Driver
       pool-size: 2
-      dialect: mysql
 ```
 
 配置了 `summer.datasources.*.url` 时自动启用多数据源模式，`DynamicDataSource` 作为唯一 `DataSource` bean 注册。

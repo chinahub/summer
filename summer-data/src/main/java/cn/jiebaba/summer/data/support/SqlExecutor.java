@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Executes {@link SqlBuilder.Sql} over a {@link DataSource} and maps rows back to
@@ -36,6 +38,9 @@ import java.util.Map;
  * is borrowed and returned per statement.
  */
 public final class SqlExecutor {
+
+    private static final Logger log = Logger.getLogger(SqlExecutor.class.getName());
+    private static final int MAX_PARAMETER_LENGTH = 120;
 
     private final DataSource dataSource;
     private final Dialect dialect;
@@ -85,6 +90,7 @@ public final class SqlExecutor {
     public UpdateResult updateWithGeneratedKey(SqlBuilder.Sql sql, TableInfo table) {
         try (Handle h = open();
              PreparedStatement ps = h.connection.prepareStatement(sql.sql(), Statement.RETURN_GENERATED_KEYS)) {
+            long start = logBefore(sql);
             bind(ps, sql.params());
             int affected = ps.executeUpdate();
             Object generatedKey = null;
@@ -93,6 +99,7 @@ public final class SqlExecutor {
                     if (keys.next()) generatedKey = keys.getObject(1);
                 } catch (SQLException ignore) {}
             }
+            logUpdateResult(affected, start);
             return new UpdateResult(affected, generatedKey);
         } catch (SQLException e) {
             throw new DataAccessException("Failed to execute update: " + sql.sql(), e);
@@ -102,8 +109,11 @@ public final class SqlExecutor {
     public int update(SqlBuilder.Sql sql) {
         try (Handle h = open();
              PreparedStatement ps = h.connection.prepareStatement(sql.sql())) {
+            long start = logBefore(sql);
             bind(ps, sql.params());
-            return ps.executeUpdate();
+            int affected = ps.executeUpdate();
+            logUpdateResult(affected, start);
+            return affected;
         } catch (SQLException e) {
             throw new DataAccessException("Failed to execute update: " + sql.sql(), e);
         }
@@ -112,9 +122,12 @@ public final class SqlExecutor {
     public <T> List<T> query(SqlBuilder.Sql sql, TableInfo table) {
         try (Handle h = open();
              PreparedStatement ps = h.connection.prepareStatement(sql.sql())) {
+            long start = logBefore(sql);
             bind(ps, sql.params());
             try (ResultSet rs = ps.executeQuery()) {
-                return mapRows(rs, table);
+                List<T> rows = mapRows(rs, table);
+                logQueryResult(rows.size(), start);
+                return rows;
             }
         } catch (SQLException e) {
             throw new DataAccessException("Failed to execute query: " + sql.sql(), e);
@@ -124,9 +137,12 @@ public final class SqlExecutor {
     public long count(SqlBuilder.Sql sql) {
         try (Handle h = open();
              PreparedStatement ps = h.connection.prepareStatement(sql.sql())) {
+            long start = logBefore(sql);
             bind(ps, sql.params());
             try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? rs.getLong(1) : 0L;
+                long count = rs.next() ? rs.getLong(1) : 0L;
+                logQueryResult(count, start);
+                return count;
             }
         } catch (SQLException e) {
             throw new DataAccessException("Failed to execute count: " + sql.sql(), e);
@@ -142,6 +158,65 @@ public final class SqlExecutor {
                 ps.setObject(i + 1, param);
             }
         }
+    }
+
+    private long logBefore(SqlBuilder.Sql sql) {
+        if (!log.isLoggable(Level.FINE)) return 0L;
+        log.fine("==> Preparing: " + sql.sql());
+        log.fine("==> Parameters: " + formatParameters(sql.params()));
+        return System.nanoTime();
+    }
+
+    private void logUpdateResult(int affected, long start) {
+        if (!log.isLoggable(Level.FINE)) return;
+        log.fine("<== Updates: " + affected + elapsed(start));
+    }
+
+    private void logQueryResult(long total, long start) {
+        if (!log.isLoggable(Level.FINE)) return;
+        log.fine("<== Total: " + total + elapsed(start));
+    }
+
+    private String elapsed(long start) {
+        if (start <= 0L) return "";
+        long elapsedMicros = (System.nanoTime() - start) / 1_000L;
+        if (elapsedMicros < 1_000L) return " (" + elapsedMicros + " µs)";
+        return " (" + (elapsedMicros / 1_000L) + " ms)";
+    }
+
+    private String formatParameters(List<Object> params) {
+        if (params == null || params.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < params.size(); i++) {
+            if (i > 0) sb.append(", ");
+            Object param = unwrapParameter(params.get(i));
+            if (param == null) {
+                sb.append("null");
+                continue;
+            }
+            sb.append(formatParameterValue(param))
+                    .append('(').append(param.getClass().getSimpleName()).append(')');
+        }
+        return sb.toString();
+    }
+
+    private Object unwrapParameter(Object param) {
+        return param instanceof JdbcValue jv ? jv.value() : param;
+    }
+
+    private String formatParameterValue(Object param) {
+        if (param instanceof CharSequence text) {
+            return abbreviate(text.toString());
+        }
+        if (param instanceof byte[] bytes) {
+            return "<" + bytes.length + " bytes>";
+        }
+        return abbreviate(String.valueOf(param));
+    }
+
+    private String abbreviate(String value) {
+        if (value.length() <= MAX_PARAMETER_LENGTH) return value;
+        return value.substring(0, MAX_PARAMETER_LENGTH) + "...";
     }
 
     @SuppressWarnings("unchecked")

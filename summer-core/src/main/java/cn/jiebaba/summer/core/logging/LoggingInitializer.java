@@ -3,11 +3,11 @@ package cn.jiebaba.summer.core.logging;
 import cn.jiebaba.summer.core.env.Environment;
 
 import java.io.IOException;
-import java.util.logging.ConsoleHandler;
 import java.util.logging.ErrorManager;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Handler;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
@@ -36,9 +36,9 @@ public final class LoggingInitializer {
                 : new SimpleFormatter();
 
         if (props.consoleEnabled()) {
-            ConsoleHandler console = new ConsoleHandler();
+            Handler console = new StdConsoleHandler();
             console.setFormatter(formatter);
-            console.setLevel(props.rootLevel());
+            console.setLevel(Level.ALL);
             root.addHandler(tag(console, SUMMER_CONSOLE_HANDLER));
         }
 
@@ -46,7 +46,7 @@ public final class LoggingInitializer {
             Handler fileHandler = createFileHandler(props, formatter);
             if (fileHandler != null) {
                 fileHandler.setFormatter(formatter);
-                fileHandler.setLevel(props.rootLevel());
+                fileHandler.setLevel(Level.ALL);
                 root.addHandler(tag(fileHandler, SUMMER_FILE_HANDLER));
                 root.info("summer logging: file channel at " + props.filePath()
                         + " (policy=" + props.rollingPolicy() + ", maxSize=" + props.maxSizeBytes()
@@ -90,6 +90,30 @@ public final class LoggingInitializer {
     private static Handler tag(Handler handler, String tag) {
         handler.setErrorManager(new TaggedErrorManager(tag));
         return handler;
+    }
+
+    private static final class StdConsoleHandler extends Handler {
+        @Override
+        public void publish(java.util.logging.LogRecord record) {
+            if (!isLoggable(record)) return;
+            String message = getFormatter().format(record);
+            if (record.getLevel().intValue() >= Level.SEVERE.intValue()) {
+                System.err.print(message);
+                System.err.flush();
+            } else {
+                System.out.print(message);
+                System.out.flush();
+            }
+        }
+
+        @Override public void flush() {
+            System.out.flush();
+            System.err.flush();
+        }
+
+        @Override public void close() {
+            flush();
+        }
     }
 
     private static final class TaggedErrorManager extends ErrorManager {

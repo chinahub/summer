@@ -125,20 +125,10 @@ public class DataAutoConfiguration {
     }
 
     private DataSource createDataSource(Environment env, String prefix) {
-        String url = env.getProperty(prefix + ".url");
-        if (url == null || url.isBlank()) {
+        DataProperties props = DataProperties.from(env, prefix);
+        if (!props.isConfigured()) {
             throw new IllegalStateException("Missing " + prefix + ".url");
         }
-        return DataSourceFactory.create(
-                env.getProperty(prefix + ".url"),
-                env.getProperty(prefix + ".username", ""),
-                env.getProperty(prefix + ".password", ""),
-                env.getProperty(prefix + ".driver-class-name", ""),
-                env.getProperty(prefix + ".pool-size", Integer.class, 8),
-                env.getProperty(prefix + ".connection-timeout", Long.class, 30000L),
-                env.getProperty(prefix + ".leak-detection-threshold", Long.class, 0L),
-                env.getProperty(prefix + ".idle-timeout", Long.class, 600000L),
-                env.getProperty(prefix + ".max-lifetime", Long.class, 1800000L),
-                env.getProperty(prefix + ".keepalive-query", "SELECT 1"));
+        return DataSourceFactory.create(props);
     }
 }

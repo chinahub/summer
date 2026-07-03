@@ -1,4 +1,4 @@
-﻿﻿# 架构设计
+# 架构设计
 
 ## 模块划分
 
@@ -118,7 +118,7 @@ WebResponse.commit（写状态行+头+body 到 socket）
 | `cn.jiebaba.summer.data.service` | `IService`、`ServiceImpl` |
 | `cn.jiebaba.summer.data.dialect` | `Dialect` 接口 + 四方言；`fromDriver(driver)` 按驱动类名映射、`detect(driver,url)` 驱动优先空则按 URL 推断、`of(name)` 通用按名取；含 `jsonColumnType()`/`setJsonParameter()`/`getJsonResult()` 方言级 JSON 类型绑定 |
 | `cn.jiebaba.summer.data.transaction` | `@Transactional`、`TransactionManager`（ThreadLocal 连接栈）、`TransactionInterceptor`（AOP 织入） |
-| `cn.jiebaba.summer.data.support` | `SqlBuilder`（持方言字段）、`SqlExecutor`（事务感知，接 TypeHandler）、`DataSourceFactory`（轻量连接池）、`DataProperties`、`IdGenerator`、`DataAccessException`、`TypeHandler`/`JdbcValue`/`JsonTypeHandler` |
+| `cn.jiebaba.summer.data.support` | `SqlBuilder`（持方言字段）、`SqlExecutor`（事务感知，接 TypeHandler）、`DataSourceFactory`（HikariCP 风格连接池）、`DataProperties`、`IdGenerator`、`DataAccessException`、`TypeHandler`/`JdbcValue`/`JsonTypeHandler` |
 
 ### TypeHandler 与方言驱动的 JSON 类型
 

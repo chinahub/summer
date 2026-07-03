@@ -1,4 +1,4 @@
-﻿﻿# 使用
+# 使用
 
 ## 构建
 
@@ -348,7 +348,7 @@ Widget loaded = widgetService.getById(widget.getId());
 loaded.getAttrs().get("color");                 // 自动反序列化回 Map
 ```
 
-**方言适配**：同一实体在 MySQL 上写 `json` 列（`setString`）、Oracle 写 `CLOB`、SQL Server 写 `nvarchar(max)`，无需改代码。方言由 `summer.datasource.dialect` 显式指定或按 JDBC URL 自动推断（见下）。
+**方言适配**：同一实体在 MySQL 上写 `json` 列（`setString`）、Oracle 写 `CLOB`、SQL Server 写 `nvarchar(max)`，无需改代码。方言由 JDBC 驱动类名自动映射（`org.postgresql.Driver`→PostgreSQL 等），无需配置 `dialect`。
 
 ## 测试结果
 
@@ -357,7 +357,7 @@ loaded.getAttrs().get("color");                 // 自动反序列化回 Map
 | `SmokeTest` | 11 路由 | Web 全链路（路由/绑定/JSON/异常/`@Value`） |
 | `OrmSmokeTest` | 28 项 | ORM 纯逻辑（元数据/SQL/Wrapper/Lambda/分页） |
 | `DbSmokeTest` | 16 项 | 真实 PostgreSQL：CRUD/分页/事务提交回滚/校验 |
-| `JsonTypeHandlerTest` | 8 项 | TypeHandler + 方言驱动 JSON：`JdbcValue` 包装、PG `PGobject(jsonb)`、MySQL `setString`、读路径反序列化、URL 推断 |
+| `JsonTypeHandlerTest` | 10 项 | TypeHandler + 方言驱动 JSON：`JdbcValue` 包装、PG `PGobject(jsonb)`、MySQL `setString`、读路径反序列化、`fromDriver` 驱动映射 |
 
 校验失败示例：`POST /products {"name":null,"price":-5}` → `400` + `{"violations":["name: name must not be blank","price: price must be non-negative"]}`。
 

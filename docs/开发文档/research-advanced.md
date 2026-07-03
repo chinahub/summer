@@ -138,21 +138,25 @@ if (result instanceof CompletableFuture<?> cf) {
 
 ## 三、连接池增强
 
+> ✅ 已落地（HikariCP 风格重写）：下文 P0–P4 方案均已实现，详见 `DataSourceFactory.java` 与 [使用文档/orm.md](../使用文档/orm.md) 的连接池配置。下为原始分析与方案，供参考。
+
 ### 3.1 现状分析
 
-当前 `DataSourceFactory.PooledDataSource`：
+当前 `DataSourceFactory.PooledDataSource`（HikariCP 风格）实现现状：
 
-| 能力 | 现状 | 问题 |
+| 能力 | 实现 | 状态 |
 | --- | --- | --- |
-| 池大小 | 固定 `poolSize`，`ArrayBlockingQueue` | 无动态扩缩 |
-| 借出校验 | `isValid(2)` | ✅ 有，但 2 秒超时偏长 |
-| 归还校验 | 无 | 死连接可能留在池中 |
-| 空闲超时 | 无 | 连接永不回收，DB 侧可能已断开 |
-| 最大空闲 | 无 | 同上 |
-| 泄漏检测 | 无 | 忘记 close 的连接永久丢失 |
-| 等待超时 | `pool.take()` 无限阻塞 | 池耗尽时永久挂起 |
-| 自动重连 | 借出时发现失效才重建 | ✅ 基本可用 |
-| 事务连接 | `TransactionManager` 用 ThreadLocal 绑定 | 事务期间不归还，事务结束才归还 ✅ |
+| 池大小 | `pool-size` 为上限、按需懒创建至上限；`minimum-idle` 为下限、后台维持 | ✅ |
+| 借出校验 | `isValid(2)`，刚归还（<1s）的跳过 | ✅ |
+| 归还校验 | 超期/已死连接软淘汰并触发补建 | ✅ |
+| 空闲回收 | `idle-timeout`，仅当空闲数 > `minimum-idle` 时回收 | ✅ |
+| 最大生存期 | `max-lifetime`，每条连接随机抖动 ±2.5% 避免同时过期 | ✅ |
+| 空闲保活 | `keepalive-time` + `keepalive-query`，长空闲定时探活 | ✅ |
+| 泄漏检测 | `leak-detection-threshold`，后台虚拟线程扫描 + WARN + 借出栈 | ✅ |
+| 等待超时 | `pool.poll(timeout)`，超时抛 `SQLException` | ✅ |
+| 自动重连 | 借出失效/过期懒重建 + housekeeper 补建（自愈，不抽干） | ✅ |
+| 事务连接 | `TransactionManager` ThreadLocal 绑定 | ✅ |
+| 虚拟线程 pinning | `ArrayBlockingQueue` 仍为 `synchronized`（JDK 24+ 已大幅改善） | ⚠️ 理论残留 |
 
 ### 3.2 关键风险
 
@@ -202,19 +206,19 @@ record LeaseInfo(long borrowedAt, StackTraceElement[] stack) {}
 ```yaml
 summer:
   datasource:
-    pool-size: 8                # → 拆分为 min-idle / max-size
-    min-idle: 2
-    max-size: 16
+    pool-size: 8                # 最大连接数（上限，按需懒创建至此上限）
+    minimum-idle: 8             # 最小空闲数（默认=pool-size，始终保持满；后台维持此下限）
     connection-timeout: 30000   # 借出等待超时
-    idle-timeout: 600000        # 空闲超时回收（10 分钟）
-    max-lifetime: 1800000       # 连接最大生存期（30 分钟强制重建）
+    idle-timeout: 600000        # 空闲超时回收（仅当空闲数 > minimum-idle）
+    max-lifetime: 1800000       # 连接最大生存期（每条连接随机抖动 ±2.5%，避免同时过期）
+    keepalive-time: 0           # 空闲探活间隔（0=关闭；代理后建议开启）
+    keepalive-query: "SELECT 1" # 探活查询
     leak-detection-threshold: 60000  # 泄漏检测阈值
-    keepalive-query: "SELECT 1" # 保活查询（可选）
 ```
 
 ### 3.5 结论
 
-P0（借出超时）+ P1（泄漏检测）应优先实现，直接关系生产稳定性。P2-P4 可迭代。总工作量约 300-400 行，仍是纯 JDK。
+上述 P0–P4 方案均已落地（HikariCP 风格重写，纯 JDK，见 `DataSourceFactory.java`）：借出超时、泄漏检测、空闲保活/回收、max-lifetime 抖动、minimum-idle 保活补建、借出懒创建自愈、keepalive 探活。唯一未做的是 P3（将 `ArrayBlockingQueue` 换为 `ReentrantLock`+`Condition` 以彻底消除虚拟线程 pinning），因 JDK 24+ 已大幅改善且收益有限，暂保留。
 
 ---
 
@@ -276,5 +280,5 @@ summer 的 AOP 与 `@Transactional` 最初仅基于 **JDK 动态代理**（`Advi
 | 连接池泄漏检测 | 中高 | 中（~100 行） | ✅ 已实现 |
 | 异步控制器（方案 A） | 中（并行聚合场景） | 极低（~5 行） | ✅ 已实现 |
 | WebSocket | 高（微服务常用） | 中高（~400 行） | P2 |
-| 连接池空闲保活/动态扩缩 | 中 | 中（~200 行） | P2 |
+| 连接池空闲保活/动态扩缩 | 中 | 中（~200 行） | ✅ 已实现 |
 | 异步控制器（方案 B） | 低（虚拟线程下收益小） | 高 | 不建议 |

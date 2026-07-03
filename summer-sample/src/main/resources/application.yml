@@ -1,4 +1,4 @@
-﻿﻿server:
+server:
   port: 8080
   host: 0.0.0.0
 app:
@@ -8,6 +8,7 @@ logging:
   level:
     root: INFO
     io.summer: INFO
+    cn.jiebaba.summer.data.support.SqlExecutor: DEBUG
   console:
     enabled: true
   file:
