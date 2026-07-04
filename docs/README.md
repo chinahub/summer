@@ -12,11 +12,16 @@
 | [发布到 Maven Central](开发文档/publishing.md) | release profile、GPG 签名（Git Bash）、Central Portal 上传、build-test 排除发布 |
 | [使用](使用文档/usage.md) | 构建/运行、配置（YML/properties）、注解速查、工具集、示例、测试结果 |
 | [日志方案](使用文档/logging.md) | JUL 滚动实测 + summer 双通道日志（控制台+文件按天/按大小滚动） |
+| [SLF4J 绑定](使用文档/logging-slf4j.md) | 自研 SLF4J→JUL 绑定，支持 Lombok `@Slf4j`，无需桥接 jar |
 | [数据访问 ORM](使用文档/orm.md) | MyBatis-Plus 风格 ORM：BaseMapper/Wrapper/分页/IService/事务/多方言 |
+| [多数据源](使用文档/multi-datasource.md) | @DS/@Master/@Slave + @DSTransactional 跨源事务 |
 | [AOP](使用文档/aop.md) | `@Aspect` 切面、`execution()` 切点、环绕/前置/后置通知、JDK 动态代理 + 无接口子类代理 |
+| [安全](使用文档/security.md) | JWT 无状态认证、BCrypt、URL/方法级授权、HttpSecurity DSL |
 | [定时任务](使用文档/scheduling.md) | `@Scheduled`：cron 表达式 + fixedRate/fixedDelay，虚拟线程执行 |
 | [ApplicationRunner](使用文档/application-runner.md) | 启动就绪回调：上下文启动 + 端口监听后执行初始化（缓存预热/字典加载），按 `@Order` 排序 |
+| [WebSocket](使用文档/websocket.md) | `@WebSocketEndpoint`，纯 JDK 握手+帧协议（RFC 6455） |
 | [参数校验](使用文档/validation.md) | `@Valid` + 约束注解，递归校验，400 违规列表 |
+| [文件上传](使用文档/multipart.md) | `multipart/form-data` 解析、`@RequestPart` + `MultipartFile`，纯 JDK |
 | [工具集](使用文档/utils.md) | StringUtil/DateUtil/JsonUtil/SecurityUtil/SummerUtil：纯 JDK 工具类，参考 commons-lang3 与 hutool |
 | [开发路线图](开发文档/roadmap.md) | 分阶段开发计划与后续扩展项 |
 | [高级特性研究](开发文档/research-advanced.md) | WebSocket / 异步控制器 / 连接池增强 / 自研子类代理（无 CGLIB 依赖） |

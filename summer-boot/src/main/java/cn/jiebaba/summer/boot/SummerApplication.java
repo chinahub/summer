@@ -18,6 +18,7 @@ import cn.jiebaba.summer.web.server.WebServerProperties;
 import cn.jiebaba.summer.web.support.ExceptionHandlerRegistry;
 import cn.jiebaba.summer.boot.data.DataAutoConfiguration;
 import cn.jiebaba.summer.boot.security.SecurityAutoConfiguration;
+import cn.jiebaba.summer.boot.web.WebAutoConfiguration;
 import cn.jiebaba.summer.boot.data.MapperRegistrar;
 import cn.jiebaba.summer.core.context.BeanDefinition;
 import cn.jiebaba.summer.web.support.WebRouteRegistrar;
@@ -116,7 +117,7 @@ public final class SummerApplication {
     }
 
     private static final java.util.List<Class<?>> AUTO_CONFIG_CLASSES =
-            java.util.List.of(DataAutoConfiguration.class, SecurityAutoConfiguration.class);
+            java.util.List.of(DataAutoConfiguration.class, SecurityAutoConfiguration.class, WebAutoConfiguration.class);
 
     private static Set<String> resolveBasePackages(Class<?> primarySource) {
         Set<String> packages = new LinkedHashSet<>();

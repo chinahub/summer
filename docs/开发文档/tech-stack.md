@@ -8,7 +8,7 @@
 | HTTP 服务器 | `java.net.ServerSocket` + 手写 HTTP/1.1 | 纯 JDK、无 NIO selector 依赖、契合虚拟线程阻塞 IO 模式 |
 | 协程/多线程 | `Executors.newVirtualThreadPerTaskExecutor()` | Loom 虚拟线程，每个连接一个虚拟线程，海量并发、阻塞友好 |
 | JSON | 纯 JDK 反射手写 | 支持 record/JavaBean/集合/数组/泛型，零第三方依赖 |
-| 日志 | `java.util.logging`（JUL） | JDK 内置，自研 `DailyRollingFileHandler` 支持按天/按大小滚动（见[日志方案](../使用文档/logging.md)） |
+| 日志 | `java.util.logging`（JUL） | JDK 内置，自研 `DailyRollingFileHandler` 按天/按大小滚动；自带 SLF4J→JUL 绑定支持 Lombok `@Slf4j`（见[日志方案](../使用文档/logging.md)、[SLF4J 绑定](../使用文档/logging-slf4j.md)） |
 | 配置 | `application.yml` / `.properties` | 自研 `YamlParser`，YML 优先，支持 `${key:default}` 占位符 |
 | ORM | 纯 JDBC（`java.sql`） | MyBatis-Plus 风格 BaseMapper/Wrapper/分页/IService，零第三方依赖 |
 | SQL 方言 | `Dialect.of(name)` | MySQL/PostgreSQL/Oracle/SqlServer 多方言分页 |
@@ -27,6 +27,7 @@
 - 反射、注解处理、字节码读取均用 JDK 内置 API；
 - 组件扫描直接读类路径的 `.class`/`.jar` 文件；
 - 唯一运行期外部依赖是 **JDBC 驱动**（由使用者自备，如 `postgresql`、`mysql-connector-j`）。
+- SLF4J 绑定为**可选**：`summer-core` 以 `optional` 引入 `slf4j-api`，仅当使用方显式引入时才由 SLF4J `ServiceLoader` 激活，框架自身运行期仍是零第三方依赖。
 
 ## 为什么不用 Servlet
 

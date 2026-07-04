@@ -1,0 +1,3 @@
+# Summer SLF4J 2.x binding: routes SLF4J calls into java.util.logging.
+# Auto-discovered by org.slf4j.LoggerFactory via java.util.ServiceLoader.
+cn.jiebaba.summer.core.logging.slf4j.SummerSlf4jServiceProvider

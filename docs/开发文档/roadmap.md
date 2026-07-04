@@ -50,7 +50,7 @@
 - [ ] 切点表达式扩展（`@annotation`、`bean()`、`within` 等）
 
 ### P2 — 协议与扩展
-- [ ] WebSocket（`@WebSocketEndpoint`，纯 JDK 实现握手+帧协议，~400 行）
+- [x] WebSocket（`@WebSocketEndpoint`，纯 JDK 握手+帧协议，见 [WebSocket](../使用文档/websocket.md)）
 - [ ] HTTP keep-alive（当前每连接单请求，`Connection: close`）
 - [ ] chunked transfer-encoding
 - [x] 多数据源（@DS/@Master/@Slave + @DSTransactional 跨源事务）
