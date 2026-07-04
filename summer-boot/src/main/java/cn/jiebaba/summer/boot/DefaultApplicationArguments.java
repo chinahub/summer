@@ -9,8 +9,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Default {@link ApplicationArguments} implementation. Parses the raw argument array into
- * option arguments ({@code --name} / {@code --name=value}) and non-option arguments.
+ * {@link ApplicationArguments} 的默认实现。将原始参数数组解析为
+ * 选项参数（{@code --name} / {@code --name=value}）与非选项参数。
  */
 public final class DefaultApplicationArguments implements ApplicationArguments {
 
@@ -18,6 +18,11 @@ public final class DefaultApplicationArguments implements ApplicationArguments {
     private final List<String> nonOptionArgs;
     private final Map<String, List<String>> optionArgs;
 
+    /**
+     * 解析原始参数数组，将其拆分为选项参数与非选项参数。
+     *
+     * @param args 原始启动参数，为 {@code null} 时视为空数组
+     */
     public DefaultApplicationArguments(String... args) {
         this.sourceArgs = args != null ? args.clone() : new String[0];
         this.nonOptionArgs = new ArrayList<>();
@@ -29,7 +34,7 @@ public final class DefaultApplicationArguments implements ApplicationArguments {
                 int eq = body.indexOf('=');
                 String key = eq >= 0 ? body.substring(0, eq) : body;
                 if (key.isEmpty()) {
-                    // bare "--" or "--=x": treat as a non-option argument
+                    // 裸 "--" 或 "--=x"：视为非选项参数
                     this.nonOptionArgs.add(arg);
                     continue;
                 }

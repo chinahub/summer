@@ -7,9 +7,9 @@ import cn.jiebaba.summer.web.http.WebRequest;
 import java.util.List;
 
 /**
- * A security filter chain. v1 supports a single chain that matches all requests;
- * {@code matches()} is reserved for future multi-chain support (see assumptions).
- * <p>Mirrors {@code org.springframework.security.web.SecurityFilterChain}.
+ * 安全过滤器链。v1 支持匹配所有请求的单条链；
+ * {@code matches()} 为未来多链支持预留（见 assumptions）。
+ * <p>对应 {@code org.springframework.security.web.SecurityFilterChain}。
  */
 public final class SecurityFilterChain {
 
@@ -19,17 +19,17 @@ public final class SecurityFilterChain {
         this.filters = List.copyOf(filters);
     }
 
-    /** v1: a single chain matches every request. */
+    /** v1：单条链匹配所有请求。 */
     public boolean matches(WebRequest request) {
         return true;
     }
 
-    /** Whether this chain should apply to the given method+path (reserved for multi-chain). */
+    /** 该链是否应用于给定 method+path（为多链预留）。 */
     public boolean matches(HttpMethod method, String path) {
         return true;
     }
 
-    /** The ordered filters; an empty list means security is effectively disabled. */
+    /** 有序过滤器列表；为空表示安全实际被禁用。 */
     public List<Filter> filters() {
         return filters;
     }

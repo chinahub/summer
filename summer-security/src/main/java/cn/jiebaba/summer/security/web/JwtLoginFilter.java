@@ -20,11 +20,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Handles a login request (default {@code POST /login}) by reading a JSON body
- * {@code {"username":"...","password":"..."}} and authenticating via
- * {@link AuthenticationManager}. On success, responds {@code 200} with a JWT
- * access token; on failure, {@code 401}. Short-circuits the chain (does not
- * dispatch a route). Mirrors Spring Security's {@code UsernamePasswordAuthenticationFilter}.
+ * 处理登录请求（默认 {@code POST /login}）：读取 JSON 请求体
+ * {@code {"username":"...","password":"..."}} 并经 {@link AuthenticationManager} 认证。
+ * 成功响应 {@code 200} 及 JWT 访问令牌；失败响应 {@code 401}。短路过滤器链（不分派路由）。
+ * 对应 Spring Security 的 {@code UsernamePasswordAuthenticationFilter}。
  */
 public final class JwtLoginFilter implements Filter {
 
@@ -42,6 +41,9 @@ public final class JwtLoginFilter implements Filter {
     }
 
     @Override
+    /**
+     * 过滤器入口：匹配登录路径与 POST 方法时读取用户名密码并认证，成功签发 JWT 令牌，失败返回 401。
+     */
     public void doFilter(WebRequest request, WebResponse response, FilterChain chain) throws Exception {
         if (!loginPath.equalsIgnoreCase(request.path()) || !"POST".equalsIgnoreCase(request.method().name())) {
             chain.doFilter(request, response);

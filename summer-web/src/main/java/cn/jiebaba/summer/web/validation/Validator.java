@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Validates an object's fields against the summer constraint annotations.
- * Supports nested {@link Valid @Valid} on bean-typed fields (one level deep).
+ * 依据 summer 约束注解校验对象字段。
+ * 支持 bean 类型字段上嵌套的 {@link Valid @Valid}（仅一层）。
  */
 public final class Validator {
 
@@ -30,6 +30,14 @@ public final class Validator {
         }
     }
 
+    /**
+     * 递归校验 Bean 的各字段：依次检查 NotNull/NotBlank/NotEmpty，再对非 null 值校验
+     * Size/Min/Max/Pattern/Email，并对 bean 类型字段上嵌套的 {@link Valid} 递归校验。
+     *
+     * @param prefix     字段路径前缀
+     * @param bean        待校验 Bean
+     * @param violations  收集校验违规的列表
+     */
     private static void validateBean(String prefix, Object bean, List<ConstraintViolation> violations) {
         for (Field field : ReflectionUtils.collectFields(bean.getClass())) {
             field.setAccessible(true);
@@ -47,7 +55,7 @@ public final class Validator {
                 violations.add(new ConstraintViolation(path, value, field.getAnnotation(NotEmpty.class).message()));
             }
             if (value == null) {
-                // remaining constraints (Size/Min/Max/Pattern/Email) require a non-null value
+                // 其余约束（Size/Min/Max/Pattern/Email）要求值非 null
                 continue;
             }
             if (field.isAnnotationPresent(Size.class)) {
@@ -104,12 +112,12 @@ public final class Validator {
 
     private static String format(String message, Object a, Object b) {
         String result = message;
-        // Always replace {value} with the first argument (the field value)
+        // 始终用第一个参数（字段值）替换 {value}
         if (a != null) result = result.replace("{value}", String.valueOf(a));
-        // Replace {min} and {max} for size/min/max constraints
+        // 替换 size/min/max 约束的 {min} 与 {max}
         if (a != null) result = result.replace("{min}", String.valueOf(a));
         if (b != null) result = result.replace("{max}", String.valueOf(b));
-        // Replace {regexp} only for pattern constraints (passed as first argument)
+        // 仅对 pattern 约束替换 {regexp}（作为第一个参数传入）
         if (a != null) result = result.replace("{regexp}", String.valueOf(a));
         return result;
     }

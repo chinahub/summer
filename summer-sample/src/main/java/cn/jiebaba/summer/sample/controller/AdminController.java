@@ -11,11 +11,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Demonstrates method-level authorization.
- * <p>{@code /admin/info} is protected at the URL level ({@code /admin/**} hasRole ADMIN)
- * AND at the method level ({@code @PreAuthorize}). {@code /secret} is permitted at the
- * URL level but protected <em>only</em> by {@code @PreAuthorize}, isolating method-level
- * enforcement.
+ * 演示方法级授权。
+ * <p>{@code /admin/info} 同时受 URL 级别（{@code /admin/**} 要求 ADMIN 角色）
+ * 与方法级别（{@code @PreAuthorize}）保护；{@code /secret} 在 URL 级别放行，
+ * 但 <em>仅</em> 由 {@code @PreAuthorize} 保护，以隔离方法级别的强制校验。
  */
 @RestController
 public class AdminController {

@@ -13,9 +13,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Represents a single WebSocket connection. After the handshake completes,
- * {@link #runLoop()} blocks on the socket reading frames and dispatching them
- * to the endpoint callbacks. Designed to run on a virtual thread (blocking IO).
+ * 表示单个 WebSocket 连接。握手完成后，{@link #runLoop()} 阻塞于 socket 读取帧并
+ * 分派到端点回调。设计为运行在虚拟线程上（阻塞式 IO）。
  */
 public final class WebSocketSession {
 
@@ -27,7 +26,7 @@ public final class WebSocketSession {
     private final WebSocketEndpointInfo endpoint;
     private final String id;
     private volatile boolean closed = false;
-    // Fragmented message buffer
+    // 分片消息缓冲区
     private final ByteArrayOutputStream fragmentBuffer = new ByteArrayOutputStream();
     private int currentFragmentOpcode = -1;
 
@@ -41,22 +40,22 @@ public final class WebSocketSession {
 
     public String id() { return id; }
 
-    /** Send a text message to the client. */
+    /** 向客户端发送文本消息。 */
     public void sendText(String message) {
         sendFrame(0x01, message.getBytes(StandardCharsets.UTF_8));
     }
 
-    /** Send a binary message to the client. */
+    /** 向客户端发送二进制消息。 */
     public void sendBinary(byte[] data) {
         sendFrame(0x02, data);
     }
 
-    /** Send a ping frame. */
+    /** 发送 ping 帧。 */
     public void sendPing(byte[] data) {
         sendFrame(0x09, data);
     }
 
-    /** Gracefully close the connection with the given reason. */
+    /** 以给定原因优雅关闭连接。 */
     public void close(CloseReason reason) {
         if (closed) return;
         byte[] payload = new byte[2 + reason.reason().length()];
@@ -73,8 +72,7 @@ public final class WebSocketSession {
     public boolean isClosed() { return closed; }
 
     /**
-     * Main blocking loop: reads frames and dispatches to endpoint callbacks.
-     * Returns when the connection is closed (by peer or locally).
+     * 主阻塞循环：读取帧并分派到端点回调；连接关闭（对端或本地关闭）时返回。
      */
     public void runLoop() {
         invokeOnOpen();
@@ -82,15 +80,15 @@ public final class WebSocketSession {
             while (!closed) {
                 Frame frame = readFrame();
                 if (frame == null) break;
-            // Handle fragmented messages (RFC 6455 §5.4)
+            // 处理分片消息（RFC 6455 §5.4）
             Frame processedFrame = frame;
             if (!frame.fin()) {
                 if (frame.opcode() == 0x00) {
-                    // Continuation frame: append to buffer
+                    // 续帧：追加到缓冲区
                     fragmentBuffer.write(frame.payload());
                     continue;
                 } else {
-                    // First frame of a fragmented message: reset buffer
+                    // 分片消息的首帧：重置缓冲区
                     fragmentBuffer.reset();
                     currentFragmentOpcode = frame.opcode();
                     fragmentBuffer.write(frame.payload());
@@ -98,7 +96,7 @@ public final class WebSocketSession {
                 }
             } else {
                 if (frame.opcode() == 0x00 && currentFragmentOpcode != -1) {
-                    // Final fragment: combine all parts
+                    // 末片：合并所有部分
                     fragmentBuffer.write(frame.payload());
                     byte[] fullPayload = fragmentBuffer.toByteArray();
                     processedFrame = new Frame(true, currentFragmentOpcode, fullPayload);
@@ -127,9 +125,9 @@ public final class WebSocketSession {
             case 0x01 -> handleTextMessage(new String(frame.payload, StandardCharsets.UTF_8));
             case 0x02 -> handleBinaryMessage(frame.payload);
             case 0x08 -> handleCloseFrame(frame.payload);
-            case 0x09 -> sendFrame(0x0A, frame.payload); // ping -> pong
-            case 0x0A -> { /* pong received, ignore */ }
-            default -> { /* unknown opcode, ignore */ }
+            case 0x09 -> sendFrame(0x0A, frame.payload); // 收到 ping 回复 pong
+            case 0x0A -> { /* 收到 pong，忽略 */ }
+            default -> { /* 未知 opcode，忽略 */ }
         }
     }
 
@@ -155,7 +153,7 @@ public final class WebSocketSession {
             }
         }
         closeSocket();
-        // echo close back not needed since we're closing
+        // 即将关闭，无需回显 close 帧
     }
 
     private Object[] resolveArgs(Method m, String text, byte[] binary) {
@@ -207,7 +205,7 @@ public final class WebSocketSession {
         }
     }
 
-    /** Sends a single frame to the client (server frames are unmasked). */
+    /** 向客户端发送单个帧（服务端帧不带掩码）。 */
     private synchronized void sendFrame(int opcode, byte[] payload) {
         if (closed) return;
         try {
@@ -220,6 +218,14 @@ public final class WebSocketSession {
         }
     }
 
+    /**
+     * 将一个帧编码为字节缓冲：写入 FIN+opcode 与长度字段（按 7/16/64 位三种情况），
+     * 再追加负载。服务端帧不带掩码。
+     *
+     * @param opcode  帧操作码
+     * @param payload 帧负载
+     * @return 编码后的字节缓冲
+     */
     private static ByteBuffer encodeFrame(int opcode, byte[] payload) {
         int headerLen = 2;
         if (payload.length <= 125) {
@@ -230,7 +236,7 @@ public final class WebSocketSession {
             headerLen = 10;
         }
         ByteBuffer buf = ByteBuffer.allocate(headerLen + payload.length);
-        buf.put((byte) (0x80 | (opcode & 0x0F))); // FIN=1
+        buf.put((byte) (0x80 | (opcode & 0x0F))); // FIN=1（结束帧）
         if (payload.length <= 125) {
             buf.put((byte) payload.length);
         } else if (payload.length <= 65535) {
@@ -245,7 +251,7 @@ public final class WebSocketSession {
         return buf;
     }
 
-    /** Reads a single WebSocket frame from the stream (blocking). */
+    /** 从流中读取单个 WebSocket 帧（阻塞）。 */
     private Frame readFrame() throws IOException {
         int b0 = in.read();
         if (b0 == -1) return null;
@@ -309,7 +315,6 @@ public final class WebSocketSession {
         try { socket.close(); } catch (IOException ignore) {}
     }
 
-    /** A parsed WebSocket frame. */
+    /** 已解析的 WebSocket 帧。 */
     record Frame(boolean fin, int opcode, byte[] payload) {}
 }
-

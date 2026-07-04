@@ -5,7 +5,7 @@ import cn.jiebaba.summer.security.jwt.JsonWriter;
 
 import java.util.Map;
 
-/** Reuses the JWT module's minimal JSON reader/writer for login request/response bodies. */
+/** 复用 JWT 模块的简易 JSON 读写器处理登录请求/响应体。 */
 final class LoginBodyParser {
 
     private LoginBodyParser() {}

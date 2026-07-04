@@ -18,10 +18,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Enforces URL-level authorization rules. Evaluated after {@link JwtAuthenticationFilter}
- * so that the {@link SecurityContextHolder} reflects any presented token. The first
- * matching rule wins; if no rule matches, the default policy is {@code AUTHENTICATED}
- * when a login filter is configured (protected-by-default), otherwise {@code PERMIT_ALL}.
+ * 强制执行 URL 级授权规则。在 {@link JwtAuthenticationFilter} 之后求值，
+ * 使 {@link SecurityContextHolder} 反映所提交的 token。首条匹配规则胜出；
+ * 若无规则匹配，则当配置了登录过滤器时默认策略为 {@code AUTHENTICATED}
+ * （默认受保护），否则为 {@code PERMIT_ALL}。
  */
 public final class AuthorizationFilter implements Filter {
 
@@ -34,6 +34,9 @@ public final class AuthorizationFilter implements Filter {
     }
 
     @Override
+    /**
+     * 过滤器入口：按 URL 授权规则校验当前请求，未授权时抛出 401/403，否则继续过滤器链。
+     */
     public void doFilter(WebRequest request, WebResponse response, FilterChain chain) throws Exception {
         AuthorizationRule rule = null;
         for (AuthorizationRule r : rules) {

@@ -8,9 +8,9 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 /**
- * Built-in interceptor for {@link Transactional @Transactional}. Advises any bean
- * that declares a @Transactional method. Wraps the invocation in a
- * begin/commit/rollback block using {@link TransactionManager}.
+ * {@link Transactional @Transactional} 的内置拦截器。对声明了 @Transactional 方法的
+ * Bean 进行增强，使用 {@link TransactionManager} 将调用包裹在
+ * begin/commit/rollback 块中。
  */
 public final class TransactionInterceptor implements MethodInterceptor, ProxyAdvisor {
 
@@ -37,7 +37,7 @@ public final class TransactionInterceptor implements MethodInterceptor, ProxyAdv
 
     @Override
     public int order() {
-        return 100; // outer-ish: transactions wrap most other advice
+        return 100; // 偏外层：事务包裹大多数其他增强
     }
 
     @Override
@@ -67,7 +67,7 @@ public final class TransactionInterceptor implements MethodInterceptor, ProxyAdv
         if (tx != null) return tx;
         Class<?> declaring = method.getDeclaringClass();
         if (declaring.isAnnotationPresent(Transactional.class)) return declaring.getAnnotation(Transactional.class);
-        // the annotation may be on the target class's overriding method (not the interface method)
+        // 注解可能在目标类的覆盖方法上（而非接口方法）
         if (target != null) {
             try {
                 Method impl = target.getClass().getMethod(method.getName(), method.getParameterTypes());

@@ -4,9 +4,8 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
 /**
- * Captures a generic type at compile time via an anonymous subclass, reifying it
- * at runtime — the JDK erases generics otherwise. Use it to parse parameterized
- * types such as {@code List<User>}:
+ * 通过匿名子类在编译期捕获泛型类型，并在运行期将其具现化——否则 JDK 会擦除泛型。
+ * 用于解析诸如 {@code List<User>} 的参数化类型：
  * <pre>{@code
  * List<User> users = Json.parse(json, new TypeReference<List<User>>() {});
  * }</pre>

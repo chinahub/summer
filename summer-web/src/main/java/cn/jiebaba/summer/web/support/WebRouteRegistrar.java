@@ -86,7 +86,7 @@ public final class WebRouteRegistrar {
         PatchMapping patch = method.getAnnotation(PatchMapping.class);
         if (patch != null) for (String p : paths(patch.value(), patch.path())) list.add(new RouteDescriptor(HttpMethod.PATCH, p, new String[0]));
         if (list.isEmpty()) {
-            // also support meta-present mapping annotations on custom composed annotations
+            // 同时支持自定义组合注解上元存在的映射注解
             if (AnnotationUtils.hasAnnotation(method, RequestMapping.class)) {
                 RequestMapping meta = AnnotationUtils.findAnnotation(method, RequestMapping.class);
                 for (String p : paths(meta.value(), meta.path())) {

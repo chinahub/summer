@@ -9,10 +9,9 @@ import java.sql.SQLException;
 import java.sql.Types;
 
 /**
- * Serializes a Java object to JSON text (via {@link JsonUtil}) and delegates
- * the native column binding to the active {@link Dialect}, so the same field
- * maps to {@code jsonb} on PostgreSQL, {@code json} on MySQL, {@code CLOB} on
- * Oracle, etc.
+ * 将 Java 对象序列化为 JSON 文本（经 {@link JsonUtil}），并将原生列绑定委托给
+ * 当前 {@link Dialect}，使同一字段在 PostgreSQL 上映射为 {@code jsonb}、
+ * MySQL 为 {@code json}、Oracle 为 {@code CLOB} 等。
  */
 public final class JsonTypeHandler implements TypeHandler {
 

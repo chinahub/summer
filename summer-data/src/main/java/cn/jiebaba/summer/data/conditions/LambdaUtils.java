@@ -6,7 +6,7 @@ import java.lang.reflect.Method;
 public final class LambdaUtils {
     private LambdaUtils() {}
 
-    /** Resolve a property name from a getter-style method reference (getName -> name). */
+    /** 从 getter 风格的方法引用解析属性名（getName -> name）。 */
     public static <T> String propertyName(SFunction<T, ?> function) {
         SerializedLambda lambda = serialized(function);
         String methodName = lambda.getImplMethodName();

@@ -10,10 +10,9 @@ import cn.jiebaba.summer.web.validation.NotBlank;
 import java.util.Map;
 
 /**
- * Demonstrates a JSONB column bound via {@link JsonTypeHandler}. The {@code attrs}
- * field is serialized to JSON text and bound to the native JSON column by the
- * active dialect (jsonb on PostgreSQL, json on MySQL, CLOB on Oracle), and read
- * back transparently.
+ * 演示通过 {@link JsonTypeHandler} 绑定的 JSONB 列。{@code attrs} 字段会被序列化为
+ * JSON 文本，并由当前方言绑定到原生 JSON 列（PostgreSQL 用 jsonb、MySQL 用 json、
+ * Oracle 用 CLOB），读取时透明还原。
  */
 @TableName("summer_widget")
 public class Widget {

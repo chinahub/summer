@@ -7,15 +7,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Specifies which datasource to use for a method or class. Resolved at runtime
- * via {@link DsContext} to route {@link DynamicDataSource#getConnection()} to
- * the correct underlying pool. {@code @Master} and {@code @Slave} are
- * convenience aliases.
+ * 指定方法或类使用的数据源。运行时通过 {@link DsContext} 解析，将
+ * {@link DynamicDataSource#getConnection()} 路由到正确的底层连接池。
+ * {@code @Master} 与 {@code @Slave} 为便捷别名。
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface DS {
-    /** Datasource name, e.g. {@code "master"}, {@code "slave"}, {@code "log-db"}. */
+    /** 数据源名称，例如 {@code "master"}、{@code "slave"}、{@code "log-db"}。 */
     String value();
 }

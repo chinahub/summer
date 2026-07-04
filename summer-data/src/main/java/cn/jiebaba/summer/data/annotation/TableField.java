@@ -16,6 +16,6 @@ public @interface TableField {
     boolean exist() default true;
     String insertStrategy() default "DEFAULT";
     String updateStrategy() default "DEFAULT";
-    /** Custom TypeHandler for this column (e.g. JsonTypeHandler). Defaults to none. */
+    /** 该列的自定义 TypeHandler（如 JsonTypeHandler）。默认无。 */
     Class<? extends TypeHandler> typeHandler() default TypeHandler.class;
 }

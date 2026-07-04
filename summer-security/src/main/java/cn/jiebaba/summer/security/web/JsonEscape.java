@@ -1,6 +1,6 @@
 package cn.jiebaba.summer.security.web;
 
-/** Tiny JSON string escaper for inline error bodies. */
+/** 用于内联错误响应体的简易 JSON 字符串转义器。 */
 final class JsonEscape {
     private JsonEscape() {}
 

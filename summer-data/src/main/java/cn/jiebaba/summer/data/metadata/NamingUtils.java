@@ -3,7 +3,7 @@ package cn.jiebaba.summer.data.metadata;
 public final class NamingUtils {
     private NamingUtils() {}
 
-    /** Convert camelCase to snake_case: userName -> user_name, HTTPServer -> h_t_t_p_server boundary-safe. */
+    /** 将驼峰命名转为下划线命名：userName -> user_name，HTTPServer -> h_t_t_p_server（边界安全）。 */
     public static String toSnakeCase(String name) {
         if (name == null || name.isEmpty()) return name;
         StringBuilder sb = new StringBuilder(name.length() + 4);

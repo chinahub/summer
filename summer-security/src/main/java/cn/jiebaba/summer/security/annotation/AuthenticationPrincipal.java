@@ -6,13 +6,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Binds the current authenticated principal to a handler method parameter.
- * The value injected is {@link cn.jiebaba.summer.security.core.Authentication#getPrincipal()},
- * typically the {@link cn.jiebaba.summer.security.userdetails.UserDetails} instance.
+ * 将当前已认证主体绑定到处理器方法参数。注入的值为
+ * {@link cn.jiebaba.summer.security.core.Authentication#getPrincipal()}，
+ * 通常是 {@link cn.jiebaba.summer.security.userdetails.UserDetails} 实例。
  */
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface AuthenticationPrincipal {
-    /** When true and no principal is present, inject null instead of failing the request. */
+    /** 为 true 且无主体时注入 null，而非令请求失败。 */
     boolean required() default true;
 }

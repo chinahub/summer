@@ -5,9 +5,9 @@ import cn.jiebaba.summer.web.bind.HandlerException;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Minimal RFC 2388 {@code multipart/form-data} parser built on the JDK only.
- * Operates on an already-buffered request body (the body is bounded by the
- * server's {@code server.max-request-size}). No streaming / no temp files.
+ * 仅基于 JDK 实现的极简 RFC 2388 {@code multipart/form-data} 解析器。
+ * 作用于已缓冲的请求体（请求体大小受服务端 {@code server.max-request-size} 限制）。
+ * 不做流式处理，也不写临时文件。
  */
 public final class MultipartParser {
 
@@ -17,6 +17,15 @@ public final class MultipartParser {
 
     private MultipartParser() {}
 
+    /**
+     * 解析 multipart/form-data 请求体：依据 Content-Type 中的边界切分各部分，
+     * 逐个解析其头部与内容并交给 {@link #processPart} 处理。
+     *
+     * @param contentType  Content-Type，需包含 boundary
+     * @param body         已缓冲的请求体
+     * @param maxFileSize  单个文件最大字节数
+     * @return 解析得到的表单数据
+     */
     public static MultipartForm parse(String contentType, byte[] body, long maxFileSize) {
         String boundary = boundaryOf(contentType);
         if (boundary == null || boundary.isEmpty()) {
@@ -33,7 +42,7 @@ public final class MultipartParser {
         pos += delim.length;
 
         while (pos < data.length) {
-            // end marker "--" terminates the body
+            // 结束标记 "--" 终止请求体
             if (pos + 1 < data.length && data[pos] == '-' && data[pos + 1] == '-') {
                 break;
             }
@@ -59,6 +68,10 @@ public final class MultipartParser {
         return form;
     }
 
+    /**
+     * 处理单个部分：解析 Content-Disposition 中的 name/filename 与 Content-Type，
+     * 带文件名则作为文件（校验大小）加入表单，否则作为普通字段加入。
+     */
     private static void processPart(MultipartForm form, String headerBlock, byte[] content, long maxFileSize) {
         String name = null, filename = null, contentType = null;
         for (String line : headerBlock.split("\r\n")) {
@@ -73,7 +86,7 @@ public final class MultipartParser {
                 contentType = headerValue;
             }
         }
-        if (name == null) return; // unnamed part, skip
+        if (name == null) return; // 无名部分，跳过
         if (filename != null) {
             if (maxFileSize > 0 && content.length > maxFileSize) {
                 throw new HandlerException("Uploaded part '" + name + "' size " + content.length

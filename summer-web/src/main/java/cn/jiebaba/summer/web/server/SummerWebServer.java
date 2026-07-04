@@ -33,10 +33,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Embedded HTTP/1.1 server built on {@link java.net.ServerSocket}. Each accepted
- * connection is handled on its own virtual thread (Java coroutines via Loom),
- * using blocking IO -- the canonical virtual-thread server pattern. No servlet,
- * no NIO selector, no third-party dependencies.
+ * 基于 {@link java.net.ServerSocket} 构建的嵌入式 HTTP/1.1 服务器。每个被接受的连接
+ * 都在其专属的虚拟线程上处理（经 Loom 的 Java 协程），使用阻塞 IO——这是经典的
+ * 虚拟线程服务器模式。无 servlet、无 NIO selector、无第三方依赖。
  */
 public final class SummerWebServer {
     private static final Logger LOG = Logger.getLogger(SummerWebServer.class.getName());
@@ -75,6 +74,10 @@ public final class SummerWebServer {
     public void setSecurityFilters(List<Filter> filters) { this.securityFilters = filters == null ? List.of() : filters; }
     public void setAccessChecker(HandlerMethodAccessChecker checker) { this.accessChecker = checker; }
 
+    /**
+     * 启动 Web 服务器：绑定端口、创建虚拟线程执行器与请求分发器，
+     * 并在平台线程上启动 accept 循环。
+     */
     public void start() {
         try {
             serverSocket = new ServerSocket();
@@ -84,7 +87,7 @@ public final class SummerWebServer {
             throw new IllegalStateException("Failed to bind HTTP server to " + properties.host() + ":" + properties.port(), e);
         }
         running = true;
-        // every connection runs on its own virtual thread
+        // 每个连接运行在各自的虚拟线程上
         executor = Executors.newVirtualThreadPerTaskExecutor();
         HandlerMethodInvoker invoker = new HandlerMethodInvoker(context, converter);
         RequestDispatcher dispatcher = new RequestDispatcher(router, invoker, converter, exceptions,
@@ -98,6 +101,10 @@ public final class SummerWebServer {
                 + (securityFilters.isEmpty() ? "" : " security-filters=" + securityFilters.size()));
     }
 
+    /**
+     * 接收循环：阻塞接受连接，将每个连接交给 {@link #handleConnection} 处理；
+     * accept 失败时按 1 秒间隔重试。
+     */
     private void acceptLoop(RequestDispatcher dispatcher) {
         while (running) {
             Socket socket;
@@ -121,6 +128,13 @@ public final class SummerWebServer {
         }
     }
 
+    /**
+     * 处理单个连接：循环读取并分发请求，支持 keep-alive 复用连接，
+     * 遇到 WebSocket 升级请求时转交 {@link #handleWebSocketUpgrade} 处理。
+     *
+     * @param socket     客户端 socket
+     * @param dispatcher 请求分发器
+     */
     private void handleConnection(Socket socket, RequestDispatcher dispatcher) {
         try (socket;
              BufferedInputStream in = new BufferedInputStream(socket.getInputStream());
@@ -132,7 +146,7 @@ public final class SummerWebServer {
                 try {
                     raw = RawHttpRequest.parse(in, properties.maxHeaderSize(), properties.maxRequestSize());
                 } catch (IOException e) {
-                    // client closed or timeout -- normal for keep-alive
+                    // 客户端关闭或超时 —— 对 keep-alive 属正常
                     return;
                 }
                 requestCount++;
@@ -171,11 +185,14 @@ public final class SummerWebServer {
         if (conn == null) return false;
         conn = conn.trim().toLowerCase();
         if ("close".equals(conn)) return false;
-        // HTTP/1.1 defaults to keep-alive; HTTP/1.0 requires explicit keep-alive
+        // HTTP/1.1 默认 keep-alive；HTTP/1.0 需显式 keep-alive
         if ("keep-alive".equals(conn)) return true;
         return raw.protocol() != null && raw.protocol().equalsIgnoreCase("HTTP/1.1");
     }
 
+    /**
+     * 处理 WebSocket 升级：匹配端点、完成握手后将连接交由 {@link WebSocketSession} 运行。
+     */
     private void handleWebSocketUpgrade(Socket socket, BufferedInputStream in, OutputStream out, RawHttpRequest raw) {
         String target = raw.target();
         int q = target.indexOf('?');
@@ -190,7 +207,7 @@ public final class SummerWebServer {
                 writeError(out, HttpStatus.BAD_REQUEST.code(), "Bad Request", "missing Sec-WebSocket-Key");
                 return;
             }
-            socket.setSoTimeout(0); // no read timeout for WebSocket
+            socket.setSoTimeout(0); // WebSocket 不设读取超时
             WebSocketSession session = new WebSocketSession(socket, endpointOpt.get());
             LOG.info("WebSocket connected: " + path + " session=" + session.id());
             session.runLoop();

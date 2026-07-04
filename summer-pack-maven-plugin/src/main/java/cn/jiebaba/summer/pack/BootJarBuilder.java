@@ -16,17 +16,17 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
 /**
- * Assembles a Spring Boot-style executable jar with nested layout:
+ * 组装 Spring Boot 风格的可执行 jar，采用嵌套布局：
  * <pre>
- *   &lt;root&gt;/cn/jiebaba/summer/loader/JarLauncher.class   launcher (from summer-boot-loader, bundled by the plugin)
- *   BOOT-INF/classes/...                                  application classes &amp; resources
- *   BOOT-INF/lib/*.jar                                    dependency jars (unexploded)
+ *   &lt;root&gt;/cn/jiebaba/summer/loader/JarLauncher.class   启动器（来自 summer-boot-loader，由插件打包）
+ *   BOOT-INF/classes/...                                  应用类与资源
+ *   BOOT-INF/lib/*.jar                                    依赖 jar（不解压）
  *   META-INF/MANIFEST.MF                                  Main-Class / Start-Class
  * </pre>
  *
- * <p>Pure JDK (java.util.jar) so it needs no third-party dependencies and can run
- * inside a Maven plugin. Entry names use forward slashes and the manifest is
- * written first by {@link JarOutputStream}, satisfying {@code java -jar}.
+ * <p>纯 JDK（java.util.jar）实现，无需第三方依赖，
+ * 可在 Maven 插件中运行。条目名使用正斜杠，清单
+ * 由 {@link JarOutputStream} 优先写入，以满足 {@code java -jar} 的要求。
  */
 final class BootJarBuilder {
 
@@ -36,6 +36,17 @@ final class BootJarBuilder {
     private BootJarBuilder() {
     }
 
+    /**
+     * 组装可执行 boot jar：创建清单，并依次写入启动器、应用类目录与依赖 jar。
+     *
+     * @param outputJar     输出 jar 路径
+     * @param appClassesDir 应用类与资源所在目录
+     * @param libJars       依赖 jar 列表
+     * @param loaderJar     启动器 jar（来自 summer-boot-loader）
+     * @param mainClass     清单 Main-Class
+     * @param startClass    实际启动类
+     * @throws IOException 写入 jar 时发生 I/O 错误
+     */
     static void build(Path outputJar, Path appClassesDir, List<Path> libJars,
                       Path loaderJar, String mainClass, String startClass) throws IOException {
         if (outputJar.getParent() != null) {
@@ -64,6 +75,15 @@ final class BootJarBuilder {
         }
     }
 
+    /**
+     * 将指定 jar 中的条目拷贝到输出流，可按需跳过 META-INF 及 module-info 等条目。
+     *
+     * @param jos         目标输出流
+     * @param jar         源 jar
+     * @param prefix      条目名前缀
+     * @param skipMetaInf 是否跳过 META-INF 条目
+     * @throws IOException 读取或写入条目时发生 I/O 错误
+     */
     private static void addJarEntries(JarOutputStream jos, Path jar, String prefix, boolean skipMetaInf)
             throws IOException {
         try (JarFile jf = new JarFile(jar.toFile())) {

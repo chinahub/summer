@@ -11,9 +11,9 @@ import java.lang.annotation.Target;
 @Documented
 public @interface Transactional {
     String value() default "";
-    /** Rollback for these exception types (default: any RuntimeException or Error). */
+    /** 对这些异常类型回滚（默认：任意 RuntimeException 或 Error）。 */
     Class<? extends Throwable>[] rollbackFor() default {};
-    /** Do not rollback for these exception types. */
+    /** 对这些异常类型不回滚。 */
     Class<? extends Throwable>[] noRollbackFor() default {};
     boolean readOnly() default false;
 }

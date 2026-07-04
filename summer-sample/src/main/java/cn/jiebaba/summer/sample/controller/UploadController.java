@@ -8,7 +8,7 @@ import cn.jiebaba.summer.web.annotation.RequestPart;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Demonstrates multipart file upload via @RequestPart + MultipartFile. */
+/** 演示通过 @RequestPart + MultipartFile 进行多部分文件上传。 */
 @RestController
 public class UploadController {
 

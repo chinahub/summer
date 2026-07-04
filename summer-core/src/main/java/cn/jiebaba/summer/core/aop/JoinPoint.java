@@ -2,7 +2,7 @@ package cn.jiebaba.summer.core.aop;
 
 import java.lang.reflect.Method;
 
-/** Runtime info about an intercepted method invocation. */
+/** 被拦截方法调用的运行时信息。 */
 public interface JoinPoint {
     Object getThis();
     Object getTarget();

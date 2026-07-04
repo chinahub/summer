@@ -11,14 +11,18 @@ import cn.jiebaba.summer.data.support.SqlBuilder;
 import cn.jiebaba.summer.sample.entity.Product;
 
 /**
- * Verifies the ORM layer's pure logic without a database: entity metadata
- * parsing, SQL generation for every CRUD path, wrapper conditions, lambda
- * resolution and pagination SQL.
+ * 在无数据库的情况下验证 ORM 层的纯逻辑：实体元数据解析、各 CRUD 路径的
+ * SQL 生成、wrapper 条件、lambda 解析以及分页 SQL。
  */
 public class OrmSmokeTest {
 
     private static int passed = 0;
 
+    /**
+     * ORM 冒烟测试入口：无数据库验证实体元数据解析、insert/update/delete/select 等
+     * 各路径的 SQL 生成、QueryWrapper/LambdaQueryWrapper 条件、count 与分页 SQL，
+     * 以及 mapper 代理的实体类型解析。
+     */
     public static void main(String[] args) {
         TableInfo table = MetadataParser.parse(Product.class);
         SqlBuilder builder = new SqlBuilder(table);

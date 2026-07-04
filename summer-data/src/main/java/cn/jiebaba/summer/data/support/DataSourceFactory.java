@@ -24,39 +24,33 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 /**
- * A lightweight, HikariCP-inspired connection pool built on a blocking queue
- * and a dynamic {@link Connection} proxy. No third-party pooling library.
- * Virtual-thread friendly.
+ * 基于阻塞队列与动态 {@link Connection} 代理构建的轻量级、受 HikariCP 启发的连接池。
+ * 无第三方池化库。对虚拟线程友好。
  *
- * <p>Design (mirrors HikariCP semantics where practical):
+ * <p>设计（在可行处沿用 HikariCP 语义）：
  * <ul>
- *   <li>{@code pool-size} is the <b>maximum</b> pool size. The pool grows on
- *       demand up to this cap and lazily creates a connection when the idle
- *       queue is empty but the cap has not been reached, so the pool
- *       self-heals after eviction instead of stalling until restart.</li>
- *   <li>{@code minimum-idle} is the floor the background housekeeper keeps
- *       topped up; idle connections beyond this are trimmed by
- *       {@code idle-timeout}. Defaults to {@code pool-size} (always-full).</li>
- *   <li>{@code max-lifetime} is applied <b>per connection with a small random
- *       variance</b>, so connections created at the same instant do not all
- *       expire together and collapse the pool.</li>
- *   <li>Idle connections that exceed their lifetime are closed and replaced
- *       by the housekeeper; borrowed connections are retired softly on
- *       return.</li>
- *   <li>{@code keepalive-time} periodically probes idle connections with
- *       {@code keepalive-query} to keep them alive behind pooling proxies.</li>
- *   <li>borrow timeout ({@code connection-timeout}) and leak detection
- *       ({@code leak-detection-threshold}) as before.</li>
+ *   <li>{@code pool-size} 为 <b>最大</b> 池大小。池按需增长至该上限，并在空闲队列为空
+ *       但尚未达到上限时惰性创建连接，因此池在驱逐后能自愈，而非停滞到重启。</li>
+ *   <li>{@code minimum-idle} 是后台 housekeeper 维持的下限；超出此值的空闲连接会被
+ *       {@code idle-timeout} 裁剪。默认等于 {@code pool-size}（始终填满）。</li>
+ *   <li>{@code max-lifetime} <b>按连接施加并带少量随机抖动</b>，使同一时刻创建的连接
+ *       不会同时过期、导致连接池整体坍塌。</li>
+ *   <li>超过生命周期的空闲连接会被 housekeeper 关闭并替换；借出的连接在归还时被
+ *       软性退役。</li>
+ *   <li>{@code keepalive-time} 周期性地用 {@code keepalive-query} 探测空闲连接，
+ *       使其在池化代理之后仍保持存活。</li>
+ *   <li>借用超时（{@code connection-timeout}）与泄漏检测
+ *       （{@code leak-detection-threshold}）如前所述。</li>
  * </ul>
- * Background maintenance runs on daemon virtual threads.
+ * 后台维护运行在 daemon 虚拟线程上。
  */
 public final class DataSourceFactory {
 
-    /** Skip isValid validation for connections idle less than this (freshly returned). */
+    /** 对空闲时间小于此值的连接跳过 isValid 校验（刚归还的连接）。 */
     private static final long VALIDATION_BYPASS_MS = 1000L;
-    /** Only apply max-lifetime variance when lifetime exceeds this (avoids tiny random ranges). */
+    /** 仅当寿命超过此值时才施加最大寿命抖动（避免极小的随机区间）。 */
     private static final long MIN_LIFETIME_FOR_VARIANCE = 60_000L;
-    /** isValid probe timeout in seconds. */
+    /** isValid 探测超时（秒）。 */
     private static final int VALIDATION_TIMEOUT_SECONDS = 2;
 
     private DataSourceFactory() {}
@@ -94,7 +88,7 @@ public final class DataSourceFactory {
         return create(props);
     }
 
-    /** Returns a no-op DataSource for when no datasource URL is configured. */
+    /** 当未配置数据源 URL 时返回的空操作 DataSource。 */
     public static DataSource lazyDummy() {
         return new LazyDataSource();
     }
@@ -131,7 +125,7 @@ public final class DataSourceFactory {
             this.minimumIdle = Math.max(Math.min(props.minimumIdle(), maximumPoolSize), 0);
             this.idle = new ArrayBlockingQueue<>(maximumPoolSize);
 
-            // Prime the pool to minimumIdle (fail fast if the DB is unreachable).
+            // 将连接池预填充到 minimumIdle（数据库不可达时快速失败）。
             List<PooledConnection> created = new ArrayList<>();
             try {
                 for (int i = 0; i < minimumIdle; i++) {
@@ -187,8 +181,8 @@ public final class DataSourceFactory {
             if (maxLifetime <= MIN_LIFETIME_FOR_VARIANCE) {
                 return maxLifetime;
             }
-            // Vary by up to 2.5% (1/40) so connections created together expire at
-            // different instants, preventing the whole pool from collapsing at once.
+            // 最多抖动 2.5%（1/40），使同时创建的连接在不同时刻过期，
+            // 避免整个连接池同时失效。
             long variance = ThreadLocalRandom.current().nextLong(maxLifetime / 40);
             return maxLifetime - variance;
         }
@@ -226,6 +220,10 @@ public final class DataSourceFactory {
             }
         }
 
+        /**
+         * 逐个检查排空出的空闲连接：按最大寿命、已关闭、空闲超时、keepalive 探测与
+         * 有效性校验决定保留或回收，保留的重新放入空闲队列。
+         */
         private void evictAndProbe(long now) {
             long idleTimeout = props.idleTimeoutMillis();
             long maxLifetime = props.maxLifetimeMillis();
@@ -330,7 +328,7 @@ public final class DataSourceFactory {
             }
         }
 
-        /** Atomically reserve a slot for a new connection, capped at maximumPoolSize. */
+        /** 原子地为新连接预留一个槽位，上限为 maximumPoolSize。 */
         private boolean tryReserveSlot() {
             while (true) {
                 int cur = totalConnections.get();
@@ -361,6 +359,10 @@ public final class DataSourceFactory {
             return sb.toString();
         }
 
+        /**
+         * 借出一个连接：优先取空闲连接，否则在配额内新建，已达上限则等待归还，
+         * 超时则抛出 {@link SQLException}。
+         */
         private PooledConnection borrow() throws SQLException {
             long deadline = System.currentTimeMillis() + props.connectionTimeoutMillis();
             while (true) {
@@ -374,7 +376,7 @@ public final class DataSourceFactory {
                     retire(pc);
                     continue;
                 }
-                // Nothing idle right now: create one if the cap allows (self-heal).
+                // 当前无空闲连接：在配额允许时新建（自愈）。
                 if (tryReserveSlot()) {
                     try {
                         PooledConnection created = newConnection();
@@ -386,7 +388,7 @@ public final class DataSourceFactory {
                         throw new SQLException("Failed to create a pooled connection", e);
                     }
                 }
-                // At capacity: wait for a return.
+                // 已达上限：等待归还。
                 long remaining = deadline - System.currentTimeMillis();
                 if (remaining <= 0L) {
                     throw borrowTimeout();
@@ -442,6 +444,10 @@ public final class DataSourceFactory {
             return isClosedQuietly(pc);
         }
 
+        /**
+         * 归还连接：重置自动提交、校验是否过期或已关闭，随后放回空闲队列；
+         * 不可用则回收并触发补充。
+         */
         private void returnConnection(PooledConnection pc) {
             leases.remove(pc);
             try {
@@ -487,7 +493,7 @@ public final class DataSourceFactory {
         @Override public Logger getParentLogger() { return Logger.getLogger(Logger.GLOBAL_LOGGER_NAME); }
     }
 
-    /** A DataSource that throws on use; returned when summer.datasource.url is not configured. */
+    /** 使用即抛异常的 DataSource；当未配置 summer.datasource.url 时返回。 */
     static final class LazyDataSource implements DataSource {
         @Override public Connection getConnection() throws SQLException {
             throw new SQLException("DataSource not configured (summer.datasource.url is empty)");
@@ -504,7 +510,7 @@ public final class DataSourceFactory {
         @Override public Logger getParentLogger() { return Logger.getLogger(Logger.GLOBAL_LOGGER_NAME); }
     }
 
-    /** Tracks a physical connection's lifecycle timestamps for housekeeping. */
+    /** 记录物理连接生命周期时间戳，用于维护。 */
     static final class PooledConnection {
         final Connection raw;
         final long createdAt;
@@ -523,7 +529,7 @@ public final class DataSourceFactory {
         }
     }
 
-    /** Forwards every Connection method to the physical connection, except close() returns it to the pool. */
+    /** 将每个 Connection 方法转发给物理连接，但 close() 会将连接归还连接池。 */
     static final class PooledConnectionHandler implements InvocationHandler {
         private final PooledConnection pc;
         private final PooledDataSource owner;

@@ -6,10 +6,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * {@link ILoggerFactory} backed by {@link java.util.logging.Logger}. Each logger
- * name maps to the corresponding JUL logger so that Summer's single logging
- * pipeline (handlers, levels and formatters configured by {@code LoggingInitializer})
- * owns all output.
+ * 由 {@link java.util.logging.Logger} 支撑的 {@link ILoggerFactory}。每个 logger 名称
+ * 映射到对应的 JUL logger，从而使 Summer 的单一日志管道（由 {@code LoggingInitializer}
+ * 配置的 handlers、levels 与 formatters）接管所有输出。
  */
 final class SummerJulLoggerFactory implements ILoggerFactory {
 

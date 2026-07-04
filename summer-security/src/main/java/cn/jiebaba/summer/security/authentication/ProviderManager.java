@@ -5,8 +5,7 @@ import cn.jiebaba.summer.security.core.Authentication;
 import java.util.List;
 
 /**
- * Delegates authentication to a chain of {@link AuthenticationProvider}s, returning
- * the first successful result. Mirrors {@code ProviderManager}.
+ * 将认证委托给一组 {@link AuthenticationProvider} 链，返回首个成功结果。对应 {@code ProviderManager}。
  */
 public class ProviderManager implements AuthenticationManager {
 

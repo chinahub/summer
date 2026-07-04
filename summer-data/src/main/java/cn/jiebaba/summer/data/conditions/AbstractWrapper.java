@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Base condition builder mirroring MyBatis-Plus wrappers. Uses a self-type
- * generic {@code W} so fluent chaining preserves the concrete wrapper type.
+ * 基础条件构造器，借鉴 MyBatis-Plus 的 Wrapper。使用自身类型泛型 {@code W}，
+ * 使链式调用保留具体 Wrapper 类型。
  */
 public abstract class AbstractWrapper<T, W extends AbstractWrapper<T, W>> {
 
@@ -20,7 +20,7 @@ public abstract class AbstractWrapper<T, W extends AbstractWrapper<T, W>> {
     @SuppressWarnings("unchecked")
     protected final W self() { return (W) this; }
 
-    /** Convert a column reference into the actual SQL column name. */
+    /** 将列引用转换为实际的 SQL 列名。 */
     protected abstract String column(String reference);
 
     public W eq(String column, Object value) { return addCondition(column, "=", value); }

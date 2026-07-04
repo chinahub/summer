@@ -23,12 +23,12 @@ import java.util.Map;
 import java.util.TreeSet;
 
 /**
- * Auto-configures the data layer. Supports two modes:
+ * 自动配置数据层。支持两种模式：
  * <ul>
- *   <li><b>Single datasource</b>: {@code summer.datasource.*} (backward compatible)</li>
- *   <li><b>Multi datasource</b>: {@code summer.datasources.<name>.*} with
- *       {@code summer.datasource.default} specifying the primary key.
- *       Enables {@code @DS}/{@code @Master}/{@code @Slave}/{@code @DSTransactional}.</li>
+ *   <li><b>单数据源</b>：{@code summer.datasource.*}（向后兼容）</li>
+ *   <li><b>多数据源</b>：{@code summer.datasources.<name>.*}，
+ *       并以 {@code summer.datasource.default} 指定主数据源。
+ *       启用 {@code @DS}/{@code @Master}/{@code @Slave}/{@code @DSTransactional}。</li>
  * </ul>
  */
 @Configuration
@@ -95,14 +95,13 @@ public class DataAutoConfiguration {
     }
 
     /**
-     * Builds datasource(s) from configuration. Multi-datasource mode is detected
-     * by the presence of {@code summer.datasources.*.url} keys; otherwise falls
-     * back to single {@code summer.datasource.*}.
+     * 根据配置构建数据源。若存在 {@code summer.datasources.*.url} 键则判定为多数据源模式；
+     * 否则回退到单数据源 {@code summer.datasource.*}。
      */
     private Map<String, DataSource> buildDataSources(Environment env) {
         Map<String, DataSource> sources = new LinkedHashMap<>();
 
-        // Multi-datasource: summer.datasources.<name>.url
+        // 多数据源：summer.datasources.<name>.url
         TreeSet<String> names = new TreeSet<>();
         for (String key : env.all().keySet()) {
             if (key.startsWith("summer.datasources.") && key.endsWith(".url")) {
@@ -114,7 +113,7 @@ public class DataAutoConfiguration {
             sources.put(name, createDataSource(env, "summer.datasources." + name));
         }
 
-        // Single datasource fallback: summer.datasource.*
+        // 单数据源回退：summer.datasource.*
         if (sources.isEmpty()) {
             DataProperties props = DataProperties.from(env);
             if (props.isConfigured()) {

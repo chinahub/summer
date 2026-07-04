@@ -6,30 +6,29 @@ import cn.jiebaba.summer.web.http.WebRequest;
 import java.util.Set;
 
 /**
- * A URL-level authorization rule: a path pattern (Ant-style with {@code **}),
- * an optional HTTP method restriction, and a {@link Decision} that applies to
- * matching requests. Evaluated by {@link AuthorizationFilter} in registration
- * order; the first matching rule wins.
+ * 一条 URL 级授权规则：路径模式（带 {@code **} 的 Ant 风格）、可选的 HTTP 方法限制，
+ * 以及适用于匹配请求的 {@link Decision}。由 {@link AuthorizationFilter} 按注册顺序求值；
+ * 首条匹配规则胜出。
  */
 public final class AuthorizationRule {
 
     public enum Decision {
-        /** Allow without authentication. */
+        /** 无需认证即允许。 */
         PERMIT_ALL,
-        /** Require an authenticated principal (any authority). */
+        /** 要求已认证主体（任意权限）。 */
         AUTHENTICATED,
-        /** Deny everyone. */
+        /** 拒绝所有人。 */
         DENY_ALL,
-        /** Require one of the given role names (matched against {@code ROLE_<name>} authorities). */
+        /** 要求具备给定角色名之一（与 {@code ROLE_<name>} 权限匹配）。 */
         HAS_ANY_ROLE,
-        /** Require one of the given authority strings. */
+        /** 要求具备给定权限字符串之一。 */
         HAS_ANY_AUTHORITY
     }
 
     private final String pattern;
-    private final HttpMethod method;       // null = any method
+    private final HttpMethod method;       // null = 任意方法
     private final Decision decision;
-    private final Set<String> required;     // role/authority names depending on decision
+    private final Set<String> required;     // 角色/权限名称（取决于决策）
 
     public AuthorizationRule(String pattern, HttpMethod method, Decision decision, String... required) {
         this.pattern = normalize(pattern);

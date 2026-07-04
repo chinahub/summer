@@ -17,7 +17,7 @@ public final class IdGenerator {
         };
     }
 
-    /** A simple monotonic id: millis << 20 | counter (no MAC dependency, single-JVM). */
+    /** 简单的单调递增 id：millis << 20 | counter（不依赖 MAC，单 JVM）。 */
     private static long nextSnowflakeLike() {
         long time = System.currentTimeMillis();
         int seq = SEQUENCE.incrementAndGet() & 0xFFFFF;

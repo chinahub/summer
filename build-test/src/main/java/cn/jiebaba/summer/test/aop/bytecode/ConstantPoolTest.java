@@ -21,7 +21,7 @@ public class ConstantPoolTest {
         int second = cp.utf8("Code");
         Assert.assertEquals(first, second);
         Assert.assertEquals(2, cp.count());
-        // tag=1, u2 length=4, "Code"
+        // tag=1，u2 长度=4，"Code"
         byte[] bytes = cp.toByteArray();
         Assert.assertEquals(7, bytes.length);
         Assert.assertEquals(1, bytes[0]);
@@ -46,7 +46,7 @@ public class ConstantPoolTest {
         int cls = cp.classRef("java/lang/Object");
         Assert.assertTrue(cls != utf, "class entry must be a distinct slot from its name utf8");
         Assert.assertEquals(3, cp.count());
-        // utf8 "java/lang/Object" (16 chars) = 3 + 16 = 19 bytes, class entry = 3 bytes
+        // utf8 "java/lang/Object"（16 字符）= 3 + 16 = 19 字节，class 项 = 3 字节
         Assert.assertEquals(22, cp.toByteArray().length);
     }
 
@@ -55,8 +55,8 @@ public class ConstantPoolTest {
         ConstantPool cp = new ConstantPool();
         int ref = cp.methodRef("java/lang/Object", "toString", "()Ljava/lang/String;");
         Assert.assertTrue(ref > 0);
-        // Object utf8(19) + NameAndType("toString","()Ljava/lang/String;") uses 2 utf8 + 5 = ...
-        // just ensure it is resolvable and dedups on repeat
+        // Object utf8(19) + NameAndType("toString","()Ljava/lang/String;") 使用 2 个 utf8 + 5 = ...
+        // 仅确保其可解析且重复添加时去重
         int again = cp.methodRef("java/lang/Object", "toString", "()Ljava/lang/String;");
         Assert.assertEquals(ref, again);
     }

@@ -10,8 +10,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
 /**
- * Creates a JDK dynamic proxy implementing a user {@link BaseMapper} subinterface,
- * delegating every {@link BaseMapper} method to a shared {@link MapperSupport}.
+ * 创建一个 JDK 动态代理，实现用户的 {@link BaseMapper} 子接口，
+ * 将每个 {@link BaseMapper} 方法委托给共享的 {@link MapperSupport}。
  */
 public final class MapperProxyFactory {
 

@@ -7,9 +7,9 @@ import cn.jiebaba.summer.web.bind.HandlerMethodArgumentResolver;
 import cn.jiebaba.summer.web.multipart.MultipartFileArgumentResolver;
 
 /**
- * Auto-configuration for summer-web. Registers the multipart argument resolver so
- * {@code @RequestPart}/{@code MultipartFile} parameters are resolved against the
- * parsed multipart/form-data body. Active whenever summer-boot is on the classpath.
+ * summer-web 的自动配置。注册 multipart 参数解析器，使
+ * {@code @RequestPart}/{@code MultipartFile} 参数能够依据解析后的
+ * multipart/form-data 请求体进行解析。只要 classpath 上存在 summer-boot 即生效。
  */
 @Configuration
 public class WebAutoConfiguration {

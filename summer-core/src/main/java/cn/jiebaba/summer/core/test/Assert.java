@@ -1,6 +1,6 @@
 package cn.jiebaba.summer.core.test;
 
-/** Minimal assertion helpers. Failures throw {@link AssertionError}. */
+/** 极简断言工具。失败时抛出 {@link AssertionError}。 */
 public final class Assert {
 
     private Assert() {}
@@ -59,7 +59,7 @@ public final class Assert {
         }
     }
 
-    /** Runs the runnable and asserts it throws the given exception type; returns the thrown instance. */
+    /** 运行 runnable 并断言其抛出给定异常类型；返回抛出的实例。 */
     public static <T extends Throwable> T assertThrows(Class<T> expected, ThrowingRunnable runnable) {
         return assertThrows(expected, runnable, null);
     }
@@ -76,7 +76,7 @@ public final class Assert {
                 + "expected " + expected.getName() + " to be thrown, but nothing was thrown");
     }
 
-    /** A runnable that may throw any checked exception. */
+    /** 可抛出任意受检异常的 runnable。 */
     @FunctionalInterface
     public interface ThrowingRunnable {
         void run() throws Throwable;

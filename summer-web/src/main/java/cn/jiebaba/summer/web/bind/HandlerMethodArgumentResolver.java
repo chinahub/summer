@@ -8,10 +8,9 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 
 /**
- * Strategy for resolving a handler-method parameter, evaluated before the built-in
- * binding in {@link HandlerMethodInvoker}. Lets extension modules (e.g. security,
- * which injects the authenticated principal) contribute parameter resolution
- * without {@code summer-web} depending on them.
+ * 处理器方法参数的解析策略，在 {@link HandlerMethodInvoker} 的内置绑定之前执行。
+ * 使扩展模块（如安全模块注入已认证主体）能贡献参数解析，
+ * 而 {@code summer-web} 无需依赖它们。
  */
 public interface HandlerMethodArgumentResolver {
     boolean supportsParameter(Parameter parameter);

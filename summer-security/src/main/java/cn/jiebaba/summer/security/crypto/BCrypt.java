@@ -5,24 +5,22 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 
 /*
- * Pure-JDK BCrypt. This is a faithful transcription of the public-domain
- * jBCrypt implementation (originally by Damien Miller, based on the OpenBSD
- * bcrypt by Niels Provos), which Spring's BCryptPasswordEncoder also relies on
- * internally. Produces and validates the standard "$2a$cost$salt+hash" format,
- * so hashes are interoperable with Spring Security and most bcrypt libraries.
+ * 纯 JDK 实现的 BCrypt。这是对公有领域 jBCrypt 实现的忠实转写
+ * （最初由 Damien Miller 编写，基于 Niels Provos 的 OpenBSD bcrypt），
+ * Spring 的 BCryptPasswordEncoder 内部也依赖该实现。生成并校验标准的
+ * "$2a$cost$salt+hash" 格式，因此哈希可与 Spring Security 及多数 bcrypt 库互操作。
  *
- * Working P and S arrays are allocated per hashpw() call (not static), making
- * the implementation thread-safe without locking -- important for virtual-thread
- * concurrency. Released to the public domain by its original author.
+ * 每次调用 hashpw() 时单独分配 P 与 S 数组（而非静态），使实现无需加锁即可线程安全——
+ * 这对虚拟线程并发尤为重要。由原作者发布到公有领域。
  */
 final class BCrypt {
 
     private BCrypt() {}
 
     private static final int BLOWFISH_NUM_ROUNDS = 16;
-    private static final int BCRYPT_BLOCKS = 6;     // 24 bytes = 6 32-bit words
+    private static final int BCRYPT_BLOCKS = 6;     // 24 字节 = 6 个 32 位字
 
-    // Blowfish P-array and S-boxes initialized from binary digits of pi (standard init).
+    // Blowfish 的 P 数组与 S 盒由 pi 的二进制位初始化（标准初始化）。
     private static final int[] P_ORIG = {
         0x243f6a88, 0x85a308d3, 0x13198a2e, 0x03707344, 0xa4093822, 0x299f31d0,
         0x082efa98, 0xec4e6c89, 0x452821e6, 0x38d01377, 0xbe5466cf, 0x34e90c6c,
@@ -203,7 +201,7 @@ final class BCrypt {
         0xb74e6132, 0xce77e25b, 0x578fdfe3, 0x3ac372e6
     };
 
-    // bcrypt's custom base64 alphabet (NOT standard base64).
+    // bcrypt 自定义的 base64 字母表（非标准 base64）。
     private static final char[] BASE64_CODE =
         "./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
     private static final byte[] INDEX_64 = new byte[128];
@@ -212,7 +210,7 @@ final class BCrypt {
         for (int i = 0; i < BASE64_CODE.length; i++) INDEX_64[BASE64_CODE[i]] = (byte) i;
     }
 
-    // Magic ciphertext "OrpheanBeholderScryDoubt" as six big-endian 32-bit words.
+    // 魔法密文 "OrpheanBeholderScryDoubt"，以六个大端序 32 位字表示。
     private static final int[] MAGIC_CDATA = {
         0x4f727068, 0x65616e42, 0x65686f6c, 0x64657253, 0x63727944, 0x6f756274
     };
@@ -238,7 +236,7 @@ final class BCrypt {
                 ^ S[0x200 + ((x >>> 8) & 0xff)]) + S[0x300 + (x & 0xff)]);
     }
 
-    /** bcrypt's Blowfish encipher variant: only the 'c' half is fed the subkeys. */
+    /** bcrypt 的 Blowfish 加密变体：仅 'c' 半部分参与子密钥处理。 */
     private static void encipher(int[] P, int[] S, int[] lr, int off) {
         int c = lr[off];
         int l = lr[off + 1];
@@ -269,7 +267,7 @@ final class BCrypt {
         }
     }
 
-    /** Initial key schedule mixing salt (for P XOR) and key (during encipher). */
+    /** 初始密钥编排：混合 salt（用于 P 异或）与 key（在加密期间）。 */
     private static void expandstate(int[] P, int[] S, byte[] data, byte[] key,
                                     int[] dataoff, int[] keyoff) {
         int[] lr = {0, 0};
@@ -292,7 +290,7 @@ final class BCrypt {
         }
     }
 
-    /** EksBlowfishSetup: initialize with salt+key, then iterate key expansion 2^cost times. */
+    /** EksBlowfishSetup：以 salt+key 初始化，再迭代密钥扩展 2^cost 次。 */
     private static void eks_blowfish_setup(int[] P, int[] S, int cost, byte[] salt, byte[] key) {
         int[] dataoff = {0};
         int[] keyoff = {0};
@@ -306,12 +304,12 @@ final class BCrypt {
     }
 
     /**
-     * Compute a bcrypt hash.
+     * 计算 bcrypt 哈希。
      *
-     * @param password the raw password (UTF-8); a NUL terminator is appended per the bcrypt spec
-     * @param salt     a salt string of the form "$2a$cc$..." + 22 base64 chars, where cc is the
-     *                 two-digit cost (04-31)
-     * @return the full bcrypt hash string
+     * @param password 原始密码（UTF-8）；按 bcrypt 规范追加一个 NUL 终止符
+     * @param salt     形如 "$2a$cc$..." + 22 个 base64 字符的 salt 字符串，其中 cc 为两位数的
+     *                 cost（04-31）
+     * @return 完整的 bcrypt 哈希字符串
      */
     static String hashpw(String password, String salt) {
         if (password == null) throw new IllegalArgumentException("password must not be null");
@@ -354,7 +352,7 @@ final class BCrypt {
         }
 
         byte[] passwordBytes = password.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        // For $2a/$2b/$2y the key gets a trailing NUL terminator.
+        // 对 $2a/$2b/$2y，key 末尾追加一个 NUL 终止符。
         if (minor >= 'a') {
             passwordBytes = Arrays.copyOf(passwordBytes, passwordBytes.length + 1);
         }
@@ -390,7 +388,7 @@ final class BCrypt {
         return rs.toString();
     }
 
-    /** Generate a 16-byte random salt as a 29-char bcrypt salt string ($2a$cc$ + 22 chars). */
+    /** 生成 16 字节随机盐，编码为 29 字符的 bcrypt 盐字符串（$2a$cc$ + 22 字符）。 */
     static String gensalt(int cost, SecureRandom random) {
         if (cost < 4 || cost > 31) {
             throw new IllegalArgumentException("cost must be 4..31");
@@ -406,7 +404,7 @@ final class BCrypt {
         return rs.toString();
     }
 
-    /** Verify that {@code plaintext} hashes to {@code hashed}. */
+    /** 校验 {@code plaintext} 哈希后是否等于 {@code hashed}。 */
     static boolean checkpw(String plaintext, String hashed) {
         if (hashed == null || hashed.length() < 29) return false;
         String computed;
@@ -418,6 +416,9 @@ final class BCrypt {
         return equalsNoEarlyExit(computed, hashed);
     }
 
+    /**
+     * 将字节数组按 bcrypt 自定义 base64 字母表编码为字符串。
+     */
     private static String encode_base64(byte[] data, int len) {
         if (len <= 0 || len > data.length) throw new IllegalArgumentException("Invalid len");
         StringBuilder rs = new StringBuilder();
@@ -446,6 +447,9 @@ final class BCrypt {
         return rs.toString();
     }
 
+    /**
+     * 将 bcrypt 自定义 base64 字符串解码为字节数组。
+     */
     private static byte[] decode_base64(String s, int maxolen) {
         ByteArrayOutputStream rs = new ByteArrayOutputStream();
         int off = 0;

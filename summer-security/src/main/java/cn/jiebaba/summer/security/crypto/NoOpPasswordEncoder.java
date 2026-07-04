@@ -1,8 +1,8 @@
 package cn.jiebaba.summer.security.crypto;
 
 /**
- * {@link PasswordEncoder} that performs no hashing (stores plaintext). Intended
- * only for testing or legacy migration. Mirrors Spring's {@code NoOpPasswordEncoder}.
+ * 不做任何哈希（直接存储明文）的 {@link PasswordEncoder}。仅用于测试或遗留系统迁移。
+ * 对应 Spring 的 {@code NoOpPasswordEncoder}。
  */
 public final class NoOpPasswordEncoder implements PasswordEncoder {
 

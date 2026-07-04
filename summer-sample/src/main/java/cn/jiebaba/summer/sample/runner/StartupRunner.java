@@ -8,9 +8,9 @@ import cn.jiebaba.summer.core.annotation.Order;
 import java.util.logging.Logger;
 
 /**
- * Sample {@link ApplicationRunner}: runs once the context is ready and the web server is
- * listening. Demonstrates cache warm-up / dictionary loading on startup. Harmless (logging only)
- * so it never breaks smoke tests that boot the sample application.
+ * 示例 {@link ApplicationRunner}：在上下文就绪、Web 服务器开始监听后运行一次。
+ * 演示启动时的缓存预热 / 字典加载。该实现只输出日志、无副作用，
+ * 因此不会破坏启动示例应用的冒烟测试。
  */
 @Component
 @Order(1)

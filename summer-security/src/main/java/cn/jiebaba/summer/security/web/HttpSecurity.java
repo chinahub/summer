@@ -11,8 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Fluent builder for a {@link SecurityFilterChain}. Mirrors Spring Security's
- * {@code HttpSecurity} DSL in spirit (without SpEL):
+ * {@link SecurityFilterChain} 的流畅构建器。在精神上对应 Spring Security 的
+ * {@code HttpSecurity} DSL（不含 SpEL）：
  * <pre>
  *   http.authorize(
  *         match("/public/**").permitAll(),
@@ -21,7 +21,7 @@ import java.util.List;
  *       .jwt(jwt -&gt; jwt.loginUrl("/login").tokenTtl(3600))
  *       .build();
  * </pre>
- * The login filter runs first, then JWT authentication, then authorization.
+ * 登录过滤器最先运行，随后是 JWT 认证，最后是授权。
  */
 public final class HttpSecurity {
 
@@ -36,7 +36,7 @@ public final class HttpSecurity {
         return new HttpSecurity();
     }
 
-    /** Add authorization rules; the last entry is treated as the catch-all default. */
+    /** 添加授权规则；最后一条作为兜底默认规则。 */
     public HttpSecurity authorize(AuthorizationSpec... specs) {
         for (AuthorizationSpec spec : specs) {
             AuthorizationRule rule = spec.toRule();
@@ -55,11 +55,11 @@ public final class HttpSecurity {
         return this;
     }
 
-    /** Build the chain. Requires a {@link JwtConfigurer} (with encoder/decoder/manager) to be set. */
+    /** 构建过滤器链。需先设置 {@link JwtConfigurer}（含编码器/解码器/管理器）。 */
     public SecurityFilterChain build() {
         List<Filter> filters = new ArrayList<>();
         if (jwt == null || !jwt.configured()) {
-            // No JWT configured: build a permit-all chain (security effectively disabled).
+            // 未配置 JWT：构建全放行链（安全实际被禁用）。
             return new SecurityFilterChain(filters);
         }
         if (jwt.loginEnabled()) {
@@ -71,7 +71,7 @@ public final class HttpSecurity {
         return new SecurityFilterChain(filters);
     }
 
-    // ---- rule specs -------------------------------------------------------
+    // ---- 规则定义 -------------------------------------------------------
 
     public static AuthorizationSpec match(String pattern) {
         return new AuthorizationSpec(pattern, null, false);
@@ -85,7 +85,7 @@ public final class HttpSecurity {
         return new AuthorizationSpec("/**", null, true);
     }
 
-    /** A spec describing one URL rule and its decision. */
+    /** 描述一条 URL 规则及其决策的定义。 */
     public static final class AuthorizationSpec {
         private final String pattern;
         private final HttpMethod method;
@@ -122,7 +122,7 @@ public final class HttpSecurity {
         }
     }
 
-    /** Configurer for JWT login + token encoding. */
+    /** JWT 登录与令牌编码的配置器。 */
     public static final class JwtConfigurer {
         private JwtEncoder encoder;
         private JwtDecoder decoder;

@@ -14,8 +14,8 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
 /**
- * Verifies Summer's built-in SLF4J binding routes every SLF4J call (the exact
- * call Lombok @Slf4j generates) into java.util.logging. Requires no bridge jar.
+ * 验证 Summer 内置的 SLF4J binding 会把每一条 SLF4J 调用（即 Lombok @Slf4j 生成的
+ * 调用形式）路由到 java.util.logging，且无需桥接 jar。
  */
 public class Slf4jBindingTest {
 

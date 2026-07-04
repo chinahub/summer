@@ -7,12 +7,12 @@ import java.lang.annotation.RetentionPolicy;
 import cn.jiebaba.summer.core.annotation.Component;
 import java.lang.annotation.Target;
 
-/** Marks a class as a WebSocket server endpoint mapped to the given path. */
+/** 将类标记为映射到指定路径的 WebSocket 服务端点。 */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Component
 @Documented
 public @interface WebSocketEndpoint {
-    /** URI path, e.g. {@code "/ws/chat"}. */
+    /** URI 路径，例如 {@code "/ws/chat"}。 */
     String value();
 }

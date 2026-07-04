@@ -15,11 +15,10 @@ import java.util.Set;
 import java.util.WeakHashMap;
 
 /**
- * Creates CGLIB-style subclass proxies by hand-generating class files (zero
- * third-party deps). The proxy overrides every public/protected non-final
- * method to delegate to {@link #intercept}; a {@code $$summer$super$<name>}
- * bridge ({@code invokespecial super.<name>}) breaks self-invocation recursion.
- * Uses a single-object model: the proxy instance is the bean itself.
+ * 通过手写字节码生成 class 文件来创建 CGLIB 风格的子类代理（零第三方依赖）。
+ * 代理会覆写每个 public/protected 且非 final 的方法以委托给 {@link #intercept}；
+ * 一个 {@code $$summer$super$<name>} bridge（{@code invokespecial super.<name>}）
+ * 用于打破自调用递归。采用单对象模型：代理实例即 bean 本身。
  */
 public final class SubclassProxyFactory {
 
@@ -27,6 +26,9 @@ public final class SubclassProxyFactory {
 
     private SubclassProxyFactory() {}
 
+    /**
+     * 通过生成目标类的子类代理创建增强实例，覆写可拦截方法并转发到拦截器。
+     */
     public static Object create(Class<?> targetClass, Constructor<?> ctor, Object[] ctorArgs,
                                 List<MethodInterceptor> interceptors, List<Advice> advices) {
         if (Modifier.isFinal(targetClass.getModifiers())) {
@@ -58,7 +60,7 @@ public final class SubclassProxyFactory {
         }
     }
 
-    /** Entry point invoked by every generated override method. */
+    /** 每个生成的覆写方法所调用的入口。 */
     public static Object intercept(Object proxy, int methodIndex, Object[] args) throws Throwable {
         SubclassProxyCallback callback;
         synchronized (CALLBACKS) {
@@ -74,7 +76,7 @@ public final class SubclassProxyFactory {
         return "$$summer$super$" + methodName;
     }
 
-    /** Collects public/protected non-final non-static methods up the hierarchy, plus Object toString/hashCode/equals. */
+    /** 收集层级中 public/protected、非 final、非 static 的方法，以及 Object 的 toString/hashCode/equals。 */
     static List<Method> collectMethods(Class<?> targetClass) {
         List<Method> methods = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();

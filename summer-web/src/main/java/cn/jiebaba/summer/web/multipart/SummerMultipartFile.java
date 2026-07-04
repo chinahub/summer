@@ -8,7 +8,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
 
-/** In-memory {@link MultipartFile} backed by the buffered part content. */
+/** 基于缓冲的部分内容实现的内存版 {@link MultipartFile}。 */
 final class SummerMultipartFile implements MultipartFile {
 
     private final String name;

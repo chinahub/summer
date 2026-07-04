@@ -3,7 +3,7 @@ package cn.jiebaba.summer.security.jwt;
 import java.util.Collection;
 import java.util.Map;
 
-/** Minimal JSON serializer for JWT claim maps (no third-party deps). */
+/** 用于 JWT 声明 Map 的简易 JSON 序列化器（无第三方依赖）。 */
 public final class JsonWriter {
 
     private JsonWriter() {}
@@ -57,6 +57,9 @@ public final class JsonWriter {
         sb.append(']');
     }
 
+    /**
+     * 将字符串转义后写入缓冲：处理引号、反斜杠及控制字符的 JSON 转义。
+     */
     private static void writeString(StringBuilder sb, String s) {
         sb.append('"');
         for (int i = 0; i < s.length(); i++) {

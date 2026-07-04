@@ -5,18 +5,18 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Represents an uploaded file received in a multipart/form-data request.
- * Mirrors a minimal subset of Spring's {@code MultipartFile}.
+ * 表示 multipart/form-data 请求中接收到的上传文件。
+ * 对应 Spring {@code MultipartFile} 的一个最小子集。
  */
 public interface MultipartFile {
 
-    /** The form field name (the {@code name} parameter of Content-Disposition). */
+    /** 表单字段名（Content-Disposition 的 {@code name} 参数）。 */
     String getName();
 
-    /** The original filename from the client, with any path stripped. May be {@code null}. */
+    /** 来自客户端的原始文件名（已剥离路径），可能为 {@code null}。 */
     String getOriginalFilename();
 
-    /** The part's Content-Type, or {@code null} if not provided. */
+    /** 该部分的 Content-Type，未提供时为 {@code null}。 */
     String getContentType();
 
     boolean isEmpty();
@@ -27,6 +27,6 @@ public interface MultipartFile {
 
     InputStream getInputStream() throws IOException;
 
-    /** Write the part content to {@code dest}, overwriting it if it exists. */
+    /** 将部分内容写入 {@code dest}，若已存在则覆盖。 */
     void transferTo(File dest) throws IOException;
 }

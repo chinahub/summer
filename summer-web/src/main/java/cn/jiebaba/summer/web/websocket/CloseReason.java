@@ -1,6 +1,6 @@
 package cn.jiebaba.summer.web.websocket;
 
-/** Reason a WebSocket connection was closed (RFC 6455 section 7.4 status codes). */
+/** WebSocket 连接关闭的原因（RFC 6455 第 7.4 节状态码）。 */
 public record CloseReason(int code, String reason) {
     public static final int NORMAL = 1000;
     public static final int GOING_AWAY = 1001;

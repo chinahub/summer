@@ -15,10 +15,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Resolves {@code MultipartFile} / {@code MultipartFile[]} / {@code List<MultipartFile>}
- * parameters and {@code @RequestPart}-annotated form fields against the parsed
- * multipart body. The body is parsed lazily and cached on the request. Collected
- * automatically by {@code HandlerMethodInvoker} as a context bean.
+ * 依据解析后的 multipart 请求体解析 {@code MultipartFile} / {@code MultipartFile[]} /
+ * {@code List<MultipartFile>} 参数以及带 {@code @RequestPart} 注解的表单字段。
+ * 请求体惰性解析并缓存于请求上；由 {@code HandlerMethodInvoker} 作为上下文 Bean 自动收集。
  */
 public final class MultipartFileArgumentResolver implements HandlerMethodArgumentResolver {
 
@@ -47,6 +46,10 @@ public final class MultipartFileArgumentResolver implements HandlerMethodArgumen
     }
 
     @Override
+    /**
+     * 解析 multipart 参数：按参数类型分别返回单个文件、文件数组、文件列表，
+     * 或对 {@code @RequestPart} 标注的简单类型返回普通表单字段值；必填缺失时抛出异常。
+     */
     public Object resolveArgument(Parameter parameter, Type genericType, RouteMatch match,
                                   WebRequest request, WebResponse response) throws Exception {
         MultipartForm form = form(request);
@@ -65,7 +68,7 @@ public final class MultipartFileArgumentResolver implements HandlerMethodArgumen
         if (type == List.class) {
             return new ArrayList<>(form.getFiles(name));
         }
-        // @RequestPart on a simple type -> regular form field
+        // @RequestPart 标注的简单类型 -> 普通表单字段
         String value = form.getField(name);
         if (value == null && required) throw missing(name);
         return value;
@@ -103,7 +106,7 @@ public final class MultipartFileArgumentResolver implements HandlerMethodArgumen
         return new HandlerException("Missing required multipart part: " + name);
     }
 
-    /** Parse a size string such as {@code 1MB}, {@code 512KB}, {@code 1048576} into bytes. */
+    /** 将诸如 {@code 1MB}、{@code 512KB}、{@code 1048576} 的大小字符串解析为字节数。 */
     private static long parseSize(String text, long fallback) {
         if (text == null || text.isBlank()) return fallback;
         String s = text.trim().toUpperCase();

@@ -31,11 +31,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Executes {@link SqlBuilder.Sql} over a {@link DataSource} and maps rows back to
- * entities via {@link TableInfo}. When a transaction is active
- * ({@link TransactionManager#currentConnection()}), the bound connection is reused
- * and NOT closed (the transaction manager owns it); otherwise a pooled connection
- * is borrowed and returned per statement.
+ * 在 {@link DataSource} 上执行 {@link SqlBuilder.Sql}，并通过 {@link TableInfo}
+ * 将结果行映射回实体。当存在活动事务时（{@link TransactionManager#currentConnection()}），
+ * 复用绑定连接且不关闭（由事务管理器持有）；否则每条语句借出并归还一个池化连接。
  */
 public final class SqlExecutor {
 
@@ -56,7 +54,7 @@ public final class SqlExecutor {
 
     public Dialect dialect() { return dialect; }
 
-    /** A connection handle that closes only non-transactional connections. */
+    /** 仅关闭非事务连接的连接句柄。 */
     private static final class Handle implements AutoCloseable {
         final Connection connection;
         final boolean transactional;
@@ -70,20 +68,20 @@ public final class SqlExecutor {
     }
 
     private Handle open() throws SQLException {
-        // 1. single-source @Transactional
+        // 1. 单数据源 @Transactional
         Connection tx = TransactionManager.currentConnection();
         if (tx != null) return new Handle(tx, true);
-        // 2. multi-source @DSTransactional
+        // 2. 多数据源 @DSTransactional
         if (DsTransactionManager.isActive()) {
             Connection dsConn = DsTransactionManager.getConnection(dataSource);
             if (dsConn != null) return new Handle(dsConn, true);
-            // not yet borrowed for this datasource — borrow now (DsTransactionManager owns it)
+            // 该数据源尚未借出连接 —— 现在借出（由 DsTransactionManager 持有）
             if (dataSource instanceof DynamicDataSource dds) {
                 dsConn = DsTransactionManager.borrow(dds);
                 return new Handle(dsConn, true);
             }
         }
-        // 3. no transaction — fresh pooled connection
+        // 3. 无事务 —— 新建池化连接
         return new Handle(dataSource.getConnection(), false);
     }
 
@@ -220,6 +218,9 @@ public final class SqlExecutor {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * 将 {@link ResultSet} 的各行映射为实体列表，按列名匹配字段并做类型转换。
+     */
     private <T> List<T> mapRows(ResultSet rs, TableInfo table) throws SQLException {
         List<T> rows = new ArrayList<>();
         ResultSetMetaData meta = rs.getMetaData();
@@ -253,12 +254,16 @@ public final class SqlExecutor {
         return rows;
     }
 
+    /**
+     * 将值强制转换为目标类型：处理数字窄化、字符串、布尔、时间及枚举等跨类型映射；
+     * 无法转换时保留原始值。
+     */
     private static Object coerce(Object value, Class<?> targetType) {
         if (value == null) return null;
         if (targetType.isInstance(value)) return value;
         if (value instanceof BigDecimal bd) {
-            // JDBC drivers often return numeric columns as BigDecimal; convert via
-            // the Number API instead of toString()+parse, which breaks on scaled values.
+            // JDBC 驱动常将数值列以 BigDecimal 返回；通过 Number API 转换，
+            // 而非 toString()+parse，后者在带小数位的值上会出错。
             if (targetType == int.class || targetType == Integer.class) return bd.intValue();
             if (targetType == long.class || targetType == Long.class) return bd.longValue();
             if (targetType == double.class || targetType == Double.class) return bd.doubleValue();
@@ -276,7 +281,7 @@ public final class SqlExecutor {
             if (targetType == byte.class || targetType == Byte.class) return bi.byteValue();
             if (targetType == String.class) return bi.toString();
         }
-        // temporal / date cross-type mapping (e.g. TIMESTAMP -> LocalDateTime)
+        // 时间/日期跨类型映射（如 TIMESTAMP -> LocalDateTime）
         if (value instanceof java.sql.Timestamp ts) {
             if (targetType == LocalDateTime.class) return ts.toLocalDateTime();
             if (targetType == Instant.class) return ts.toInstant();
@@ -334,8 +339,8 @@ public final class SqlExecutor {
                 return Enum.valueOf((Class<? extends Enum>) targetType, s);
             }
         } catch (NumberFormatException e) {
-            // value cannot be coerced to the target numeric type; keep the raw
-            // value rather than failing the whole row (see #2).
+            // 值无法强制转换为目标数值类型；保留原始值，
+            // 而非令整行失败（见 #2）。
             return value;
         }
         return value;

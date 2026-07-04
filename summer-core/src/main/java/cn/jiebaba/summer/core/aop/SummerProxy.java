@@ -1,5 +1,5 @@
 package cn.jiebaba.summer.core.aop;
 
-/** Marker interface implemented by every summer-generated subclass proxy. */
+/** 每个 summer 生成的子类代理都实现的标记接口。 */
 public interface SummerProxy {
 }

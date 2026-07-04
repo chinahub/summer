@@ -11,8 +11,11 @@ public class Environment {
 
     private final Properties properties = new Properties();
 
+    /**
+     * 初始化环境：按优先级加载系统属性、环境变量与 application 配置（properties/yml）。
+     */
     public Environment() {
-        // lowest priority: system properties first then environment variables then app properties
+        // 最低优先级：先系统属性，再环境变量，最后应用属性
         Properties app = new Properties();
         try (InputStream in = Thread.currentThread().getContextClassLoader()
                 .getResourceAsStream("application.properties")) {
@@ -20,12 +23,12 @@ public class Environment {
                 app.load(in);
             }
         } catch (IOException e) {
-            // ignore missing/invalid application.properties
+            // 忽略缺失/无效的 application.properties
         }
         for (String name : app.stringPropertyNames()) {
             properties.setProperty(name, app.getProperty(name));
         }
-        // also load application.yml (if present) and flatten into dotted keys
+        // 同时加载 application.yml（若存在）并展平为点分键
         try (InputStream in = Thread.currentThread().getContextClassLoader()
                 .getResourceAsStream("application.yml")) {
             if (in != null) {
@@ -38,9 +41,9 @@ public class Environment {
                 }
             }
         } catch (IOException e) {
-            // ignore missing/invalid application.yml
+            // 忽略缺失/无效的 application.yml
         }
-        // environment variables override: SERVER_PORT -> server.port style mapping
+        // 环境变量覆盖：SERVER_PORT -> server.port 风格映射
         Map<String, String> env = System.getenv();
         for (Map.Entry<String, String> e : env.entrySet()) {
             String key = relaxedKey(e.getKey());
@@ -48,7 +51,7 @@ public class Environment {
                 properties.setProperty(key, e.getValue());
             }
         }
-        // system properties win
+        // 系统属性优先
         Properties sys = System.getProperties();
         for (String name : sys.stringPropertyNames()) {
             properties.setProperty(name, sys.getProperty(name));
@@ -63,7 +66,7 @@ public class Environment {
             if (c == '_') {
                 sb.append('.');
             } else if (c == '.') {
-                // keep dots from system-style names untouched
+                // 保留系统风格名中的点号不变
                 sb.append(c);
             } else {
                 sb.append(Character.toLowerCase(c));
@@ -103,14 +106,17 @@ public class Environment {
         return map;
     }
 
-    /** Resolve ${key} and ${key:default} placeholders inside the given text. */
+    /** 解析给定文本中的 ${key} 与 ${key:default} 占位符。 */
     public String resolvePlaceholders(String text) {
         if (text == null) return null;
         return resolvePlaceholders(text, 0);
     }
 
+    /**
+     * 递归解析文本中的 ${key} 与 ${key:default} 占位符，最多 5 层以防循环引用。
+     */
     private String resolvePlaceholders(String text, int depth) {
-        // Prevent infinite recursion from circular references (max 5 levels)
+        // 防止循环引用导致的无限递归（最多 5 层）
         if (depth >= 5) return text;
         StringBuilder result = new StringBuilder(text.length());
         int i = 0;
@@ -138,7 +144,7 @@ public class Environment {
                     value = defaultValue;
                 }
                 if (value != null) {
-                    // Recursively resolve placeholders in the value itself for nesting support
+                    // 递归解析值本身中的占位符以支持嵌套
                     String resolved = resolvePlaceholders(value, depth + 1);
                     result.append(resolved);
                 } else {
@@ -153,8 +159,11 @@ public class Environment {
         return result.toString();
     }
 
-    /** Coerce a raw string value to the target type. */
+    /** 将原始字符串值转换为目标类型。 */
     @SuppressWarnings("unchecked")
+    /**
+     * 将原始字符串值转换为目标类型（基本类型、枚举、时间等）。
+     */
     public static Object convert(String value, Class<?> targetType) {
         if (value == null) return null;
         if (targetType == String.class || targetType == Object.class || targetType == CharSequence.class) {

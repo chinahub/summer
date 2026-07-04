@@ -9,8 +9,8 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 /**
- * Intercepts methods annotated with {@link DSTransactional}. Begins a
- * multi-datasource transaction scope, commits on success, rolls back on failure.
+ * 拦截带 {@link DSTransactional} 注解的方法。开启多数据源事务作用域，
+ * 成功则提交，失败则回滚。
  */
 public final class DsTransactionInterceptor implements MethodInterceptor, ProxyAdvisor {
 
@@ -37,7 +37,7 @@ public final class DsTransactionInterceptor implements MethodInterceptor, ProxyA
 
     @Override
     public int order() {
-        return 150; // between DsInterceptor(200) and TransactionInterceptor(100)
+        return 150; // 介于 DsInterceptor(200) 与 TransactionInterceptor(100) 之间
     }
 
     @Override

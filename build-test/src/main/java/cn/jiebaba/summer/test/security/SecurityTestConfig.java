@@ -17,11 +17,10 @@ import cn.jiebaba.summer.security.web.SecurityFilterChain;
 import cn.jiebaba.summer.web.bind.HandlerMethodAccessChecker;
 
 /**
- * Security wiring for {@link SecurityTestApp}. Overrides the auto-configured
- * beans with {@code @Primary} instances: an in-memory user store with BCrypt
- * passwords, an always-enabled method enforcer, and a URL rule set that permits
- * public paths, requires ADMIN for /admin/**, requires authentication for /me,
- * and leaves everything else open (so unmatched paths still 404).
+ * {@link SecurityTestApp} 的安全装配。以 {@code @Primary} 实例覆盖自动配置的 Bean：
+ * 内存用户存储（BCrypt 密码）、始终启用的方法级执行器，以及一组 URL 规则——
+ * 放行公开路径、对 /admin/** 要求 ADMIN、对 /me 要求认证，其余默认放行
+ * （使未匹配路径仍返回 404）。
  */
 @Configuration
 public class SecurityTestConfig {

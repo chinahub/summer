@@ -11,17 +11,19 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * A tiny JUnit-like test runner. Discovers classes under the given base
- * packages via {@link ClassPathScanner}, then for each {@code @Test} method
- * creates a fresh instance, runs surrounding {@code @BeforeEach}/{@code @AfterEach},
- * and exits with code 0 if all pass, 1 otherwise.
+ * 一个类似 JUnit 的微型测试运行器。通过 {@link ClassPathScanner} 发现给定基础包下的类，
+ * 随后对每个 {@code @Test} 方法创建新实例、运行前后的 {@code @BeforeEach}/{@code @AfterEach}，
+ * 全部通过则退出码为 0，否则为 1。
  *
- * Usage: {@code java -cp ... cn.jiebaba.summer.core.test.TestRunner [package ...]}
+ * 用法：{@code java -cp ... cn.jiebaba.summer.core.test.TestRunner [package ...]}
  */
 public final class TestRunner {
 
     private TestRunner() {}
 
+    /**
+     * 测试运行入口：扫描并执行 @Test 方法，汇总通过/失败结果。
+     */
     public static void main(String[] args) throws Exception {
         Set<String> basePackages = new LinkedHashSet<>();
         if (args != null) {
@@ -84,6 +86,9 @@ public final class TestRunner {
         return tests;
     }
 
+    /**
+     * 执行单个 @Test 方法：运行 @BeforeEach/@AfterEach 回调并捕获通过/失败与异常。
+     */
     private static Outcome runOne(Class<?> cls, Method test) {
         Object instance;
         try {

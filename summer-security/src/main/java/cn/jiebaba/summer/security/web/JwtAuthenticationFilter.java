@@ -20,10 +20,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * Extracts a Bearer JWT from the {@code Authorization} header, validates it via
- * {@link JwtDecoder}, and populates the {@link SecurityContextHolder} with the
- * resulting {@link Authentication}. Invalid/expired tokens yield 401.
- * <p>Stateless: no session is created; the principal is reconstructed from claims.
+ * 从 {@code Authorization} 头提取 Bearer JWT，经 {@link JwtDecoder} 校验，
+ * 并用结果 {@link Authentication} 填充 {@link SecurityContextHolder}。
+ * 无效/过期令牌返回 401。
+ * <p>无状态：不创建会话，主体由声明重建。
  */
 public final class JwtAuthenticationFilter implements Filter {
 
@@ -35,6 +35,9 @@ public final class JwtAuthenticationFilter implements Filter {
     }
 
     @Override
+    /**
+     * 过滤器入口：从 Authorization 头提取 Bearer JWT 并校验，成功则填充安全上下文，无效则返回 401。
+     */
     public void doFilter(WebRequest request, WebResponse response, FilterChain chain) throws Exception {
         String header = request.header("Authorization");
         if (header != null && header.startsWith(BEARER)) {
@@ -59,7 +62,7 @@ public final class JwtAuthenticationFilter implements Filter {
         try {
             chain.doFilter(request, response);
         } finally {
-            // Clear per-request context on the virtual thread to avoid leakage.
+            // 清除虚拟线程上的每请求上下文，避免泄漏。
             SecurityContextHolder.clearContext();
         }
     }

@@ -6,9 +6,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 /**
- * Encodes {@link JwtClaims} into a compact JWS (HS256). The token structure is
- * {@code base64url(header).base64url(payload).base64url(signature)}, with header
- * {@code {"alg":"HS256","typ":"JWT"}}. Pure JDK via {@link Mac}.
+ * 将 {@link JwtClaims} 编码为紧凑 JWS（HS256）。token 结构为
+ * {@code base64url(header).base64url(payload).base64url(signature)}，header 为
+ * {@code {"alg":"HS256","typ":"JWT"}}。纯 JDK 实现，经 {@link Mac}。
  */
 public final class JwtEncoder {
 
@@ -50,6 +50,6 @@ public final class JwtEncoder {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(data);
     }
 
-    /** Expose the secret length / presence for diagnostics (not the bytes). */
+    /** 暴露密钥长度/是否存在以供诊断（不暴露字节）。 */
     public int secretLength() { return secret.length; }
 }

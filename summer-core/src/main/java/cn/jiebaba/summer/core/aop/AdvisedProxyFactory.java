@@ -9,9 +9,8 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Creates a JDK dynamic proxy for a target bean, applying a chain of
- * {@link MethodInterceptor}s (from aspects and built-in interceptors) to
- * matching methods. The proxy implements every interface of the target.
+ * 为目标 bean 创建 JDK 动态代理，将一串 {@link MethodInterceptor}（来自切面与内置拦截器）
+ * 应用到匹配的方法上。代理会实现目标的所有接口。
  */
 public final class AdvisedProxyFactory {
 
@@ -29,6 +28,9 @@ public final class AdvisedProxyFactory {
         return false;
     }
 
+    /**
+     * 构造被增强的代理对象：组装内置拦截器与匹配的 advice 拦截链后生成代理实例。
+     */
     public static Object createProxy(Object target, Class<?>[] interfaces,
                                      List<MethodInterceptor> interceptors, List<Advice> advices) {
         InvocationHandler handler = (proxy, method, args) -> {
@@ -51,7 +53,7 @@ public final class AdvisedProxyFactory {
                 handler);
     }
 
-    /** Builds the interceptor chain (built-in interceptors + matching advice), sorted by order. */
+    /** 构建拦截器链（内置拦截器 + 匹配的 advice），按 order 排序。 */
     static List<MethodInterceptor> buildChain(Class<?> targetClass, Method method,
                                               List<MethodInterceptor> interceptors, List<Advice> advices) {
         List<MethodInterceptor> chain = new ArrayList<>(interceptors);
@@ -97,13 +99,13 @@ public final class AdvisedProxyFactory {
         }
     }
 
-    /** Tail of the interceptor chain: invokes the target method with the given args. */
+    /** 拦截器链尾：以给定参数调用目标方法。 */
     @FunctionalInterface
     interface TailInvoker {
         Object invoke(Object[] args) throws Throwable;
     }
 
-    /** Reflective chain invocation terminating at the target method (or a custom tail). */
+    /** 反射式链调用，终止于目标方法（或自定义尾节点）。 */
     static final class ReflectiveMethodInvocation implements ProceedingJoinPoint {
         private final Object proxy;
         private final Object target;

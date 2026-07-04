@@ -6,7 +6,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/** Called when a WebSocket connection is established. Method may take a {@link WebSocketSession}. */
+/** 当 WebSocket 连接建立时调用。方法可接收一个 {@link WebSocketSession} 参数。 */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented

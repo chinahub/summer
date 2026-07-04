@@ -10,9 +10,9 @@ import cn.jiebaba.summer.security.userdetails.UserDetailsService;
 import java.util.Collection;
 
 /**
- * Authenticates {@link UsernamePasswordAuthenticationToken} by loading the
- * {@link UserDetails} via {@link UserDetailsService} and verifying the password
- * with {@link PasswordEncoder}. Mirrors Spring's {@code DaoAuthenticationProvider}.
+ * 通过 {@link UserDetailsService} 加载 {@link UserDetails} 并用 {@link PasswordEncoder}
+ * 校验密码，从而认证 {@link UsernamePasswordAuthenticationToken}。对应 Spring 的
+ * {@code DaoAuthenticationProvider}。
  */
 public class DaoAuthenticationProvider implements AuthenticationProvider {
 
@@ -25,6 +25,9 @@ public class DaoAuthenticationProvider implements AuthenticationProvider {
     }
 
     @Override
+    /**
+     * 认证用户名密码令牌：按用户名加载用户、校验账号状态与密码，成功则返回带权限的已认证令牌。
+     */
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         if (!supports(authentication.getClass())) {
             throw new AuthenticationException("Unsupported authentication: " + authentication.getClass().getName());
@@ -34,7 +37,7 @@ public class DaoAuthenticationProvider implements AuthenticationProvider {
         try {
             user = userDetailsService.loadUserByUsername(username);
         } catch (AuthenticationException e) {
-            // Avoid leaking whether the username exists; treat lookup failure as bad credentials.
+            // 避免泄露用户名是否存在；将查找失败视为凭据错误。
             throw new BadCredentialsException("Bad credentials");
         }
         if (!user.isEnabled()) {

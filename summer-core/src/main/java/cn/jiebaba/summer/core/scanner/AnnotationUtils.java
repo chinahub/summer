@@ -10,7 +10,7 @@ import java.util.Set;
 public final class AnnotationUtils {
     private AnnotationUtils() {}
 
-    /** Find an annotation on the element, walking meta-annotations recursively. */
+    /** 在元素上查找注解，递归遍历元注解。 */
     public static <A extends Annotation> A findAnnotation(AnnotatedElement element, Class<A> annotationType) {
         if (element == null || annotationType == null) return null;
         Set<String> visited = new HashSet<>();

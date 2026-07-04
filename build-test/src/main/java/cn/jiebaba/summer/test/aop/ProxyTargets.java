@@ -1,7 +1,7 @@
 package cn.jiebaba.summer.test.aop;
 
-/** Target fixtures for subclass-proxy tests. Public so the generated proxy
- *  (defined in a child classloader) can legally extend them. */
+/** 子类代理测试的目标测试夹具。声明为 public，以便生成的代理
+ *  （定义在子 classloader 中）可以合法地继承它们。 */
 public class ProxyTargets {
 
     public static class Simple {

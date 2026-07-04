@@ -5,7 +5,7 @@ import cn.jiebaba.summer.core.test.Assert;
 import cn.jiebaba.summer.core.test.BeforeEach;
 import cn.jiebaba.summer.core.test.Test;
 
-/** Self-test for the tiny test framework. All cases here must pass. */
+/** 轻量测试框架的自测，此处所有用例必须通过。 */
 public class FrameworkSelfTest {
 
     private int beforeCount;
@@ -60,7 +60,7 @@ public class FrameworkSelfTest {
         Assert.assertEquals(0, afterCount);
     }
 
-    // Named to sort last so prior tests' @AfterEach have run.
+    // 命名排序靠后，确保先前测试的 @AfterEach 已执行。
     @Test
     void zzAfterEachHasRunForPriorTest() {
         Assert.assertTrue(afterRuns >= 1, "at least one @AfterEach should have run");

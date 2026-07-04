@@ -53,6 +53,11 @@ public final class HandlerMethodInvoker {
         }
     }
 
+    /**
+     * 绑定处理器方法参数：先交由已注册的 {@link HandlerMethodArgumentResolver} 处理，
+     * 再依次处理 WebRequest/WebResponse/上下文、{@link PathVariable}、{@link RequestParam}、
+     * {@link RequestHeader}、{@link RequestBody}，最后对简单/复杂类型从查询参数绑定。
+     */
     private Object bindParameter(Parameter param, Type genericType, RouteMatch match,
                                  WebRequest request, WebResponse response) throws Exception {
         for (HandlerMethodArgumentResolver resolver : resolvers) {
@@ -106,19 +111,23 @@ public final class HandlerMethodInvoker {
             return bound;
         }
 
-        // unannotated simple type -> bind from query parameter by name
+        // 无注解的简单类型 -> 按名称从查询参数绑定
         if (isSimpleType(type)) {
             String value = request.query(param.getName());
             if (value == null) return null;
             return Environment.convert(value, type);
         }
 
-        // unannotated complex type -> bind model attributes from query parameters
+        // 无注解的复杂类型 -> 从查询参数绑定模型属性
         Object model = bindModelAttribute(param.getName(), type, request);
         validateIfValid(param, model);
         return model;
     }
 
+    /**
+     * 绑定 {@link RequestParam} 参数：按数组、集合与单值三种情况从查询参数取值，
+     * 支持默认值与必填校验。
+     */
     @SuppressWarnings("unchecked")
     private Object bindRequestParam(RequestParam query, Parameter param, Class<?> type, Type genericType,
                                     WebRequest request) {

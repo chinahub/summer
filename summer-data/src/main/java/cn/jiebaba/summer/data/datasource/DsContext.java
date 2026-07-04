@@ -4,9 +4,9 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 /**
- * Thread-local routing context for {@link DynamicDataSource}. Holds a stack of
- * datasource names so that nested {@code @DS} calls can override and restore.
- * When empty, {@link DynamicDataSource} uses its default (primary) datasource.
+ * {@link DynamicDataSource} 的线程局部路由上下文。维护数据源名称栈，
+ * 使嵌套的 {@code @DS} 调用可覆盖并恢复。栈为空时，{@link DynamicDataSource}
+ * 使用默认（主）数据源。
  */
 public final class DsContext {
 
@@ -17,30 +17,30 @@ public final class DsContext {
 
     private DsContext() {}
 
-    /** Push a datasource name onto the routing stack. */
+    /** 将数据源名称压入路由栈。 */
     public static void push(String name) {
         STACK.get().push(name);
     }
 
-    /** Pop the top datasource name, restoring the previous one. */
+    /** 弹出栈顶数据源名称，恢复上一个。 */
     public static void pop() {
         Deque<String> stack = STACK.get();
         stack.pop();
         if (stack.isEmpty()) STACK.remove();
     }
 
-    /** Returns the current routing key, or {@code null} if none set (use default). */
+    /** 返回当前路由键，未设置时返回 {@code null}（使用默认）。 */
     public static String current() {
         Deque<String> stack = STACK.get();
         return stack.isEmpty() ? null : stack.peek();
     }
 
-    /** Returns true if a routing key is set. */
+    /** 是否已设置路由键。 */
     public static boolean isActive() {
         return !STACK.get().isEmpty();
     }
 
-    /** Clears any routing state for the current thread. */
+    /** 清除当前线程的路由状态。 */
     public static void clear() {
         STACK.remove();
     }

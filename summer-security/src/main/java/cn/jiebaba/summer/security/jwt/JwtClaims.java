@@ -8,9 +8,8 @@ import java.util.Map;
 import cn.jiebaba.summer.security.core.GrantedAuthority;
 
 /**
- * Claims carried by a JWT access token. Standard claims {@code sub}/{@code iat}/
- * {@code exp} are complemented by a custom {@code authorities} claim holding the
- * principal's granted authorities (strings).
+ * JWT access token 携带的 claims。标准 claims {@code sub}/{@code iat}/{@code exp}
+ * 之外，另有一个自定义的 {@code authorities} claim，保存 principal 的已授予权限（字符串）。
  */
 public final class JwtClaims {
 

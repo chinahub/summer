@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Parsed multipart/form-data body: file parts keyed by field name plus regular
- * (non-file) form fields. Built by {@link MultipartParser}.
+ * 解析后的 multipart/form-data 请求体：按字段名索引的文件部分，外加普通（非文件）表单字段。
+ * 由 {@link MultipartParser} 构建。
  */
 public final class MultipartForm {
 

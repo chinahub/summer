@@ -14,15 +14,14 @@ import cn.jiebaba.summer.security.web.HttpSecurity;
 import cn.jiebaba.summer.security.web.SecurityFilterChain;
 
 /**
- * Sample security configuration. Demonstrates the HttpSecurity DSL:
+ * 示例安全配置，演示 HttpSecurity DSL：
  * <ul>
- *   <li>{@code /admin/**} requires the {@code ADMIN} role (URL-level).</li>
- *   <li>{@code /me} requires authentication.</li>
- *   <li>everything else (including unmatched paths) is permitted, so existing
- *       public routes and 404s behave unchanged.</li>
+ *   <li>{@code /admin/**} 需要 {@code ADMIN} 角色（URL 级别）。</li>
+ *   <li>{@code /me} 需要登录认证。</li>
+ *   <li>其余路径（含未匹配路径）一律放行，使现有公开路由与 404 行为保持不变。</li>
  * </ul>
- * Provides a {@code @Primary} in-memory user store with BCrypt-encoded passwords
- * (admin/admin123, user/user123), overriding the auto-configured one.
+ * 提供一个 {@code @Primary} 的内存用户存储，密码以 BCrypt 加密
+ * （admin/admin123、user/user123），覆盖自动配置的默认实现。
  */
 @Configuration
 public class SecurityConfig {

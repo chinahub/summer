@@ -6,15 +6,13 @@ import java.lang.reflect.Modifier;
 import java.util.Map;
 
 /**
- * Emits the {@code method_info} byte arrays for the three kinds of methods on a
- * generated subclass proxy:
+ * 为生成的子类代理上三类方法生成 {@code method_info} 字节数组：
  * <ul>
- *   <li><b>override</b> — delegates to {@code SubclassProxyFactory.intercept}</li>
- *   <li><b>bridge</b> — {@code $$summer$super$<name>} calling {@code invokespecial super.<name>}</li>
- *   <li><b>constructor</b> — forwards to {@code super.<init>}</li>
+ *   <li><b>override</b> — 委托给 {@code SubclassProxyFactory.intercept}</li>
+ *   <li><b>bridge</b> — {@code $$summer$super$<name>}，调用 {@code invokespecial super.<name>}</li>
+ *   <li><b>constructor</b> — 转发给 {@code super.<init>}</li>
  * </ul>
- * All method bodies are strictly linear (no branches / no try-catch) so that no
- * {@code StackMapTable} attribute is required.
+ * 所有方法体均为严格线性（无分支 / 无 try-catch），因此无需 {@code StackMapTable} 属性。
  */
 final class MethodBuilder {
 
@@ -49,15 +47,15 @@ final class MethodBuilder {
 
     private MethodBuilder() {}
 
-    /** Generates an override that calls {@code factoryInternal.intercept(this, index, args)}. */
+    /** 生成一个覆写方法，调用 {@code factoryInternal.intercept(this, index, args)}。 */
     static byte[] overrideMethod(ConstantPool cp, String factoryInternal, Method m, int methodIndex) {
         String desc = Descriptor.of(m);
         Class<?>[] params = m.getParameterTypes();
         Class<?> ret = m.getReturnType();
 
         ByteArrayOutputStream c = new ByteArrayOutputStream();
-        emitLoadRef(c, 0);                       // this (proxy)
-        emitIntConst(c, cp, methodIndex);        // method index
+        emitLoadRef(c, 0);                       // this（代理）
+        emitIntConst(c, cp, methodIndex);        // 方法索引
         emitNewArgsArray(c, cp, params);         // Object[] args
         int imr = cp.methodRef(factoryInternal, "intercept",
                 "(Ljava/lang/Object;I[Ljava/lang/Object;)Ljava/lang/Object;");
@@ -70,7 +68,7 @@ final class MethodBuilder {
         return methodInfo(cp, access, m.getName(), desc, c.toByteArray(), maxStack, maxLocals);
     }
 
-    /** Generates {@code $$summer$super$<name>} that calls {@code invokespecial super.<name>}. */
+    /** 生成 {@code $$summer$super$<name>}，调用 {@code invokespecial super.<name>}。 */
     static byte[] bridgeMethod(ConstantPool cp, Method m, String superOwner) {
         String name = "$$summer$super$" + m.getName();
         String desc = Descriptor.of(m);
@@ -94,7 +92,7 @@ final class MethodBuilder {
         return methodInfo(cp, ACC_PRIVATE | ACC_SYNTHETIC, name, desc, c.toByteArray(), maxStack, maxLocals);
     }
 
-    /** Generates a constructor that forwards to {@code super.<init>}. */
+    /** 生成一个构造器，转发到 {@code super.<init>}。 */
     static byte[] constructor(ConstantPool cp, String desc, Class<?>[] params, String superOwner) {
         ByteArrayOutputStream c = new ByteArrayOutputStream();
         emitLoadRef(c, 0);                       // this
@@ -112,7 +110,7 @@ final class MethodBuilder {
         return methodInfo(cp, ACC_PUBLIC, "<init>", desc, c.toByteArray(), maxStack, maxLocals);
     }
 
-    // ---- bytecode emission helpers ----
+    // ---- 字节码发射辅助 ----
 
     private static void emitNewArgsArray(ByteArrayOutputStream c, ConstantPool cp, Class<?>[] params) {
         int objClass = cp.classRef("java/lang/Object");
@@ -146,7 +144,7 @@ final class MethodBuilder {
         if (rt.isPrimitive()) {
             String w = WRAPPER.get(rt);
             int cc = cp.classRef(w);
-            c.write(192); Bytecode.u2(c, cc);    // checkcast wrapper
+            c.write(192); Bytecode.u2(c, cc);    // checkcast 包装类
             int mr = cp.methodRef(w, UNBOX.get(rt), "()" + PRIM.get(rt));
             c.write(182); Bytecode.u2(c, mr);    // invokevirtual xxxValue()
             c.write(returnOpcode(rt));
@@ -162,8 +160,8 @@ final class MethodBuilder {
         if (rt == long.class) return 173;
         if (rt == float.class) return 174;
         if (rt == double.class) return 175;
-        if (rt.isPrimitive()) return 172;        // int-ish
-        return 176;                              // ref/array
+        if (rt.isPrimitive()) return 172;        // 整型类
+        return 176;                              // 引用/数组
     }
 
     private static void emitLoadRef(ByteArrayOutputStream c, int index) {
@@ -205,7 +203,7 @@ final class MethodBuilder {
         Bytecode.u2(mi, access);
         Bytecode.u2(mi, nameIdx);
         Bytecode.u2(mi, descIdx);
-        Bytecode.u2(mi, 1);                      // attributes_count (Code only)
+        Bytecode.u2(mi, 1);                      // attributes_count（仅 Code）
         Bytecode.u2(mi, codeAttr);
         Bytecode.u4(mi, 2 + 2 + 4 + code.length + 2 + 2); // attribute_length
         Bytecode.u2(mi, maxStack);
@@ -213,7 +211,7 @@ final class MethodBuilder {
         Bytecode.u4(mi, code.length);
         mi.write(code, 0, code.length);
         Bytecode.u2(mi, 0);                      // exception_table_length
-        Bytecode.u2(mi, 0);                      // attributes_count (no StackMapTable)
+        Bytecode.u2(mi, 0);                      // attributes_count（无 StackMapTable）
         return mi.toByteArray();
     }
 }

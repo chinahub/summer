@@ -17,11 +17,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Discovers {@link Scheduled @Scheduled} methods on context beans and runs each
- * on its own virtual thread. Every task owns a self-scheduling loop, so one
- * task's blocking body never delays another's timing (virtual threads unmount
- * while blocked) and {@code fixedDelay} is measured from the real end of a run
- * to the start of the next, guaranteeing executions never overlap.
+ * 发现 context bean 上的 {@link Scheduled @Scheduled} 方法，并在各自独立的虚拟线程上运行。
+ * 每个任务拥有自己的自调度循环，因此一个任务的阻塞体不会拖延另一个任务的时序
+ * （虚拟线程在阻塞时会卸载），且 {@code fixedDelay} 从一次运行真正结束之时
+ * 量到下次开始之时，保证执行不会重叠。
  */
 public final class ScheduledTaskRegistrar {
 
@@ -30,6 +29,9 @@ public final class ScheduledTaskRegistrar {
     private final List<Thread> tasks = new CopyOnWriteArrayList<>();
     private volatile boolean running = true;
 
+    /**
+     * 扫描上下文中带 @Scheduled 的方法并登记全部定时任务。
+     */
     public int scheduleAll(ApplicationContext context) {
         int count = 0;
         for (String name : context.getBeanNamesForType(Object.class)) {
@@ -61,6 +63,9 @@ public final class ScheduledTaskRegistrar {
         return count;
     }
 
+    /**
+     * 按 @Scheduled 配置启动单个定时任务（fixedRate/fixedDelay/cron）。
+     */
     private void startTask(Object bean, Method method, Scheduled s) {
         if (method.getParameterCount() != 0) {
             throw new IllegalArgumentException("@Scheduled method must have no parameters");

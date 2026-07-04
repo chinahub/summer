@@ -8,7 +8,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.logging.Formatter;
 import java.util.logging.LogRecord;
 
-/** Compact single-line log formatter: timestamp LEVEL [thread] logger - message. */
+/** 紧凑的单行日志格式器：时间戳 LEVEL [线程] logger - 消息。 */
 public final class SingleLineFormatter extends Formatter {
 
     private final DateTimeFormatter timeFormat =

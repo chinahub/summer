@@ -2,7 +2,7 @@ package cn.jiebaba.summer.web.websocket;
 
 import java.lang.reflect.Method;
 
-/** Metadata for a registered @WebSocketEndpoint bean. */
+/** 已注册的 @WebSocketEndpoint Bean 的元数据。 */
 public final class WebSocketEndpointInfo {
     private final String path;
     private final Object bean;

@@ -12,10 +12,10 @@ import cn.jiebaba.summer.data.support.SqlExecutor;
 import java.util.Set;
 
 /**
- * Scans for user-declared {@link BaseMapper} subinterfaces and registers a
- * bean definition (with an instance supplier) for each, so mappers participate
- * in normal dependency resolution and can be {@code @Autowired} into services.
- * Must be called before {@code context.refresh()}.
+ * 扫描用户声明的 {@link BaseMapper} 子接口，并为每个子接口注册一个
+ * Bean 定义（带实例供给器），使 mapper 参与正常的依赖解析，
+ * 可被 {@code @Autowired} 注入到 service 中。
+ * 必须在 {@code context.refresh()} 之前调用。
  */
 public final class MapperRegistrar {
 

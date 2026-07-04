@@ -25,17 +25,16 @@ import java.util.List;
 import java.util.logging.Logger;
 
 /**
- * Auto-configures the security layer. Mirrors Spring Security's auto-configuration
- * in spirit. <b>Opt-in</b>: security is activated only when
- * {@code summer.security.enabled=true} (or when the application supplies its own
- * {@link SecurityFilterChain} bean). When disabled, the {@link SecurityFilterChain}
- * has no filters and {@link MethodSecurityEnforcer} is a no-op, so existing
- * applications are completely unaffected.
+ * 自动配置安全层，在理念上借鉴 Spring Security 的自动配置。
+ * <b>可选启用</b>：仅当 {@code summer.security.enabled=true}
+ * （或应用自行提供 {@link SecurityFilterChain} Bean）时才激活安全功能。
+ * 禁用时，{@link SecurityFilterChain} 不含任何过滤器，{@link MethodSecurityEnforcer}
+ * 为空操作，因此对现有应用完全没有影响。
  *
- * <p>Configuration properties:
+ * <p>配置属性：
  * <pre>
  *   summer.security.enabled=true
- *   summer.security.jwt.secret=...           # &gt;=32 bytes; auto-generated + WARN if absent
+ *   summer.security.jwt.secret=...           # &gt;=32 字节；缺失时自动生成并告警
  *   summer.security.jwt.access-token-ttl=3600
  *   summer.security.jwt.login-url=/login
  *   summer.security.password.bcrypt.strength=10
@@ -94,6 +93,16 @@ public class SecurityAutoConfiguration {
     }
 
     @Bean
+    /**
+     * 构建安全过滤器链。当 {@code summer.security.enabled=false} 时返回空过滤器链；
+     * 否则基于 JWT 配置登录地址与令牌有效期等组装过滤器链。
+     *
+     * @param env                  环境配置
+     * @param authenticationManager 认证管理器
+     * @param jwtEncoder           JWT 编码器
+     * @param jwtDecoder           JWT 解码器
+     * @return 安全过滤器链
+     */
     public SecurityFilterChain securityFilterChain(Environment env,
                                                    AuthenticationManager authenticationManager,
                                                    JwtEncoder jwtEncoder, JwtDecoder jwtDecoder) {
@@ -116,7 +125,7 @@ public class SecurityAutoConfiguration {
                 .build();
     }
 
-    /** Shared HS256 secret: computed once and reused by both encoder and decoder. */
+    /** 共享的 HS256 密钥：仅计算一次，编码器与解码器共用。 */
     private byte[] sharedSecret(Environment env) {
         if (cachedSecret == null) {
             synchronized (this) {
@@ -126,7 +135,7 @@ public class SecurityAutoConfiguration {
         return cachedSecret;
     }
 
-    /** Resolve the HS256 secret: configured value, else a random 32-byte key (WARN when enabled). */
+    /** 解析 HS256 密钥：取配置值，否则生成随机 32 字节密钥（启用时告警）。 */
     private byte[] resolveSecret(Environment env) {
         String secret = env.getProperty("summer.security.jwt.secret");
         if (secret != null && !secret.isBlank()) {

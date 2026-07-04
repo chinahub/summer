@@ -14,10 +14,10 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * Date and time helpers inspired by {@code cn.hutool.core.date.DateUtil}.
+ * 日期时间工具，灵感来自 {@code cn.hutool.core.date.DateUtil}。
  *
- * <p>Backed entirely by {@code java.time} with a {@link java.util.Date} facade so it stays
- * useful for legacy APIs. Date↔LocalDateTime conversions use {@link ZoneId#systemDefault()}.
+ * <p>完全基于 {@code java.time} 实现，并保留 {@link java.util.Date} 外观以兼容遗留 API。
+ * Date↔LocalDateTime 转换使用 {@link ZoneId#systemDefault()}。
  */
 public final class DateUtil {
 
@@ -36,23 +36,23 @@ public final class DateUtil {
             "yyyyMMddHHmmss", "yyyyMMdd", NORM_TIME_PATTERN, "HH:mm"
     };
 
-    /** Current time formatted as {@code yyyy-MM-dd HH:mm:ss}. */
+    /** 当前时间，格式 {@code yyyy-MM-dd HH:mm:ss}。 */
     public static String now() { return formatDateTime(new Date()); }
 
-    /** Current date formatted as {@code yyyy-MM-dd}. */
+    /** 当前日期，格式 {@code yyyy-MM-dd}。 */
     public static String today() { return formatDate(new Date()); }
 
-    /** Current epoch milliseconds. */
+    /** 当前 epoch 毫秒。 */
     public static long current() { return System.currentTimeMillis(); }
 
-    /** Current epoch seconds. */
+    /** 当前 epoch 秒。 */
     public static long currentTimeSeconds() { return System.currentTimeMillis() / 1000L; }
 
     public static Date date() { return new Date(); }
     public static Date date(long epochMilli) { return new Date(epochMilli); }
     public static Date date(Instant instant) { return instant == null ? null : Date.from(instant); }
 
-    // ---- format --------------------------------------------------------------
+    // ---- 格式化 --------------------------------------------------------------
 
     public static String format(Date date, String pattern) {
         if (date == null) return null;
@@ -67,7 +67,7 @@ public final class DateUtil {
     public static String formatDateTime(Date date) { return format(date, NORM_DATETIME_PATTERN); }
     public static String formatTime(Date date) { return format(date, NORM_TIME_PATTERN); }
 
-    // ---- parse ---------------------------------------------------------------
+    // ---- 解析 ---------------------------------------------------------------
 
     public static Date parse(String dateStr) {
         if (dateStr == null) return null;
@@ -107,7 +107,7 @@ public final class DateUtil {
         }
     }
 
-    // ---- conversions ---------------------------------------------------------
+    // ---- 转换 ---------------------------------------------------------
 
     public static LocalDateTime toLocalDateTime(Date date) {
         if (date == null) return null;
@@ -130,7 +130,7 @@ public final class DateUtil {
     }
     public static Instant toInstant(Date date) { return date == null ? null : date.toInstant(); }
     public static long toEpochMilli(Date date) { return date == null ? 0L : date.getTime(); }
-    // ---- offset --------------------------------------------------------------
+    // ---- 偏移 --------------------------------------------------------------
 
     public static Date offset(Date date, DateField field, int amount) {
         if (date == null || field == null) return date;
@@ -152,7 +152,7 @@ public final class DateUtil {
     public static Date addYears(Date date, int years) { return offsetYear(date, years); }
     public static Date addWeeks(Date date, int weeks) { return offsetWeek(date, weeks); }
 
-    // ---- between -------------------------------------------------------------
+    // ---- 区间 -------------------------------------------------------------
 
     public static long between(Date begin, Date end, DateUnit unit) {
         if (begin == null || end == null || unit == null) return 0L;
@@ -165,7 +165,7 @@ public final class DateUtil {
     public static long betweenHour(Date begin, Date end) { return between(begin, end, DateUnit.HOUR); }
     public static long betweenDay(Date begin, Date end) { return between(begin, end, DateUnit.DAY); }
 
-    // ---- bounds --------------------------------------------------------------
+    // ---- 边界 --------------------------------------------------------------
 
     public static Date beginOfDay(Date date) {
         return date == null ? null : fromLocalDateTime(toLocalDateTime(date).toLocalDate().atStartOfDay());
@@ -220,7 +220,7 @@ public final class DateUtil {
         return fromLocalDateTime(LocalDate.of(year, 12, 31).atTime(23, 59, 59, 0));
     }
 
-    // ---- field accessors -----------------------------------------------------
+    // ---- 字段访问 -----------------------------------------------------
 
     public static int year(Date date) { return date == null ? 0 : toLocalDateTime(date).getYear(); }
     public static int month(Date date) { return date == null ? 0 : toLocalDateTime(date).getMonthValue(); }
@@ -237,7 +237,7 @@ public final class DateUtil {
         return date == null ? 0 : toLocalDate(date).get(WeekFields.ISO.weekOfMonth());
     }
 
-    // ---- compare / predicates ------------------------------------------------
+    // ---- 比较 / 谓词 ------------------------------------------------
 
     public static boolean isSameDay(Date date1, Date date2) {
         if (date1 == null || date2 == null) return false;
@@ -267,7 +267,7 @@ public final class DateUtil {
         return date1.compareTo(date2);
     }
 
-    /** A calendar field enum used by {@link #offset(Date, DateField, int)}. */
+    /** {@link #offset(Date, DateField, int)} 使用的日历字段枚举。 */
     public enum DateField {
         YEAR(ChronoUnit.YEARS),
         MONTH(ChronoUnit.MONTHS),
@@ -284,7 +284,7 @@ public final class DateUtil {
         public ChronoUnit chrono() { return chrono; }
     }
 
-    /** A time-unit enum used by {@link #between(Date, Date, DateUnit)}. */
+    /** {@link #between(Date, Date, DateUnit)} 使用的时间单位枚举。 */
     public enum DateUnit {
         MS(1L),
         SECOND(1000L),

@@ -17,17 +17,16 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 
 /**
- * Resolves handler-method parameters carrying security types:
+ * 解析携带安全类型的 handler-method 参数：
  * <ul>
- *   <li>{@code @AuthenticationPrincipal} -- injects {@link Authentication#getPrincipal()}.
- *       When the parameter type is {@link UserDetails} (or a subtype) and the current
- *       principal is a plain username string (the stateless-JWT case), the full
- *       {@code UserDetails} is reloaded via {@link UserDetailsService} so controllers
- *       can type-safely receive the user record.</li>
- *   <li>{@link Authentication} -- the current authentication (or null).</li>
- *   <li>{@link SecurityContext} -- the current security context.</li>
+ *   <li>{@code @AuthenticationPrincipal} —— 注入 {@link Authentication#getPrincipal()}。
+ *       当参数类型为 {@link UserDetails}（或其子类型）、且当前 principal 是普通用户名字符串
+ *       （无状态 JWT 场景）时，会通过 {@link UserDetailsService} 重新加载完整
+ *       {@code UserDetails}，使控制器能以类型安全的方式接收用户记录。</li>
+ *   <li>{@link Authentication} —— 当前认证信息（或 null）。</li>
+ *   <li>{@link SecurityContext} —— 当前安全上下文。</li>
  * </ul>
- * Implements the {@code summer-web} {@link HandlerMethodArgumentResolver} SPI.
+ * 实现 {@code summer-web} 的 {@link HandlerMethodArgumentResolver} SPI。
  */
 public final class AuthenticationPrincipalArgumentResolver implements HandlerMethodArgumentResolver {
 
@@ -49,14 +48,18 @@ public final class AuthenticationPrincipalArgumentResolver implements HandlerMet
     }
 
     @Override
+    /**
+     * 解析已认证主体参数：无状态 JWT 下按类型返回用户名或重新加载的 UserDetails，
+     * 无主体时按 required 决定注入 null 或抛出异常。
+     */
     public Object resolveArgument(Parameter parameter, Type genericType, RouteMatch match,
                                   WebRequest request, WebResponse response) {
         Authentication auth = SecurityContextHolder.getAuthentication();
         if (parameter.isAnnotationPresent(AuthenticationPrincipal.class)) {
             AuthenticationPrincipal ann = parameter.getAnnotation(AuthenticationPrincipal.class);
             Object principal = auth == null ? null : auth.getPrincipal();
-            // Stateless JWT: principal is the username string. If the handler wants a
-            // UserDetails, reload the full record so controllers stay type-safe.
+            // 无状态 JWT：主体为用户名字符串。若处理器需要 UserDetails，
+            // 重新加载完整记录，使控制器保持类型安全。
             if (principal instanceof String username
                     && UserDetails.class.isAssignableFrom(parameter.getType())
                     && userDetailsService != null) {
@@ -70,7 +73,7 @@ public final class AuthenticationPrincipalArgumentResolver implements HandlerMet
                 }
             }
             if (principal == null && ann.required()) {
-                // inject null; the handler may still tolerate it (or NPE naturally)
+                // 注入 null；处理器可能仍能容忍（或自然抛出 NPE）
             }
             return principal;
         }

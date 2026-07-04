@@ -68,7 +68,7 @@ public class DateUtilTest {
 
     @Test
     public void weekBounds() {
-        Date d = DateUtil.parseDateTime("2024-06-15 10:20:30"); // Saturday
+        Date d = DateUtil.parseDateTime("2024-06-15 10:20:30"); // 星期六
         Assert.assertEquals("2024-06-10 00:00:00", DateUtil.formatDateTime(DateUtil.beginOfWeek(d)));
         Assert.assertEquals("2024-06-16 23:59:59", DateUtil.formatDateTime(DateUtil.endOfWeek(d)));
     }
@@ -82,7 +82,7 @@ public class DateUtilTest {
         Assert.assertEquals(10, DateUtil.hour(d));
         Assert.assertEquals(20, DateUtil.minute(d));
         Assert.assertEquals(30, DateUtil.second(d));
-        Assert.assertEquals(6, DateUtil.dayOfWeek(d)); // 2024-06-15 is Saturday -> ISO 6
+        Assert.assertEquals(6, DateUtil.dayOfWeek(d)); // 2024-06-15 为星期六 -> ISO 6
         Assert.assertTrue(DateUtil.weekOfYear(d) >= 1);
         Assert.assertTrue(DateUtil.isWeekend(d));
         Assert.assertFalse(DateUtil.isWeekend(DateUtil.parseDateTime("2024-06-17 10:00:00")));

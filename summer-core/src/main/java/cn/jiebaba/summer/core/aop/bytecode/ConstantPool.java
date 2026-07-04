@@ -8,9 +8,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Builds a JVM constant pool with on-demand deduplication. Indices are 1-based
- * (slot 0 is reserved). Only the entry kinds used by the proxy generator are
- * supported (no long/double).
+ * 构建带按需去重的 JVM 常量池。索引从 1 开始（槽位 0 保留）。仅支持代理生成器用到的
+ * 条目类型（不含 long/double）。
  */
 public final class ConstantPool {
 
@@ -25,7 +24,7 @@ public final class ConstantPool {
 
     private int add(byte[] entry) {
         entries.add(entry);
-        return entries.size(); // 1-based
+        return entries.size(); // 从 1 开始
     }
 
     public int utf8(String s) {
@@ -85,12 +84,12 @@ public final class ConstantPool {
                         (byte) (value >>> 8), (byte) value})); // CONSTANT_Integer
     }
 
-    /** constant_pool_count: number of entries + 1 (slot 0 is unused). */
+    /** constant_pool_count：条目数 + 1（槽 0 未使用）。 */
     public int count() {
         return entries.size() + 1;
     }
 
-    /** The concatenated bytes of every constant pool entry (without the count prefix). */
+    /** 所有常量池条目的拼接字节（不含计数前缀）。 */
     public byte[] toByteArray() {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         for (byte[] e : entries) out.write(e, 0, e.length);

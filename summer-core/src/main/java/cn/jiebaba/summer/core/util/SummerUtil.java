@@ -7,14 +7,13 @@ import java.lang.annotation.Annotation;
 import java.util.Map;
 
 /**
- * Static facade over the running {@link ApplicationContext}, inspired by the convenience
- * accessors frameworks expose for IoC lookups. Provides bean <em>get / register / unregister</em>
- * operations from anywhere in application code without injecting the context.
+ * 运行中 {@link ApplicationContext} 的静态外观，灵感来自各类框架为 IoC 查找提供的便捷访问器。
+ * 提供从应用代码任意位置进行的 bean <em>get / register / unregister</em> 操作，无需注入上下文。
  *
- * <p>The context is bound by {@code SummerApplication.run()} via {@link #setContext}; calling any
- * accessor before that throws {@link IllegalStateException}. Bean registration is backed by
- * {@link ApplicationContext#registerBean(String, Object)} and unregistration by
- * {@link ApplicationContext#unregisterBean(String)}.
+ * <p>上下文由 {@code SummerApplication.run()} 通过 {@link #setContext} 绑定；在此之前调用任意
+ * 访问器都会抛出 {@link IllegalStateException}。bean 注册由
+ * {@link ApplicationContext#registerBean(String, Object)} 支撑，注销由
+ * {@link ApplicationContext#unregisterBean(String)} 支撑。
  */
 public final class SummerUtil {
 
@@ -22,12 +21,12 @@ public final class SummerUtil {
 
     private static volatile ApplicationContext context;
 
-    /** Framework-managed: binds the running application context. */
+    /** 框架管理：绑定运行中的应用上下文。 */
     public static void setContext(ApplicationContext context) {
         SummerUtil.context = context;
     }
 
-    /** Returns the bound context or throws if the framework has not been started. */
+    /** 返回已绑定的上下文；框架未启动时抛出异常。 */
     public static ApplicationContext getContext() {
         ApplicationContext ctx = context;
         if (ctx == null) {
@@ -37,12 +36,12 @@ public final class SummerUtil {
         return ctx;
     }
 
-    /** Clears the bound context. Intended for tests / shutdown. */
+    /** 清除已绑定的上下文。用于测试 / 关闭。 */
     public static void clearContext() {
         context = null;
     }
 
-    // ---- get -----------------------------------------------------------------
+    // ---- 获取 -----------------------------------------------------------------
 
     public static Object getBean(String name) {
         return getContext().getBean(name);
@@ -84,27 +83,27 @@ public final class SummerUtil {
         return getContext().getEnvironment();
     }
 
-    // ---- register ------------------------------------------------------------
+    // ---- 注册 ------------------------------------------------------------
 
-    /** Register an existing object as a singleton bean under the given name. */
+    /** 将已有对象以给定名称注册为单例 Bean。 */
     public static void registerBean(String name, Object bean) {
         getContext().registerBean(name, bean);
     }
 
-    /** Register an existing object as a singleton bean using its decapitalized class name. */
+    /** 以去首字母大写的类名将已有对象注册为单例 Bean。 */
     public static void registerBean(Object bean) {
         if (bean == null) throw new IllegalArgumentException("bean must not be null");
         registerBean(DefaultApplicationContext.decapitalize(bean.getClass().getSimpleName()), bean);
     }
 
-    // ---- unregister ----------------------------------------------------------
+    // ---- 注销 ----------------------------------------------------------
 
-    /** Remove the bean registered under the given name. Returns {@code true} if removed. */
+    /** 移除以给定名称注册的 Bean；移除成功返回 {@code true}。 */
     public static boolean unregisterBean(String name) {
         return getContext().unregisterBean(name);
     }
 
-    /** Remove all beans assignable to the given type. Returns the number of beans removed. */
+    /** 移除所有可赋值为给定类型的 Bean；返回移除数量。 */
     public static int unregisterBean(Class<?> type) {
         String[] names = getBeanNamesForType(type);
         int removed = 0;

@@ -5,8 +5,8 @@ import cn.jiebaba.summer.security.core.GrantedAuthority;
 import java.util.Collection;
 
 /**
- * Core user information retrieved by a {@link UserDetailsService}.
- * Mirrors {@code org.springframework.security.core.userdetails.UserDetails}.
+ * 由 {@link UserDetailsService} 获取的核心用户信息。
+ * 对应 {@code org.springframework.security.core.userdetails.UserDetails}。
  */
 public interface UserDetails {
     Collection<? extends GrantedAuthority> getAuthorities();

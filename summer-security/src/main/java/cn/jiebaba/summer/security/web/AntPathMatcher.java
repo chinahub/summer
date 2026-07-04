@@ -1,8 +1,8 @@
 package cn.jiebaba.summer.security.web;
 
 /**
- * Minimal Ant-style path matcher supporting {@code ?}, {@code *}, and {@code **}.
- * Sufficient for URL authorization rules like {@code /public/**}, {@code /api/*}, {@code /admin/**}.
+ * 极简的 Ant 风格路径匹配器，支持 {@code ?}、{@code *} 与 {@code **}。
+ * 足以处理 URL 授权规则，如 {@code /public/**}、{@code /api/*}、{@code /admin/**}。
  */
 final class AntPathMatcher {
 
@@ -10,53 +10,56 @@ final class AntPathMatcher {
 
     static boolean match(String pattern, String path) {
         if (pattern == null || path == null) return false;
-        // normalize: strip trailing slash except root
+        // 规范化：去除尾部斜杠（根除外）
         if (path.length() > 1 && path.endsWith("/")) path = path.substring(0, path.length() - 1);
         if (pattern.length() > 1 && pattern.endsWith("/")) pattern = pattern.substring(0, pattern.length() - 1);
         return doMatch(pattern, 0, path, 0);
     }
 
+    /**
+     * 递归匹配 Ant 风格模式与路径：支持 {@code ?}、{@code *}（单段）与 {@code **}（跨段）。
+     */
     private static boolean doMatch(String pattern, int pStart, String path, int sStart) {
         int pLen = pattern.length();
         int sLen = path.length();
         while (pStart < pLen) {
-            // consume a single '*' (not '**')
+            // 消费单个 '*'（非 '**'）
             if (pStart < pLen - 1 && pattern.charAt(pStart) == '*' && pattern.charAt(pStart + 1) == '*') {
                 pStart += 2;
-                // skip an optional following '/'
+                // 跳过可选的紧随 '/'
                 if (pStart < pLen && pattern.charAt(pStart) == '/') pStart++;
-                // '**' matches zero or more path segments; try every position
+                // '**' 匹配零或多个路径段；尝试每个位置
                 for (int k = sStart; k <= sLen; k++) {
                     if (doMatch(pattern, pStart, path, k)) return true;
-                    // stop at segment boundaries only; but try all anyway
+                    // 仅在段边界停止；但仍逐一尝试
                     if (k < sLen && path.charAt(k) != '/' ) {
-                        // keep scanning; only '/' or end are valid split points for /**/
+                        // 继续扫描；仅 '/' 或末尾是 /**/ 的有效分割点
                     }
                 }
-                // also handle pattern ending in '**' matching the entire rest
+                // 同时处理以 '**' 结尾的模式匹配剩余全部
                 return pStart >= pLen;
             }
             if (pStart < pLen && pattern.charAt(pStart) == '*') {
                 pStart++;
-                // '*' matches zero or more chars except '/'
+                // '*' 匹配零或多个非 '/' 字符
                 int nextSep = indexOfSlash(pattern, pStart);
                 String literal = pattern.substring(pStart, nextSep);
                 int searchFrom = sStart;
                 while (true) {
                     int found = path.indexOf(literal, searchFrom);
                     if (found < 0) return false;
-                    // ensure nothing but non-slash chars were matched between sStart and found
+                    // 确保 sStart 与 found 之间仅匹配了非斜杠字符
                     if (!containsSlash(path, sStart, found)) {
                         if (doMatch(pattern, nextSep, path, found + literal.length())) return true;
                     }
                     searchFrom = found + 1;
                 }
             }
-            // literal segment (possibly with '?')
+            // 字面段（可能含 '?'）
             int nextP = nextWildcardOrEnd(pattern, pStart);
             String token = pattern.substring(pStart, nextP);
             if (!regionMatchesWithQ(pattern, pStart, nextP, path, sStart)) {
-                // no match for literal token
+                // 字面 token 不匹配
                 return false;
             }
             sStart += token.length();

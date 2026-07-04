@@ -12,13 +12,13 @@ import java.lang.annotation.Target;
 @Documented
 @Repeatable(Schedules.class)
 public @interface Scheduled {
-    /** Fixed delay in milliseconds between end of one run and start of next. */
+    /** 上一次运行结束到下一次开始之间的固定延迟（毫秒）。 */
     long fixedDelay() default -1;
-    /** Fixed rate in milliseconds between start of consecutive runs. */
+    /** 连续两次运行开始之间的固定速率（毫秒）。 */
     long fixedRate() default -1;
-    /** Initial delay in milliseconds before the first run. */
+    /** 首次运行前的初始延迟（毫秒）。 */
     long initialDelay() default 0;
-    /** Cron expression (5 fields: min hour day-of-month month day-of-week). */
+    /** cron 表达式（5 字段：分 时 日 月 周）。 */
     String cron() default "";
 }
 

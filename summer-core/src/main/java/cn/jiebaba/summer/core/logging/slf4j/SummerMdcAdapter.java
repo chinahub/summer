@@ -8,9 +8,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Thread-local MDC adapter for the Summer SLF4J binding. MDC state is kept per
- * thread so {@code MDC.put/get} work programmatically. It is a minimal,
- * dependency-free adapter (no JUL formatter hook), mirroring a no-frills binding.
+ * Summer SLF4J 绑定的线程级 MDC 适配器。MDC 状态按线程保存，因此 {@code MDC.put/get}
+ * 可在程序中使用。它是一个极简、无依赖的适配器（不挂钩 JUL formatter），
+ * 对应一种无附加功能的绑定。
  */
 final class SummerMdcAdapter implements MDCAdapter {
 

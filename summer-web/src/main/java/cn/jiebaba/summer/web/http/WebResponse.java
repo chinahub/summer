@@ -50,6 +50,12 @@ public final class WebResponse {
 
     public boolean committed() { return committed; }
 
+    /**
+     * 提交响应：补齐 Content-Type/Content-Length/Connection/Date 等默认头，
+     * 写出 HTTP/1.1 状态行、响应头与响应体并刷新输出流；已提交则直接返回。
+     *
+     * @throws IOException 写出响应时发生 I/O 错误
+     */
     public void commit() throws IOException {
         if (committed) return;
         committed = true;

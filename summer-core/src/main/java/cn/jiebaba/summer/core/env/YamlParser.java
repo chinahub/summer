@@ -6,10 +6,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A minimal YAML parser sufficient for application.yml config files: nested maps
- * via indentation, inline lists, block sequences, scalars and quoted strings.
- * Not a full YAML implementation (no anchors/aliases/multi-doc), but covers the
- * shapes used for configuration. Returns a nested Map/Object tree.
+ * 一个足以解析 application.yml 配置文件的极简 YAML 解析器：支持基于缩进的嵌套 map、
+ * 内联列表、块序列、标量与带引号字符串。并非完整的 YAML 实现（不支持
+ * anchors/aliases/multi-doc），但覆盖了配置中常用的结构。返回嵌套的 Map/Object 树。
  */
 public final class YamlParser {
 
@@ -21,7 +20,7 @@ public final class YamlParser {
         return p.parseMapping();
     }
 
-    /** Flatten a parsed tree into dotted property keys (lists become [i] indices). */
+    /** 将解析树展平为点分属性键（列表转为 [i] 索引）。 */
     public static Map<String, String> flatten(Map<String, Object> tree) {
         Map<String, String> out = new LinkedHashMap<>();
         flatten("", tree, out);
@@ -97,7 +96,7 @@ public final class YamlParser {
                 if (line.indent < indent) break;
                 if (line.indent > indent) { index++; continue; }
                 if (line.content.startsWith("- ")) {
-                    // sequence at mapping level — unusual; skip defensively
+                    // 映射层级的序列 —— 异常；防御性跳过
                     index++;
                     continue;
                 }
@@ -152,7 +151,7 @@ public final class YamlParser {
                     list.add(parseChild());
                 } else if (item.contains(":") && !item.startsWith("'") && !item.startsWith("\"")
                         && !isFlowSequence(item) && !isFlowMapping(item)) {
-                    // inline mapping item: "- key: value"
+                    // 内联映射项："- key: value"
                     List<Line> synthetic = new ArrayList<>();
                     int itemIndent = line.indent + 2;
                     synthetic.add(new Line(itemIndent, item));
@@ -234,6 +233,9 @@ public final class YamlParser {
     private static boolean isFlowSequence(String s) { return s.startsWith("[") && s.endsWith("]"); }
     private static boolean isFlowMapping(String s) { return s.startsWith("{") && s.endsWith("}"); }
 
+    /**
+     * 将 YAML 流式结构（如 [a, b, c]）的单行内容拆分为子项列表。
+     */
     private static List<String> splitFlow(String body) {
         List<String> parts = new ArrayList<>();
         if (body.isBlank()) return parts;

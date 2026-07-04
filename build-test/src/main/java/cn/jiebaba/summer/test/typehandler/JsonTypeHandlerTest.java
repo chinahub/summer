@@ -23,12 +23,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Verifies the TypeHandler + dialect-driven JSON binding path end-to-end
- * without a real database: SqlBuilder wraps handler fields into {@link JdbcValue},
- * {@link JsonTypeHandler} serializes via JsonUtil and delegates native binding to
- * the active {@link Dialect} (PGobject(jsonb) on PostgreSQL, setString on MySQL),
- * the read path deserializes JSON back, and {@link Dialect#fromUrl} infers the
- * dialect from the JDBC URL.
+ * 在无真实数据库的情况下，端到端验证 TypeHandler + 方言驱动的 JSON 绑定路径：
+ * SqlBuilder 将 handler 字段包装为 {@link JdbcValue}，{@link JsonTypeHandler}
+ * 通过 JsonUtil 序列化并把原生绑定委托给当前 {@link Dialect}
+ * （PostgreSQL 用 PGobject(jsonb)、MySQL 用 setString），读取路径将 JSON 反序列化回对象，
+ * 并由 {@link Dialect#fromUrl} 从 JDBC URL 推断方言。
  */
 public class JsonTypeHandlerTest {
 

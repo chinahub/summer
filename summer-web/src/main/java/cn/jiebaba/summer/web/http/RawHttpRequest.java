@@ -11,14 +11,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A minimal HTTP/1.1 request parser reading from a socket stream.
- * Supports request line, headers and a Content-Length body. No chunked
- * transfer-encoding (rare for JSON APIs) by design.
+ * 从 socket 流读取的极简 HTTP/1.1 请求解析器。
+ * 支持请求行、请求头与基于 Content-Length 的请求体；按设计不支持分块传输编码
+ * （在 JSON API 中较少使用）。
  */
 public final class RawHttpRequest {
 
     private final String method;
-    private final String target;   // raw request target (path?query)
+    private final String target;   // 原始请求目标（path?query）
     private final String protocol;
     private final Map<String, List<String>> headers;
     private final byte[] body;
@@ -38,6 +38,16 @@ public final class RawHttpRequest {
     public Map<String, List<String>> headers() { return headers; }
     public byte[] body() { return body; }
 
+    /**
+     * 从输入流解析一个 HTTP/1.1 请求：读取请求头块、解析请求行与各请求头，
+     * 再依据 Content-Length 读取请求体。
+     *
+     * @param raw            底层输入流
+     * @param maxHeaderSize  请求头最大字节数
+     * @param maxRequestSize 请求体最大字节数
+     * @return 解析得到的请求对象
+     * @throws IOException 当流关闭、请求格式错误或超出大小限制时抛出
+     */
     public static RawHttpRequest parse(InputStream raw, int maxHeaderSize, int maxRequestSize) throws IOException {
         BufferedInputStream in = raw instanceof BufferedInputStream bi ? bi : new BufferedInputStream(raw);
         byte[] headerBlock = readHeaderBlock(in, maxHeaderSize);
@@ -72,6 +82,14 @@ public final class RawHttpRequest {
         return new RawHttpRequest(method, target, protocol, headers, body);
     }
 
+    /**
+     * 读取请求头块，直到遇到空行（{@code \r\n\r\n}）为止，并在超出最大长度时抛出异常。
+     *
+     * @param in           输入流
+     * @param maxHeaderSize 请求头最大字节数
+     * @return 不含末尾空行的请求头字节
+     * @throws IOException 当读取失败或超出大小限制时抛出
+     */
     private static byte[] readHeaderBlock(InputStream in, int maxHeaderSize) throws IOException {
         ByteArrayOutputStream buf = new ByteArrayOutputStream(512);
         int[] win = new int[4];

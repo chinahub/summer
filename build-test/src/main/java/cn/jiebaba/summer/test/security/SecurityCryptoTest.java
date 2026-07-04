@@ -5,10 +5,10 @@ import cn.jiebaba.summer.core.test.Test;
 import cn.jiebaba.summer.security.crypto.BCryptPasswordEncoder;
 import cn.jiebaba.summer.security.crypto.PasswordEncoder;
 
-/** Unit tests for the pure-JDK BCrypt password encoder. */
+/** 纯 JDK 实现 BCrypt 密码编码器的单元测试。 */
 public class SecurityCryptoTest {
 
-    private final PasswordEncoder encoder = new BCryptPasswordEncoder(6); // low strength for fast tests
+    private final PasswordEncoder encoder = new BCryptPasswordEncoder(6); // 低强度以加快测试
 
     @Test
     public void encodeThenMatches() {
@@ -42,7 +42,7 @@ public class SecurityCryptoTest {
     @Test
     public void costFactorRespected() {
         String hash = encoder.encode("pw");
-        // $2a$06$ -> cost 6 (encoder strength 6)
+        // $2a$06$ -> cost 为 6（编码器强度 6）
         Assert.assertTrue(hash.startsWith("$2a$06$"), "cost factor should be 06: " + hash);
     }
 }

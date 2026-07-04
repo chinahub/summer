@@ -3,17 +3,17 @@ package cn.jiebaba.summer.security.crypto;
 import java.security.SecureRandom;
 
 /**
- * {@link PasswordEncoder} backed by the pure-JDK {@link BCrypt} implementation.
- * Produces the standard {@code $2a$cost$salt+hash} format, interoperable with
- * Spring Security's {@code BCryptPasswordEncoder} and most bcrypt libraries.
- * <p>Mirrors {@code org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder}.
+ * 由纯 JDK 实现的 {@link BCrypt} 支撑的 {@link PasswordEncoder}。
+ * 产出标准 {@code $2a$cost$salt+hash} 格式，可与 Spring Security 的
+ * {@code BCryptPasswordEncoder} 及多数 bcrypt 库互操作。
+ * <p>对应 {@code org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder}。
  */
 public final class BCryptPasswordEncoder implements PasswordEncoder {
 
     private final int strength;
     private final SecureRandom random;
 
-    /** Default strength 10 (2^10 = 1024 key-expansion rounds). */
+    /** 默认强度 10（2^10 = 1024 轮密钥扩展）。 */
     public BCryptPasswordEncoder() {
         this(10);
     }
@@ -38,7 +38,7 @@ public final class BCryptPasswordEncoder implements PasswordEncoder {
         return BCrypt.checkpw(toString(rawPassword), encodedPassword);
     }
 
-    /** Upgrades/encodes only when the stored hash isn't already bcrypt. */
+    /** 仅当存储的哈希不是 bcrypt 时才升级/编码。 */
     public boolean upgradeEncoding(String encodedPassword) {
         return encodedPassword != null && !encodedPassword.startsWith("$2");
     }

@@ -10,7 +10,7 @@ import cn.jiebaba.summer.web.annotation.RestController;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Endpoints exercising permitAll, authenticated, role-based (URL + method) access. */
+/** 用于演练 permitAll、authenticated、基于角色（URL + 方法级）访问的端点集合。 */
 @RestController
 public class SecurityTestController {
 
@@ -37,7 +37,7 @@ public class SecurityTestController {
         return body;
     }
 
-    /** URL-permitted but method-protected: isolates @PreAuthorize enforcement. */
+    /** URL 放行但方法受保护：用于隔离验证 @PreAuthorize 的执行。 */
     @GetMapping("/secret")
     @PreAuthorize(roles = {"ADMIN"})
     public Map<String, Object> secret(@AuthenticationPrincipal UserDetails principal) {

@@ -10,7 +10,7 @@ import cn.jiebaba.summer.security.jwt.JwtException;
 
 import java.util.List;
 
-/** Unit tests for the HS256 JWT encoder/decoder. */
+/** HS256 JWT 编码器/解码器的单元测试。 */
 public class SecurityJwtTest {
 
     private static final byte[] SECRET = "0123456789abcdef0123456789abcdef-test-secret".getBytes(java.nio.charset.StandardCharsets.UTF_8);

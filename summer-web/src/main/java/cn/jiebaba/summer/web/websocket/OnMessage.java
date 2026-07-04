@@ -6,7 +6,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/** Called when a text or binary message arrives. Method may take a {@link WebSocketSession} and the message. */
+/** 当收到文本或二进制消息时调用。方法可接收 {@link WebSocketSession} 与消息。 */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented

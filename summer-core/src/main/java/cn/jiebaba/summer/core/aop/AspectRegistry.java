@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/** Collects advice from {@link Aspect @Aspect} beans. */
+/** 从 {@link Aspect @Aspect} Bean 中收集通知。 */
 public final class AspectRegistry {
 
     private final List<Advice> advices = new ArrayList<>();
@@ -26,6 +26,9 @@ public final class AspectRegistry {
         advices.sort(Comparator.comparingInt(Advice::order));
     }
 
+    /**
+     * 登记一个 @Aspect 通知方法：解析其切点表达式并按通知类型（before/after/around）归类。
+     */
     private void registerAdviceMethod(Object aspectBean, Method m, java.util.Map<String, String> pointcuts) {
         Around around = m.getAnnotation(Around.class);
         Before before = m.getAnnotation(Before.class);
@@ -40,7 +43,7 @@ public final class AspectRegistry {
         else if (afterRet != null) { expr = afterRet.value(); kind = Advice.Kind.AFTER_RETURNING; }
         else if (afterThrow != null) { expr = afterThrow.value(); kind = Advice.Kind.AFTER_THROWING; }
         if (expr == null) return;
-        // support referencing a named @Pointcut method
+        // 支持引用具名 @Pointcut 方法
         if (pointcuts.containsKey(expr)) expr = pointcuts.get(expr);
         int order = Integer.MAX_VALUE;
         Order orderAnn = AnnotationUtils.findAnnotation(m, Order.class);

@@ -9,11 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Assembles a complete JVM class file for a subclass proxy of the given target
- * class. The generated class extends the target, implements {@link SummerProxy},
- * and for every overridable method emits an override (delegating to
- * {@code SubclassProxyFactory.intercept}) plus a {@code $$summer$super$<name>}
- * bridge ({@code invokespecial super.<name>}).
+ * 为给定目标类的子类代理组装完整的 JVM class 文件。生成的类继承目标类、实现
+ * {@link SummerProxy}，并为每个可覆写方法生成一个覆写（委托给
+ * {@code SubclassProxyFactory.intercept}）外加一个 {@code $$summer$super$<name>}
+ * bridge（{@code invokespecial super.<name>}）。
  */
 public final class ClassBuilder {
 
@@ -22,7 +21,7 @@ public final class ClassBuilder {
 
     private ClassBuilder() {}
 
-    /** Builds the class bytes and defines the proxy class in a dedicated classloader. */
+    /** 构建类字节码并在专属 ClassLoader 中定义代理类。 */
     public static Class<?> defineProxyClass(Class<?> targetClass, List<Method> methods,
                                             Constructor<?> ctor, String factoryInternal) {
         String proxyName = targetClass.getName() + "$$SummerProxy";
@@ -31,6 +30,9 @@ public final class ClassBuilder {
         return cl.define(proxyName, bytes);
     }
 
+    /**
+     * 构建代理类的字节码并在专属 ClassLoader 中定义该类。
+     */
     static byte[] build(String proxyInternalName, Class<?> targetClass,
                         List<Method> methods, Constructor<?> ctor, String factoryInternal) {
         ConstantPool cp = new ConstantPool();
@@ -50,9 +52,9 @@ public final class ClassBuilder {
         methodInfos.add(MethodBuilder.constructor(cp, ctorDesc, ctor.getParameterTypes(), targetInternal));
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        out.write(0xCA); out.write(0xFE); out.write(0xBA); out.write(0xBE); // magic
+        out.write(0xCA); out.write(0xFE); out.write(0xBA); out.write(0xBE); // 魔数
         Bytecode.u2(out, 0);   // minor_version
-        Bytecode.u2(out, 69);  // major_version (Java 25)
+        Bytecode.u2(out, 69);  // major_version（Java 25）
         Bytecode.u2(out, cp.count());
         byte[] pool = cp.toByteArray();
         out.write(pool, 0, pool.length);

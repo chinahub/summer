@@ -1,11 +1,10 @@
 package cn.jiebaba.summer.security.core;
 
 /**
- * Thread-local store for the current {@link SecurityContext}.
- * <p>Built on {@link ThreadLocal} and therefore transparent to virtual threads: each
- * request runs on its own virtual thread, which has its own {@code ThreadLocal} value.
- * The web layer clears the context in a {@code finally} block after each request to
- * avoid leakage between pooled carrier threads.
+ * 当前 {@link SecurityContext} 的线程级存储。
+ * <p>基于 {@link ThreadLocal}，因此对虚拟线程透明：每个请求运行在各自的虚拟线程上，
+ * 拥有各自的 {@code ThreadLocal} 值。web 层在每个请求结束后的 {@code finally} 块中
+ * 清理上下文，避免在共享的 carrier 线程之间泄漏。
  */
 public final class SecurityContextHolder {
 
@@ -30,7 +29,7 @@ public final class SecurityContextHolder {
         return HOLDER.get() == null ? null : HOLDER.get().getAuthentication();
     }
 
-    /** Clears the context bound to the current thread. Must be called at request end. */
+    /** 清除绑定到当前线程的上下文。须在请求结束时调用。 */
     public static void clearContext() {
         HOLDER.remove();
     }

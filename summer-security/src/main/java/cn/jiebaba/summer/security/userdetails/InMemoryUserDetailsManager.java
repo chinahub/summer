@@ -9,12 +9,12 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 /**
- * {@link UserDetailsService} backed by an in-memory user map.
- * <p>Loads users from configuration of the form:
+ * 由内存用户表支撑的 {@link UserDetailsService}。
+ * <p>从如下形式的配置中加载用户：
  * <pre>
  *   summer.security.users.alice.password=$2a$10$...
  *   summer.security.users.alice.roles=ADMIN,USER
- *   summer.security.users.alice.enabled=false   # optional, default true
+ *   summer.security.users.alice.enabled=false   # 可选，默认 true
  * </pre>
  */
 public class InMemoryUserDetailsManager implements UserDetailsService {
@@ -29,7 +29,7 @@ public class InMemoryUserDetailsManager implements UserDetailsService {
         for (User u : users) this.users.put(u.getUsername(), u);
     }
 
-    /** Register/replace a user. */
+    /** 注册/替换用户。 */
     public void addUser(User user) {
         users.put(user.getUsername(), user);
     }
@@ -44,8 +44,8 @@ public class InMemoryUserDetailsManager implements UserDetailsService {
     }
 
     /**
-     * Build from environment properties with prefix {@code summer.security.users.<name>.*}.
-     * Each user needs {@code .password} and {@code .roles}; {@code .enabled} is optional (default true).
+     * 以前缀 {@code summer.security.users.<name>.*} 的环境属性构建实例。
+     * 每个用户需要 {@code .password} 与 {@code .roles}；{@code .enabled} 可选（默认 true）。
      */
     public static InMemoryUserDetailsManager fromEnvironment(java.util.Map<String, String> props) {
         InMemoryUserDetailsManager mgr = new InMemoryUserDetailsManager();

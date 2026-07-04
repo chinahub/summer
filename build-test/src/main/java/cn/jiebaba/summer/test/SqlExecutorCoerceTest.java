@@ -12,9 +12,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Verifies the temporal/numeric cross-type coercion added to
- * {@link SqlExecutor#coerce} (framework issue: ORM did no type conversion, so a
- * TIMESTAMP column could not map onto a LocalDateTime field, etc.).
+ * 验证 {@link SqlExecutor#coerce} 新增的 时间/数值 跨类型转换能力
+ * （框架缺陷：ORM 此前不做类型转换，导致 TIMESTAMP 列无法映射到 LocalDateTime 字段等）。
  */
 public class SqlExecutorCoerceTest {
 

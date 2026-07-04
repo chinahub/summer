@@ -4,7 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Minimal JSON parser for JWT payloads (no third-party deps). Returns a Map. */
+/** 用于 JWT 负载的简易 JSON 解析器（无第三方依赖），返回 Map。 */
 public final class JsonReader {
 
     private final String json;
@@ -77,6 +77,9 @@ public final class JsonReader {
         return list;
     }
 
+    /**
+     * 读取并解析一个 JSON 字符串字面量，处理转义序列。
+     */
     private String readString() {
         expect('"');
         StringBuilder sb = new StringBuilder();

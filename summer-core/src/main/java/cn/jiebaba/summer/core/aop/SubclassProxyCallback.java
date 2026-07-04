@@ -5,10 +5,9 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 /**
- * Per-proxy-class dispatch state: the target methods (with their original
- * annotations), the matching bridge methods, and the interceptor/advice sets.
- * Registered against the generated proxy class and looked up by
- * {@link SubclassProxyFactory#intercept} on every invocation.
+ * 每个代理类对应的分派状态：目标方法（及其原始注解）、匹配的 bridge 方法，
+ * 以及拦截器/切面集合。注册到生成的代理类上，并在每次调用时由
+ * {@link SubclassProxyFactory#intercept} 查找。
  */
 final class SubclassProxyCallback {
 

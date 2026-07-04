@@ -11,8 +11,8 @@ import cn.jiebaba.summer.data.support.SqlExecutor;
 import java.util.List;
 
 /**
- * Concrete implementation backing every {@link BaseMapper} proxy. Holds the
- * entity {@link TableInfo}, a {@link SqlBuilder} and a shared {@link SqlExecutor}.
+ * 支撑每个 {@link BaseMapper} 代理的具体实现。持有实体 {@link TableInfo}、
+ * 一个 {@link SqlBuilder} 与共享的 {@link SqlExecutor}。
  */
 public class MapperSupport<T> {
 

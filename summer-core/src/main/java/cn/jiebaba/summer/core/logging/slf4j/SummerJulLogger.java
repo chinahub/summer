@@ -8,13 +8,11 @@ import org.slf4j.helpers.MessageFormatter;
 import java.util.logging.Level;
 
 /**
- * SLF4J {@link Logger} backed by a {@link java.util.logging.Logger}. Each call is
- * translated to the corresponding JUL level so that all output flows through
- * Summer's single logging pipeline configured by {@code LoggingInitializer}.
- * {@code {}} placeholders are resolved with SLF4J's {@link MessageFormatter}; a
- * trailing {@link Throwable} that is not consumed by a placeholder is attached to
- * the JUL {@code LogRecord} so the single-line formatter prints its stack trace.
- * Marker arguments are ignored, matching a minimal no-frills binding.
+ * 由 {@link java.util.logging.Logger} 支撑的 SLF4J {@link Logger}。每次调用都会被
+ * 转换为对应的 JUL 级别，使所有输出都流经由 {@code LoggingInitializer} 配置的 Summer
+ * 单一日志管道。{@code {}} 占位符用 SLF4J 的 {@link MessageFormatter} 解析；
+ * 未被占位符消费的尾随 {@link Throwable} 会附加到 JUL 的 {@code LogRecord}，
+ * 以便单行格式化器打印其堆栈。Marker 参数被忽略，符合极简、无附加功能的绑定。
  */
 final class SummerJulLogger implements Logger {
 
@@ -35,7 +33,7 @@ final class SummerJulLogger implements Logger {
         return jul.getName();
     }
 
-    // ---- helpers ----------------------------------------------------------
+    // ---- 辅助 ----------------------------------------------------------
     private void emit(Level level, String msg) {
         jul.log(level, msg);
     }

@@ -13,11 +13,15 @@ import cn.jiebaba.summer.data.support.SqlExecutor;
 import java.util.Set;
 
 /**
- * Verifies that {@link cn.jiebaba.summer.data.service.ServiceImpl} gets its
- * {@code baseMapper} auto-injected without any setter boilerplate in the subclass.
+ * 验证 {@link cn.jiebaba.summer.data.service.ServiceImpl} 的
+ * {@code baseMapper} 会被自动注入，子类无需手写任何 setter 模板代码。
  */
 public class ServiceInjectionTest {
 
+    /**
+     * 验证 baseMapper 被容器自动注入：构建隔离上下文并注册 SqlExecutor/dialect，
+     * 刷新后取出的 WidgetService 其 baseMapper 应为 WidgetMapper 代理且非空。
+     */
     @Test
     void baseMapperAutoInjectedWithoutSetter() {
         Environment env = new Environment();

@@ -3,7 +3,7 @@ package cn.jiebaba.summer.core.aop.bytecode;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 
-/** Converts Java reflection types/methods into JVM type and method descriptors. */
+/** 将 Java 反射类型/方法转换为 JVM 类型与方法描述符。 */
 public final class Descriptor {
 
     private Descriptor() {}

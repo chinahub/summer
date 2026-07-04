@@ -6,11 +6,11 @@ import cn.jiebaba.summer.data.page.IPage;
 import java.util.List;
 
 /**
- * MyBatis-Plus-style generic CRUD mapper. Users declare their own interface:
+ * MyBatis-Plus 风格的泛型 CRUD mapper。用户声明自己的接口：
  * <pre>{@code
  * public interface UserMapper extends BaseMapper<User> {}
  * }</pre>
- * The framework supplies an implementation via a JDK dynamic proxy.
+ * 框架通过 JDK 动态代理提供实现。
  */
 public interface BaseMapper<T> {
 

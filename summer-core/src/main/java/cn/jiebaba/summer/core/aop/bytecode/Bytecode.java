@@ -2,7 +2,7 @@ package cn.jiebaba.summer.core.aop.bytecode;
 
 import java.io.ByteArrayOutputStream;
 
-/** Small helpers for writing big-endian u2/u4 values into a byte stream. */
+/** 向字节流写入大端序 u2/u4 值的小工具。 */
 public final class Bytecode {
     private Bytecode() {}
 

@@ -11,11 +11,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Manages multi-datasource transactions for {@link DSTransactional}. When active,
- * {@link #getConnection(DataSource)} returns a transactional connection (autoCommit
- *=false) for the routed datasource, caching it per datasource so multiple
- * operations on the same source share one connection. On commit/rollback, all
- * participating connections are handled together.
+ * 为 {@link DSTransactional} 管理多数据源事务。激活时，{@link #getConnection(DataSource)}
+ * 返回路由数据源的事务连接（autoCommit=false），并按数据源缓存，使同一数据源的多次操作
+ * 共用一个连接。提交/回滚时统一处理所有参与连接。
  */
 public final class DsTransactionManager {
 
@@ -24,9 +22,8 @@ public final class DsTransactionManager {
     private static final ThreadLocal<Map<String, Connection>> HOLDER = ThreadLocal.withInitial(LinkedHashMap::new);
 
     /**
-     * Returns a transactional connection for the given datasource if a
-     * {@code @DSTransactional} scope is active; otherwise returns null (caller
-     * should get a fresh non-transactional connection).
+     * 当 {@code @DSTransactional} 作用域激活时，返回给定数据源的事务连接；
+     * 否则返回 {@code null}（调用方应自行获取新的非事务连接）。
      */
     public static Connection getConnection(DataSource dataSource) {
         Map<String, Connection> conns = HOLDER.get();
@@ -35,12 +32,12 @@ public final class DsTransactionManager {
         return conns.get(key);
     }
 
-    /** Begin a multi-datasource transaction scope. */
+    /** 开启多数据源事务作用域。 */
     public void begin() {
-        HOLDER.get(); // initialize if not present
+        HOLDER.get(); // 若不存在则初始化
     }
 
-    /** Borrow a transactional connection for the datasource (lazily on first use). */
+    /** 为数据源借出事务连接（首次使用时惰性创建）。 */
     public static Connection borrow(DataSource dataSource) throws SQLException {
         Map<String, Connection> conns = HOLDER.get();
         String key = dsKey(dataSource);
@@ -52,7 +49,7 @@ public final class DsTransactionManager {
         return conn;
     }
 
-    /** Commit all participating connections. */
+    /** 提交所有参与连接。 */
     public void commit() {
         Map<String, Connection> conns = HOLDER.get();
         SQLException firstError = null;
@@ -69,7 +66,7 @@ public final class DsTransactionManager {
         }
     }
 
-    /** Rollback all participating connections. */
+    /** 回滚所有参与连接。 */
     public void rollback() {
         Map<String, Connection> conns = HOLDER.get();
         for (var entry : conns.entrySet()) {
@@ -81,7 +78,7 @@ public final class DsTransactionManager {
         }
     }
 
-    /** Close all participating connections and clear the scope. */
+    /** 关闭所有参与连接并清除作用域。 */
     public void end() {
         Map<String, Connection> conns = HOLDER.get();
         for (var entry : conns.entrySet()) {
@@ -97,7 +94,7 @@ public final class DsTransactionManager {
         HOLDER.remove();
     }
 
-    /** Whether a multi-datasource transaction scope is active. */
+    /** 多数据源事务作用域是否激活。 */
     public static boolean isActive() {
         return !HOLDER.get().isEmpty();
     }

@@ -23,6 +23,10 @@ public final class MetadataParser {
         return CACHE.computeIfAbsent(entityType, MetadataParser::doParse);
     }
 
+    /**
+     * 解析实体类型为 {@link TableInfo}：确定表名/Schema，遍历字段推导列名、
+     * 主键与逻辑删除字段，并实例化自定义 TypeHandler。
+     */
     private static TableInfo doParse(Class<?> entityType) {
         if (entityType.isRecord()) {
             throw new IllegalArgumentException("summer-data does not support record entities (use a class with fields): " + entityType.getName());
@@ -68,7 +72,7 @@ public final class MetadataParser {
                 info.idField(fi);
                 info.idType(tableId.type());
                 if (tableId.type() == IdType.AUTO) {
-                    // auto increment: not inserted explicitly
+                    // 自增主键：插入时不显式赋值
                 }
             }
             if (logic != null) {

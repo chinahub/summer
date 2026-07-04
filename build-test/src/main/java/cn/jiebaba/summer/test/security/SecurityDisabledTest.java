@@ -8,13 +8,13 @@ import cn.jiebaba.summer.security.web.SecurityFilterChain;
 
 import java.lang.reflect.Method;
 
-/** Verifies the opt-in/disable behavior: security off must be inert. */
+/** 验证 opt-in/禁用行为：安全关闭时必须为空操作。 */
 public class SecurityDisabledTest {
 
     @Test
     public void disabledEnforcerIsNoOp() throws Exception {
         MethodSecurityEnforcer enforcer = new MethodSecurityEnforcer(false);
-        // any method, no auth in context -> must NOT throw (no-op)
+        // 任意方法，上下文无认证信息 -> 不得抛异常（空操作）
         Method m = String.class.getMethod("length");
         enforcer.check(m);
         Assert.assertTrue(!enforcer.isEnabled(), "disabled enforcer reports disabled");
@@ -42,7 +42,7 @@ public class SecurityDisabledTest {
         try {
             enforcer.check(m);
         } catch (RuntimeException e) {
-            threw = true; // AuthenticationException (401) expected, no auth in context
+            threw = true; // 预期抛出 AuthenticationException（401），上下文无认证信息
         }
         Assert.assertTrue(threw, "enabled enforcer on @PreAuthorize method with no auth must throw");
     }

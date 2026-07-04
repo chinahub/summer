@@ -2,7 +2,7 @@ package cn.jiebaba.summer.core.aop;
 
 import java.lang.reflect.Method;
 
-/** A registered advice (before/after/around) bound to a pointcut expression. */
+/** 已注册的通知（before/after/around），绑定到一个切点表达式。 */
 public final class Advice {
     public enum Kind { BEFORE, AFTER, AFTER_RETURNING, AFTER_THROWING, AROUND }
 

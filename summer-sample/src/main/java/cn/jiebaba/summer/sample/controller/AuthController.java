@@ -9,9 +9,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Demonstrates authenticated endpoints and {@link AuthenticationPrincipal} injection.
- * The {@code /login} endpoint is handled by the JWT login filter (no controller needed);
- * this controller exposes {@code /me} to inspect the current principal.
+ * 演示需要认证的端点与 {@link AuthenticationPrincipal} 注入。
+ * {@code /login} 端点由 JWT 登录过滤器处理（无需控制器）；
+ * 本控制器暴露 {@code /me} 以查看当前登录主体。
  */
 @RestController
 public class AuthController {

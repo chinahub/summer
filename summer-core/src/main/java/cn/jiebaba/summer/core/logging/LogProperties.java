@@ -7,8 +7,8 @@ import java.util.Map;
 import java.util.logging.Level;
 
 /**
- * Logging configuration read from the {@link Environment}. Supports a console
- * channel and a file channel with size-based and/or time-based (daily) rolling.
+ * 从 {@link Environment} 读取的日志配置。支持控制台通道，以及带基于大小和/或基于时间
+ * （按天）滚动的文件通道。
  */
 public final class LogProperties {
 

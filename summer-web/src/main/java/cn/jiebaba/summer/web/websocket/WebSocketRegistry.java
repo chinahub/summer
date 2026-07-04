@@ -9,13 +9,17 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Scans the application context for beans annotated with {@link WebSocketEndpoint},
- * collects their lifecycle callback methods, and provides path-based lookup.
+ * 扫描应用上下文中带 {@link WebSocketEndpoint} 注解的 Bean，
+ * 收集其生命周期回调方法，并提供基于路径的查找。
  */
 public final class WebSocketRegistry {
 
     private final Map<String, WebSocketEndpointInfo> endpoints = new LinkedHashMap<>();
 
+    /**
+     * 扫描上下文中带 {@link WebSocketEndpoint} 注解的 Bean，收集其
+     * OnOpen/OnMessage/OnClose/OnError 回调方法，并按路径登记端点信息。
+     */
     public void scan(ApplicationContext context) {
         Map<String, Object> candidates;
         try {

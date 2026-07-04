@@ -5,11 +5,10 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * String helpers inspired by {@code org.apache.commons.lang3.StringUtils}.
+ * 字符串工具，灵感来自 {@code org.apache.commons.lang3.StringUtils}。
  *
- * <p>All methods are null-tolerant: a {@code null} input is treated as the empty string
- * for "contains"/"index" style queries and propagates as {@code null}/empty for
- * transformation queries, mirroring the commons-lang3 contract.
+ * <p>所有方法均容忍 null：对于 "contains"/"index" 类查询，{@code null} 输入按空串处理；
+ * 对于转换类查询则传播为 {@code null}/空串，与 commons-lang3 的约定一致。
  */
 public final class StringUtil {
 
@@ -263,6 +262,9 @@ public final class StringUtil {
     public static String[] split(String str, String separatorChars) { return splitWorker(str, separatorChars, false); }
     public static String[] splitPreserveAllTokens(String str) { return splitWorker(str, null, true); }
     public static String[] splitPreserveAllTokens(String str, String separatorChars) { return splitWorker(str, separatorChars, true); }
+    /**
+     * 按分隔符拆分字符串的核心实现，支持是否保留空白 token。
+     */
     private static String[] splitWorker(String str, String separatorChars, boolean preserveAllTokens) {
         if (str == null) return null;
         int len = str.length();

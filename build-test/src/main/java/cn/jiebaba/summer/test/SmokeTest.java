@@ -8,8 +8,12 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
-/** In-process smoke test: starts the app and exercises every route via loopback. */
+/** 进程内冒烟测试：启动应用并通过回环地址遍历每个路由。 */
 public class SmokeTest {
+    /**
+     * 冒烟测试入口：启动应用，通过回环地址对全部路由（GET/POST/PUT/DELETE 等）
+     * 发起请求，结束后关闭 Web 服务与上下文。
+     */
     public static void main(String[] args) throws Exception {
         SummerApplication app = SummerApplication.run(Application.class, args);
         int port = app.webServer().port();
@@ -32,6 +36,10 @@ public class SmokeTest {
         }
     }
 
+    /**
+     * 向指定端口发起一次 HTTP 请求：组装请求行、头部与请求体，读取完整响应并
+     * 打印状态行与响应正文。
+     */
     static void test(int port, String method, String path, String body) throws Exception {
         try (Socket s = new Socket("127.0.0.1", port)) {
             s.setSoTimeout(5000);

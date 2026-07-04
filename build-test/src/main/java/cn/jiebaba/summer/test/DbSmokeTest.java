@@ -15,14 +15,17 @@ import java.sql.Statement;
 import java.util.List;
 
 /**
- * End-to-end test against the Supabase PostgreSQL database: table creation,
- * CRUD, pagination (multi-dialect), lambda wrapper, @Transactional
- * commit/rollback (via AOP proxy), and bean-style validation.
+ * 针对 Supabase PostgreSQL 数据库的端到端测试：建表、CRUD、分页（多方言）、
+ * lambda wrapper、@Transactional 提交/回滚（经 AOP 代理）以及 Bean 校验。
  */
 public class DbSmokeTest {
 
     private static int passed = 0;
 
+    /**
+     * 端到端数据库冒烟测试入口：启动应用，覆盖建表、CRUD、分页、lambda wrapper、
+     * 事务提交/回滚与 Bean 校验等流程，并在结束时清理临时表。
+     */
     public static void main(String[] args) throws Exception {
         SummerApplication app = SummerApplication.run(Application.class, args);
         try {

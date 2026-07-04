@@ -39,7 +39,7 @@ public final class RequestDispatcher {
     private final List<Filter> securityFilters;
     private final HandlerMethodAccessChecker accessChecker;
 
-    /** Backward-compatible constructor: no security filters, no access checker. */
+    /** 向后兼容的构造器：不含安全过滤器与访问检查器。 */
     public RequestDispatcher(Router router, HandlerMethodInvoker invoker, MessageConverter converter,
                              ExceptionHandlerRegistry exceptions, String contextPath) {
         this(router, invoker, converter, exceptions, contextPath, List.of(), null);
@@ -70,7 +70,7 @@ public final class RequestDispatcher {
         }
     }
 
-    /** Terminal handler: route match -> method access check -> invoke -> write result. */
+    /** 终端处理器：路由匹配 -> 方法访问检查 -> 调用 -> 写出结果。 */
     private void dispatchInternal(WebRequest request, WebResponse response) throws Exception {
         String path = stripContext(request.path());
         Optional<RouteMatch> match = router.match(request.method(), path);
@@ -94,6 +94,10 @@ public final class RequestDispatcher {
         return path;
     }
 
+    /**
+     * 写出处理器返回值：处理 @ResponseStatus、null（204）、异步 CompletionStage、
+     * WebResponse 直返，以及 @ResponseBody/字符串/字节数组等情形的响应体序列化。
+     */
     private void writeResult(RouteMatch route, Object result, WebResponse response) {
         ResponseStatus status = route.mapping().handlerMethod().getAnnotation(ResponseStatus.class);
         if (status != null && status.value() != 200) response.status(status.value());
@@ -143,6 +147,10 @@ public final class RequestDispatcher {
         response.body(errorBody(status, path, pathExists ? "Method Not Allowed" : "Not Found", method + " " + path));
     }
 
+    /**
+     * 处理分发过程中的异常：按 ResponseStatusException、ValidationException、
+     * 已注册的 @ExceptionHandler 顺序处理；均未命中时按 400/500 返回错误响应。
+     */
     private void handleException(Throwable t, WebRequest request, WebResponse response) {
         if (response.committed()) {
             LOG.log(Level.FINE, "Exception after response committed for " + request.method() + " " + request.path(), t);

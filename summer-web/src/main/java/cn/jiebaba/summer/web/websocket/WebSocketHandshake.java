@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Handles the WebSocket opening handshake (RFC 6455 section 4).
- * Detects upgrade requests and writes the 101 response.
+ * 处理 WebSocket 开场握手（RFC 6455 第 4 节）。
+ * 检测升级请求并写出 101 响应。
  */
 public final class WebSocketHandshake {
 
@@ -18,7 +18,7 @@ public final class WebSocketHandshake {
 
     private WebSocketHandshake() {}
 
-    /** Returns true if the HTTP request is a WebSocket upgrade request. */
+    /** 当 HTTP 请求为 WebSocket 升级请求时返回 true。 */
     public static boolean isUpgradeRequest(Map<String, List<String>> headers, String method) {
         if (!"GET".equalsIgnoreCase(method)) return false;
         String upgrade = firstHeader(headers, "upgrade");
@@ -26,8 +26,8 @@ public final class WebSocketHandshake {
     }
 
     /**
-     * Writes the 101 Switching Protocols response to complete the handshake.
-     * @return true on success
+     * 写出 101 Switching Protocols 响应以完成握手。
+     * @return 成功时返回 true
      */
     public static boolean completeHandshake(Map<String, List<String>> headers, OutputStream out) throws IOException {
         String key = firstHeader(headers, "sec-websocket-key");

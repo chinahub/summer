@@ -11,10 +11,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Binds a JDBC {@link Connection} (autoCommit=false) to the current thread for
- * the duration of a {@link Transactional @Transactional} method. Supports
- * nested @Transactional via propagation REQUIRES_NEW-less nesting: nested calls
- * join the existing transaction (a reference-counted stack).
+ * 在 {@link Transactional @Transactional} 方法执行期间，将 JDBC {@link Connection}
+ * （autoCommit=false）绑定到当前线程。通过非 REQUIRES_NEW 的嵌套传播支持
+ * 嵌套 @Transactional：嵌套调用加入当前事务（基于引用计数的栈）。
  */
 public final class TransactionManager {
 
@@ -27,11 +26,11 @@ public final class TransactionManager {
         this.dataSource = dataSource;
     }
 
-    /** Begin a transaction (or join the current one); returns true if a new connection was bound. */
+    /** 开启事务（或加入当前事务）；绑定了新连接时返回 true。 */
     public boolean begin() {
         Deque<Connection> stack = HOLDER.get();
         if (!stack.isEmpty()) {
-            return false; // join existing transaction
+            return false; // 加入已有事务
         }
         try {
             Connection conn = dataSource.getConnection();
@@ -65,7 +64,7 @@ public final class TransactionManager {
         }
     }
 
-    /** End the transaction: close+unbind the connection if this caller began it. */
+    /** 结束事务：若由本调用方开启，则关闭并解绑连接。 */
     public void end(boolean began) {
         if (!began) return;
         Deque<Connection> stack = HOLDER.get();
@@ -83,7 +82,7 @@ public final class TransactionManager {
         }
     }
 
-    /** The connection bound to the current thread, or null if no transaction is active. */
+    /** 绑定到当前线程的连接；无活动事务时为 null。 */
     public static Connection currentConnection() {
         Deque<Connection> stack = HOLDER.get();
         return stack.peek();

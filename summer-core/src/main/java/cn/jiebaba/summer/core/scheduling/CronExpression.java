@@ -8,14 +8,13 @@ import java.util.BitSet;
 import java.util.Locale;
 
 /**
- * Minimal 5-field cron expression: {@code minute hour day-of-month month day-of-week}.
- * Supports star, comma lists, ranges (1-5), step values (star/5, 0-30/10),
- * and names for months/day-of-week (jan..dec, sun..sat). The next fire time after a
- * given moment is computed by field-by-field jumping rather than a minute scan.
+ * 极简 5 字段 cron 表达式：{@code minute hour day-of-month month day-of-week}。
+ * 支持 星号、逗号列表、范围（1-5）、步长值（star/5、0-30/10），
+ * 以及月份/星期几的名称（jan..dec、sun..sat）。给定时刻之后的下一次触发时间，
+ * 通过逐字段跳跃计算，而非逐分钟扫描。
  *
- * <p>Day-of-month and day-of-week follow Vixie cron semantics: when <em>both</em>
- * fields are restricted (neither contains {@code *}), a day matches if <em>either</em>
- * field matches; otherwise both must match.
+ * <p>day-of-month 与 day-of-week 遵循 Vixie cron 语义：当两个字段都被限定
+ * （都不含 {@code *}）时，任一字段匹配即视为该天匹配；否则两个字段都必须匹配。
  */
 public final class CronExpression {
 
@@ -46,7 +45,7 @@ public final class CronExpression {
 
     public String expression() { return expression; }
 
-    /** Next fire time strictly after the given moment. */
+    /** 给定时刻之后的下一次触发时间。 */
     public LocalDateTime nextFire(LocalDateTime after) {
         LocalDateTime t = after.truncatedTo(ChronoUnit.MINUTES).plusMinutes(1);
         int startYear = t.getYear();
@@ -101,6 +100,9 @@ public final class CronExpression {
         parse(field, min, max, target, null);
     }
 
+    /**
+     * 将单个 cron 字段解析为 BitSet：支持逗号、范围、步长与名称（如月份/星期）。
+     */
     private void parse(String field, int min, int max, BitSet target, Enum<?>[] names) {
         for (String part : field.split(",")) {
             String p = part.trim();

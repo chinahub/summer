@@ -3,7 +3,7 @@ package cn.jiebaba.summer.core.aop.bytecode;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Defines generated proxy classes; parent is the target class's loader. */
+/** 定义生成的代理类；父加载器为目标类的加载器。 */
 final class ProxyClassLoader extends ClassLoader {
 
     private final Map<String, Class<?>> cache = new ConcurrentHashMap<>();

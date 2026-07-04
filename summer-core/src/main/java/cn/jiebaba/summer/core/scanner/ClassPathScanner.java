@@ -14,16 +14,14 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 /**
- * Scans the class-path for class files under the given base packages,
- * reading directory and jar entries directly from {@code java.class.path}.
+ * 扫描 class-path 中位于给定基础包下的 class 文件，直接读取目录与 jar 条目（来源为
+ * {@code java.class.path}）。
  *
- * <p><b>Note:</b> only the application class path ({@code java.class.path})
- * is scanned. On JDK 9+ the platform/JDK classes live on the module path and
- * are never enumerated here, so JDK internals are not traversed.
+ * <p><b>注意：</b>仅扫描应用 class path（{@code java.class.path}）。在 JDK 9+ 上，
+ * 平台/JDK 类位于 module path，不会被此处枚举，因此不会遍历 JDK 内部类。
  *
- * <p>Jar scanning is optimized with an O(1) probe: a jar that has no entry
- * for the requested package directory is skipped without iterating its entries,
- * so unrelated dependencies (drivers, libs) are not walked.
+ * <p>jar 扫描做了 O(1) 探测优化：若某个 jar 不含所请求包目录对应的条目，则跳过它而
+ * 不遍历其条目，从而不会扫描无关依赖（驱动、库等）。
  */
 public final class ClassPathScanner {
     private ClassPathScanner() {}
@@ -73,16 +71,18 @@ public final class ClassPathScanner {
                       tryLoad(fullName, classLoader, classes);
                   });
         } catch (IOException e) {
-            // ignore unreadable directory
+            // 忽略不可读目录
         }
     }
 
+    /**
+     * 扫描 jar 内指定包路径下的类，对包目录做 O(1) 探测以跳过无关 jar。
+     */
     private static void scanJar(Path jarPath, String pkgPath, String pkg, ClassLoader classLoader, Set<Class<?>> classes) {
         try (JarFile jar = new JarFile(jarPath.toFile())) {
-            // Fast path: a single O(1) probe for the package directory entry. If the jar has no
-            // entry under pkgPath/ it cannot contain any class in the target package, so skip
-            // iterating its (potentially thousands of) entries entirely. This keeps unrelated
-            // jars (e.g. JDBC drivers, JSON libs) from being walked when scanning app packages.
+            // 快速路径：对包目录条目做一次 O(1) 探测。若 jar 中不存在 pkgPath/ 下的条目，
+            // 则它不可能包含目标包中的任何类，故整体跳过其（可能数以千计的）条目遍历。
+            // 这避免在扫描应用包时遍历无关 jar（如 JDBC 驱动、JSON 库）。
             if (!pkgPath.isEmpty() && jar.getJarEntry(pkgPath + "/") == null) return;
             Enumeration<JarEntry> entries = jar.entries();
             while (entries.hasMoreElements()) {
@@ -96,17 +96,17 @@ public final class ClassPathScanner {
                 tryLoad(className, classLoader, classes);
             }
         } catch (IOException e) {
-            // skip unreadable jar
+            // 跳过不可读 jar
         }
     }
 
     private static void tryLoad(String className, ClassLoader classLoader, Set<Class<?>> classes) {
-        if (className.indexOf('$') >= 0) return; // skip nested classes
+        if (className.indexOf('$') >= 0) return; // 跳过嵌套类
         try {
             Class<?> clazz = Class.forName(className, false, classLoader);
             classes.add(clazz);
         } catch (LinkageError | ClassNotFoundException e) {
-            // skip classes we cannot load (optional deps etc.)
+            // 跳过无法加载的类（可选依赖等）
         }
     }
 }

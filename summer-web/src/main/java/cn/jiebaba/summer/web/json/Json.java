@@ -17,14 +17,14 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Minimal JSON serializer and parser implemented with only the JDK.
- * Supports records, JavaBeans (getters/fields), maps, collections, arrays,
- * primitives, enums, strings and common java.time types.
+ * 仅用 JDK 实现的极简 JSON 序列化器与解析器。
+ * 支持 record、JavaBean（getter/字段）、Map、集合、数组、
+ * 基本类型、枚举、字符串及常用 java.time 类型。
  */
 public final class Json {
     private Json() {}
 
-    // ---- serialization --------------------------------------------------------
+    // ---- 序列化 --------------------------------------------------------
 
     public static String stringify(Object value) {
         StringBuilder sb = new StringBuilder();
@@ -36,6 +36,13 @@ public final class Json {
         return stringify(value);
     }
 
+    /**
+     * 按值的实际运行时类型分派序列化，将结果写入 {@code sb}：支持 null、{@link Optional}、
+     * 布尔、数字、字符、枚举、字符串/时间、数组、集合、Map、Record 及普通对象。
+     *
+     * @param sb    目标缓冲区
+     * @param value 待序列化的值
+     */
     private static void write(StringBuilder sb, Object value) {
         if (value == null) {
             sb.append("null");
@@ -126,6 +133,13 @@ public final class Json {
         sb.append('}');
     }
 
+    /**
+     * 将普通对象序列化为 JSON 对象：先遍历无参 getter 推导属性名并去重，
+     * 再补充尚未出现过的公开字段，逐个写出键值对。
+     *
+     * @param sb     目标缓冲区
+     * @param object 待序列化对象
+     */
     private static void writeObject(StringBuilder sb, Object object) {
         sb.append('{');
         boolean first = true;
@@ -191,6 +205,13 @@ public final class Json {
         return fields;
     }
 
+    /**
+     * 将字符串转义后写入：对引号、反斜杠及控制字符做 JSON 转义，
+     * 非 ASCII 字符按其原始字符输出。
+     *
+     * @param sb 目标缓冲区
+     * @param s  待写入字符串
+     */
     private static void writeString(StringBuilder sb, String s) {
         sb.append('"');
         for (int i = 0; i < s.length(); i++) {
@@ -215,7 +236,7 @@ public final class Json {
         sb.append('"');
     }
 
-    // ---- parsing --------------------------------------------------------------
+    // ---- 解析 --------------------------------------------------------------
 
     public static Object parse(String json) {
         Parser p = new Parser(json);
@@ -234,8 +255,8 @@ public final class Json {
     }
 
     /**
-     * Parses JSON into a generic type, e.g. {@code List<User>}. Capture the type
-     * with {@link TypeReference} or build a {@link Type} by other means.
+     * 将 JSON 解析为泛型类型，例如 {@code List<User>}。使用 {@link TypeReference}
+     * 捕获类型，或通过其他方式构造 {@link Type}。
      */
     @SuppressWarnings("unchecked")
     public static <T> T parse(String json, Type type) {
@@ -246,6 +267,15 @@ public final class Json {
         return parse(json, typeRef.getType());
     }
 
+    /**
+     * 将解析得到的值绑定到目标类型：处理基本类型、枚举、数字窄化、布尔、字符、
+     * java.time 类型，以及 Map 到 Bean、Map 到 Map、List 到数组/集合的转换。
+     *
+     * @param value        解析得到的值
+     * @param rawType      目标原始类型
+     * @param genericType  目标泛型类型
+     * @return 转换后的值
+     */
     @SuppressWarnings("unchecked")
     public static Object bind(Object value, Class<?> rawType, Type genericType) {
         if (value == null) return defaultValue(rawType);
@@ -372,9 +402,18 @@ public final class Json {
                 || type == float.class || type == Float.class;
     }
 
+    /**
+     * 将数字窄化转换为目标数值类型；对 int/short/byte 做范围校验，超界时抛出异常，
+     * 避免大 Long 绑定到 Integer 字段时被静默截断。
+     *
+     * @param num  原始数字
+     * @param type 目标数值类型
+     * @return 转换后的数字
+     * @throws IllegalArgumentException 当窄化转换超出目标类型范围时抛出
+     */
     private static Object coerceNumber(Number num, Class<?> type) {
-        // Narrowing conversions must check range; otherwise a Long id > Integer.MAX_VALUE
-        // would be silently truncated when bound to an Integer field (see #2).
+        // 窄化转换必须校验范围；否则绑定到 Integer 字段时，超过 Integer.MAX_VALUE 的 Long 型 id
+        // 会被静默截断（见 #2）。
         if (type == int.class || type == Integer.class) {
             long v = num.longValue();
             if (v < Integer.MIN_VALUE || v > Integer.MAX_VALUE) {

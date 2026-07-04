@@ -3,9 +3,8 @@ package cn.jiebaba.summer.core.aop;
 import java.util.List;
 
 /**
- * SPI for built-in interceptors (e.g. {@code @Transactional}). The container
- * asks every registered {@code ProxyAdvisor} whether it advises a bean class,
- * and applies the returned interceptors to that bean's proxy.
+ * 内置拦截器（如 {@code @Transactional}）的 SPI。容器会询问每个已注册的
+ * {@code ProxyAdvisor} 是否代理某个 bean 类，并将返回的拦截器应用到该 bean 的代理上。
  */
 public interface ProxyAdvisor {
     boolean advises(Class<?> beanClass);

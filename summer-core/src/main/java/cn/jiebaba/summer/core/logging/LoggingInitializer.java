@@ -12,9 +12,8 @@ import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
 /**
- * Initializes {@code java.util.logging} with a console channel and a rolling
- * file channel according to {@link LogProperties}. Should be called early, before
- * the IoC container refreshes, so that startup logs are captured to file.
+ * 依据 {@link LogProperties} 初始化 {@code java.util.logging}：一个控制台通道与一个滚动
+ * 文件通道。应尽早调用（在 IoC 容器刷新之前），以便将启动日志写入文件。
  */
 public final class LoggingInitializer {
 
@@ -23,6 +22,9 @@ public final class LoggingInitializer {
 
     private LoggingInitializer() {}
 
+    /**
+     * 初始化日志系统：加载日志属性、配置 JUL 并安装控制台/文件处理器。
+     */
     public static LogProperties initialize(Environment environment) {
         LogProperties props = new LogProperties(environment);
         Logger root = Logger.getLogger("");

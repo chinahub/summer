@@ -14,9 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Pure SQL generator. Turns entity metadata plus optional wrappers into SQL
- * strings with {@code ?} placeholders and the matching parameter list. No JDBC
- * here, so it is fully unit-testable without a database.
+ * 纯 SQL 生成器。将实体元数据与可选的 Wrapper 转换为带 {@code ?} 占位符的 SQL
+ * 字符串及对应参数列表。此处不涉及 JDBC，因此无需数据库即可完整单元测试。
  */
 public final class SqlBuilder {
 
@@ -138,7 +137,7 @@ public final class SqlBuilder {
         }
     }
 
-    /** Resolve a wrapper's segments (which may use property names) into column-backed SQL. */
+    /** 将 Wrapper 的片段（可能使用属性名）解析为基于列的 SQL。 */
     public String whereClause(AbstractWrapper<?, ?> wrapper, List<Object> params) {
         if (wrapper == null || wrapper.isEmpty()) return "";
         List<String> resolved = new ArrayList<>();
@@ -147,7 +146,7 @@ public final class SqlBuilder {
             resolved.add(resolveSegment(seg));
         }
         if (wrapper instanceof LambdaQueryWrapper<?> lw && params != null) {
-            // params already added in wrapper; nothing extra
+            // 参数已在 Wrapper 中添加；无需额外处理
         }
         if (params != null) params.addAll(wrapper.params());
         return String.join(" AND ", resolved);
@@ -163,10 +162,9 @@ public final class SqlBuilder {
 
     private String replacePropertyWithColumn(String segment, String property, String column) {
         if (column == null || property == null || property.isEmpty()) return segment;
-        // Replace whole-word property occurrences (propertyName) with the SQL column.
-        // quoteReplacement escapes the replacement string; the previous code compared its
-        // result to null, which is impossible (it throws on null input), so the ternary
-        // was dead code (see #1).
+        // 将整词出现的属性名替换为 SQL 列名。
+        // quoteReplacement 会转义替换字符串；此前代码将结果与 null 比较，
+        // 而该结果不可能为 null（输入为 null 时会抛异常），故该三元判断属于死代码（见 #1）.
         String regex = "\\b" + java.util.regex.Pattern.quote(property) + "\\b";
         return segment.replaceAll(regex, java.util.regex.Matcher.quoteReplacement(column));
     }

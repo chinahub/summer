@@ -24,11 +24,10 @@ import java.util.Base64;
 import java.util.UUID;
 
 /**
- * Encryption / digest helpers inspired by {@code cn.hutool.crypto.SecureUtil}.
+ * 加密 / 摘要工具，灵感来自 {@code cn.hutool.crypto.SecureUtil}。
  *
- * <p>Built only on the JDK ({@code java.security} / {@code javax.crypto}). Provides Base64,
- * hex, message digests, HMAC, symmetric (AES/DES) and asymmetric (RSA) encryption plus
- * signatures and UUID helpers.
+ * <p>仅基于 JDK（{@code java.security} / {@code javax.crypto}）实现。提供 Base64、
+ * 十六进制、消息摘要、HMAC、对称（AES/DES）与非对称（RSA）加密，以及签名与 UUID 工具。
  */
 public final class SecurityUtil {
 
@@ -56,7 +55,7 @@ public final class SecurityUtil {
     public static byte[] decodeBase64(String base64) { return base64 == null ? null : B64D.decode(base64); }
     public static byte[] decodeBase64(byte[] base64) { return base64 == null ? null : B64D.decode(base64); }
 
-    // ---- hex -----------------------------------------------------------------
+    // ---- 十六进制 -------------------------------------------------------------
 
     public static String encodeHex(byte[] data) {
         if (data == null) return null;
@@ -84,7 +83,7 @@ public final class SecurityUtil {
         return out;
     }
 
-    // ---- digest --------------------------------------------------------------
+    // ---- 摘要 --------------------------------------------------------------
 
     public static byte[] digest(String algorithm, byte[] data) {
         try {
@@ -138,7 +137,7 @@ public final class SecurityUtil {
         }
     }
 
-    // ---- random / uuid -------------------------------------------------------
+    // ---- 随机 / uuid -------------------------------------------------------
 
     public static byte[] randomSalt(int byteLength) {
         byte[] salt = new byte[byteLength];

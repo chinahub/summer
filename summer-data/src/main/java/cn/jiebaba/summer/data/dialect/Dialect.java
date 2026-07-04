@@ -6,24 +6,24 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.List;
 
-/** SQL dialect abstraction, primarily for pagination and identifier quoting. */
+/** SQL 方言抽象，主要用于分页与标识符引号处理。 */
 public interface Dialect {
     String name();
-    /** Append pagination SQL to the builder and add bound params in the correct order. */
+    /** 向 builder 追加分页 SQL，并按正确顺序添加绑定参数。 */
     void appendPagination(StringBuilder sql, long offset, long size, List<Object> params);
-    /** Quote an identifier (e.g. `name` or "name"). */
+    /** 为标识符加引号（如 `name` 或 "name"）。 */
     default String quote(String identifier) { return identifier; }
-    /** Native column type used to store JSON for this database (e.g. "jsonb", "json", "CLOB"). */
+    /** 该数据库用于存储 JSON 的原生列类型（如 "jsonb"、"json"、"CLOB"）。 */
     default String jsonColumnType() { return "json"; }
-    /** Bind a JSON text value to a native JSON column. */
+    /** 将 JSON 文本值绑定到原生 JSON 列。 */
     default void setJsonParameter(PreparedStatement ps, int index, String json) throws SQLException {
         ps.setObject(index, json, Types.OTHER);
     }
-    /** Read a JSON column back as text. */
+    /** 将 JSON 列读回为文本。 */
     default String getJsonResult(ResultSet rs, int index) throws SQLException {
         return rs.getString(index);
     }
-    /** Infer the dialect from the JDBC driver class name, or null if unknown. */
+    /** 从 JDBC 驱动类名推断方言，未知时返回 null。 */
     static Dialect fromDriver(String driverClassName) {
         if (driverClassName == null || driverClassName.isBlank()) return null;
         String d = driverClassName.toLowerCase();
@@ -34,14 +34,14 @@ public interface Dialect {
         return null;
     }
 
-    /** Detect the dialect from the driver class name, falling back to the JDBC URL. */
+    /** 从驱动类名检测方言，回退到 JDBC URL。 */
     static Dialect detect(String driverClassName, String url) {
         Dialect byDriver = fromDriver(driverClassName);
         if (byDriver != null) return byDriver;
         return fromUrl(url);
     }
 
-    /** Infer the dialect from a JDBC URL. */
+    /** 从 JDBC URL 推断方言。 */
     static Dialect fromUrl(String url) {
         if (url == null || url.isBlank()) return new PostgreSqlDialect();
         String lower = url.toLowerCase();

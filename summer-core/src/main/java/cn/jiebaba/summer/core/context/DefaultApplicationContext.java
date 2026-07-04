@@ -93,6 +93,9 @@ public class DefaultApplicationContext implements ApplicationContext {
         registerBeanDefinition(def.getName(), def);
     }
 
+    /**
+     * 处理 Bean 上的 @Bean 等工厂方法，注册其产生的 Bean 定义。
+     */
     private void processBeanMethods() {
         for (BeanDefinition def : new ArrayList<>(beanDefinitions.values())) {
             Class<?> configClass = def.getBeanClass();
@@ -201,7 +204,7 @@ public class DefaultApplicationContext implements ApplicationContext {
         return exposed;
     }
 
-    /** A no-interface, non-final, constructor-instantiated bean that needs interception is proxied via subclassing. */
+    /** 无接口、非 final、构造器实例化且需要拦截的 Bean 通过子类代理增强。 */
     private boolean needsSubclassProxy(Class<?> beanClass, BeanDefinition def) {
         if (beanClass.getInterfaces().length > 0) return false;
         if (def.getFactoryMethod() != null || def.getInstanceSupplier() != null) return false;
@@ -244,11 +247,14 @@ public class DefaultApplicationContext implements ApplicationContext {
         return proxy;
     }
 
-    /** For annotation scanning, a subclass proxy exposes its user class via the superclass. */
+    /** 为注解扫描，子类代理通过超类暴露其用户类。 */
     private Class<?> effectiveType(Object bean) {
         return (bean instanceof SummerProxy) ? bean.getClass().getSuperclass() : bean.getClass();
     }
 
+    /**
+     * 实例化指定 Bean 定义：执行构造器注入并按需生成代理。
+     */
     private Object instantiate(String name, BeanDefinition def) {
         if (def.getInstanceSupplier() != null) {
             return def.getInstanceSupplier().get();
@@ -291,6 +297,9 @@ public class DefaultApplicationContext implements ApplicationContext {
         return args;
     }
 
+    /**
+     * 对已实例化的 Bean 进行属性注入与依赖填充。
+     */
     private void populateBean(Object bean, BeanDefinition def) {
         for (Field field : ReflectionUtils.collectFields(bean.getClass())) {
             if (field.isAnnotationPresent(Value.class)) {
@@ -415,7 +424,7 @@ public class DefaultApplicationContext implements ApplicationContext {
         for (String name : getBeanNamesForType(type)) {
             BeanDefinition def = beanDefinitions.get(name);
             if (def.isPrototype()) {
-                // do not eagerly create prototypes on lookup
+                // 查找时不预先创建原型 Bean
                 continue;
             }
             result.put(name, (T) getBean(name));
@@ -462,6 +471,9 @@ public class DefaultApplicationContext implements ApplicationContext {
         destructionOrder.clear();
     }
 
+    /**
+     * 销毁 Bean：调用生命周期销毁回调并释放资源。
+     */
     private void destroyBean(String name, Object bean, BeanDefinition def) {
         Object target = targetObjects.getOrDefault(name, bean);
         try {
@@ -478,7 +490,7 @@ public class DefaultApplicationContext implements ApplicationContext {
                     Method m = bean.getClass().getMethod(def.getDestroyMethodName());
                     ReflectionUtils.invokeMethod(m, bean);
                 } catch (NoSuchMethodException ignore) {
-                    // ignore missing destroy method
+                    // 忽略缺失的销毁方法
                 }
             }
         } catch (Throwable t) {
@@ -486,9 +498,12 @@ public class DefaultApplicationContext implements ApplicationContext {
         }
     }
 
-    // ---- dependency resolution -------------------------------------------------
+    // ---- 依赖解析 -------------------------------------------------
 
     @SuppressWarnings("unchecked")
+    /**
+     * 解析目标类型的依赖：按类型/名称/限定符查找候选 Bean，缺失时按 required 决定是否抛出异常。
+     */
     private Object resolveDependency(Class<?> type, Type genericType, String qualifier, String paramName, boolean required) {
         if (type == ApplicationContext.class) return this;
         if (type == Environment.class) return environment;
@@ -558,10 +573,9 @@ public class DefaultApplicationContext implements ApplicationContext {
     }
 
     /**
-     * Resolves a generic type — including type variables such as {@code M} in
-     * {@code ServiceImpl<M, T>} — to a concrete {@link Class} by walking the bean's
-     * class hierarchy. Returns {@code null} when the type cannot be resolved to a
-     * concrete class, in which case callers fall back to the erased type.
+     * 解析泛型类型——包括类型变量（如 {@code ServiceImpl<M, T>} 中的 {@code M}）——
+     * 通过遍历 bean 的类层级，将其解析为具体的 {@link Class}。当类型无法解析为具体类时
+     * 返回 {@code null}，此时调用方回退到擦除类型。
      */
     private Class<?> resolveActualType(Type genericType, Class<?> contextClass) {
         if (genericType instanceof Class<?> c) return c;
@@ -575,6 +589,9 @@ public class DefaultApplicationContext implements ApplicationContext {
         return null;
     }
 
+    /**
+     * 在给定上下文类中解析类型变量到具体类型。
+     */
     private Type resolveTypeVariable(TypeVariable<?> variable, Class<?> contextClass) {
         Class<?> current = contextClass;
         while (current != null && current != Object.class) {
@@ -623,7 +640,7 @@ public class DefaultApplicationContext implements ApplicationContext {
         }
     }
 
-    /** Pre-instantiate a synthetic singleton (e.g. a mapper proxy) for an existing definition. */
+    /** 为已存在定义预实例化一个合成的单例（如 mapper 代理）。 */
     public void registerSingleton(String name, Object bean) {
         singletonObjects.put(name, bean);
         destructionOrder.add(name);
@@ -681,7 +698,7 @@ public class DefaultApplicationContext implements ApplicationContext {
                     String v = (String) valueMethod.invoke(a);
                     if (v != null && !v.isEmpty()) return v;
                 } catch (ReflectiveOperationException ignore) {
-                    // value() not present, fall back to default name
+                    // value() 未提供，回退到默认名称
                 }
             }
         }

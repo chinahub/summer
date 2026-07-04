@@ -16,15 +16,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Enforces method-level {@link PreAuthorize} / {@link PermitAll} / {@link DenyAll}
- * on a web handler method, against the current {@link SecurityContextHolder}.
- * Method annotations take precedence over type-level annotations.
- * <p>Implements the {@code summer-web} {@link HandlerMethodAccessChecker} SPI so the
- * dispatcher can invoke it after route matching without depending on the security
- * module. Throws {@link ResponseStatusException} (401/403) so the generic web
- * dispatcher can translate the failure to an HTTP response without any dependency
- * on security exception types. When {@code enabled} is false, it is a no-op so
- * existing applications are unaffected.
+ * 依据当前 {@link SecurityContextHolder}，对 Web 处理器方法强制方法级
+ * {@link PreAuthorize} / {@link PermitAll} / {@link DenyAll}。方法注解优先于类型级注解。
+ * <p>实现 {@code summer-web} 的 {@link HandlerMethodAccessChecker} SPI，使调度器
+ * 在路由匹配后调用它而无需依赖安全模块。抛出 {@link ResponseStatusException}（401/403），
+ * 使通用 Web 调度器无需依赖安全异常类型即可将失败转为 HTTP 响应。
+ * 当 {@code enabled} 为 false 时为空操作，对现有应用无影响。
  */
 public final class MethodSecurityEnforcer implements HandlerMethodAccessChecker {
 
@@ -35,6 +32,10 @@ public final class MethodSecurityEnforcer implements HandlerMethodAccessChecker 
     }
 
     @Override
+    /**
+     * 检查处理器方法上的方法级安全注解：按 @PreAuthorize/@PermitAll/@DenyAll
+     * 校验当前主体权限，不满足时抛 401/403。
+     */
     public void check(Method handlerMethod) {
         if (!enabled || handlerMethod == null) return;
 
@@ -46,7 +47,7 @@ public final class MethodSecurityEnforcer implements HandlerMethodAccessChecker 
         if (preAuthorize == null) {
             preAuthorize = handlerMethod.getDeclaringClass().getAnnotation(PreAuthorize.class);
         }
-        if (preAuthorize == null) return; // no method-level security
+        if (preAuthorize == null) return; // 无方法级安全注解
 
         Authentication auth = SecurityContextHolder.getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {

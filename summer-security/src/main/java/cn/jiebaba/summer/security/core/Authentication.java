@@ -3,29 +3,28 @@ package cn.jiebaba.summer.security.core;
 import java.util.Collection;
 
 /**
- * Represents the token for an authentication request or for an authenticated
- * principal once the request has been processed.
- * <p>Mirrors {@code org.springframework.security.core.Authentication}.
+ * 表示认证请求的令牌，或在请求处理后表示已认证主体。
+ * <p>对应 {@code org.springframework.security.core.Authentication}。
  */
 public interface Authentication {
-    /** The identity of the principal being authenticated (often a username or {@code UserDetails}). */
+    /** 正在认证的主体的身份（通常是用户名或 {@code UserDetails}）。 */
     Object getPrincipal();
 
-    /** The credentials proving the principal's identity (e.g. a password or raw token). */
+    /** 证明主体身份的凭据（如密码或原始令牌）。 */
     Object getCredentials();
 
-    /** The authorities granted to the principal; empty until authenticated. */
+    /** 授予主体的权限；认证前为空。 */
     Collection<? extends GrantedAuthority> getAuthorities();
 
-    /** Extra details about the authentication request (e.g. remote address). */
+    /** 认证请求的附加细节（如远程地址）。 */
     Object getDetails();
 
-    /** {@code true} once the credentials have been successfully verified. */
+    /** 凭据校验成功后为 {@code true}。 */
     boolean isAuthenticated();
 
     void setAuthenticated(boolean authenticated) throws IllegalArgumentException;
 
-    /** Convenience: the principal rendered as a name (username). */
+    /** 便捷方法：将主体呈现为名称（用户名）。 */
     default String getName() {
         Object principal = getPrincipal();
         return principal == null ? "" : principal.toString();

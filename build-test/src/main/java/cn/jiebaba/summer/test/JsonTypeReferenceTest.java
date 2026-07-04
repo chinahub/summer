@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Verifies {@code Json.parse(String, Type)} / {@code Json.parse(String, TypeReference)},
- * which the framework previously lacked (only parse(String, Class) existed).
+ * 验证 {@code Json.parse(String, Type)} / {@code Json.parse(String, TypeReference)}，
+ * 这是框架此前缺失的能力（原先仅存在 parse(String, Class)）。
  */
 public class JsonTypeReferenceTest {
 

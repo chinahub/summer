@@ -7,7 +7,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-/** Default immutable {@link UserDetails} implementation. */
+/** 默认的不可变 {@link UserDetails} 实现。 */
 public final class User implements UserDetails {
 
     private final String username;
@@ -48,7 +48,7 @@ public final class User implements UserDetails {
     @Override
     public String toString() { return username; }
 
-    /** Convenience builder for in-memory users with bare role names. */
+    /** 用于内存用户的便捷构造器，接受裸角色名。 */
     public static User withRoles(String username, String password, String... roles) {
         return withRoles(username, password, true, roles);
     }

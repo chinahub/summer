@@ -1,7 +1,7 @@
 package cn.jiebaba.summer.security.userdetails;
 
 /**
- * Loads user-specific data. Mirrors {@code org.springframework.security.core.userdetails.UserDetailsService}.
+ * 加载用户专属数据。对应 {@code org.springframework.security.core.userdetails.UserDetailsService}。
  */
 @FunctionalInterface
 public interface UserDetailsService {

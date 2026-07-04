@@ -72,7 +72,7 @@ public class MultipartParserTest {
     void stripsPathFromFilename() {
         String boundary = "b";
         byte[] body = body(boundary, "x", "y");
-        // rebuild with a malicious filename
+        // 用恶意文件名重新构建
         StringBuilder sb = new StringBuilder();
         sb.append("--").append(boundary).append("\r\n");
         sb.append("Content-Disposition: form-data; name=\"file\"; filename=\"../../etc/passwd\"\r\n\r\n");

@@ -5,11 +5,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * An {@link Authentication} for username/password credentials.
- * <p>Two states: <b>unauthenticated</b> (principal=username, credentials=password,
- * authorities empty) used as input to {@code AuthenticationManager}; and
- * <b>authenticated</b> (principal={@code UserDetails}, credentials nulled,
- * authorities populated) returned after successful verification.
+ * 用于用户名/密码凭据的 {@link Authentication}。
+ * <p>两种状态：<b>未认证</b>（principal=username、credentials=password、authorities 为空），
+ * 作为 {@code AuthenticationManager} 的输入；以及 <b>已认证</b>
+ * （principal={@code UserDetails}、credentials 置空、authorities 已填充），在验证成功后返回。
  */
 public class UsernamePasswordAuthenticationToken implements Authentication {
 
@@ -19,12 +18,12 @@ public class UsernamePasswordAuthenticationToken implements Authentication {
     private final boolean authenticated;
     private Object details;
 
-    /** Unauthenticated request token: principal is the username, credentials the raw password. */
+    /** 未认证请求令牌：主体为用户名，凭据为原始密码。 */
     public UsernamePasswordAuthenticationToken(Object principal, Object credentials) {
         this(principal, credentials, Collections.emptyList(), false);
     }
 
-    /** Authenticated token: principal is the verified {@code UserDetails}, authorities populated. */
+    /** 已认证令牌：主体为已校验的 {@code UserDetails}，权限已填充。 */
     public UsernamePasswordAuthenticationToken(Object principal, Object credentials,
                                                Collection<? extends GrantedAuthority> authorities) {
         this(principal, credentials, authorities, true);

@@ -11,13 +11,17 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Tests multi-datasource routing logic without a real database.
- * Verifies DynamicDataSource routes to the correct underlying pool based on DsContext.
+ * 在无真实数据库的情况下测试多数据源路由逻辑。
+ * 验证 DynamicDataSource 能依据 DsContext 路由到正确的底层连接池。
  */
 public class MultiDsSmokeTest {
 
     private static int passed = 0;
 
+    /**
+     * 多数据源冒烟测试入口：构造 master/slave/log-db 三个 FakeDataSource，
+     * 依次验证默认路由、@Master/@Slave/@DS 路由、嵌套路由的压栈/出栈与恢复。
+     */
     public static void main(String[] args) throws Exception {
         Map<String, DataSource> sources = new LinkedHashMap<>();
         sources.put("master", new FakeDataSource("master"));
@@ -75,7 +79,7 @@ public class MultiDsSmokeTest {
         try {
             return conn.unwrap(Connection.class);
         } catch (SQLException e) {
-            // FakeDataSource returns raw connections, not proxied
+            // FakeDataSource 返回的是原始连接，未经代理包装
             return conn;
         }
     }
@@ -118,7 +122,7 @@ public class MultiDsSmokeTest {
         @Override public boolean isWrapperFor(Class<?> iface) { return iface.isInstance(this); }
     }
 
-    /** Minimal Connection stub that throws UnsupportedOperationException for everything. */
+    /** 最小化的 Connection 桩，对所有方法抛出 UnsupportedOperationException。 */
     static class ConnectionStub implements Connection {
         @Override public void close() {}
         @Override public boolean isClosed() { return false; }

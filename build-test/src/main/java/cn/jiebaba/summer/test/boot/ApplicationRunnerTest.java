@@ -15,12 +15,12 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Verifies {@link SummerApplication#invokeRunners}: discovery of {@link ApplicationRunner} beans,
- * {@link Order @Order}-based sequencing, argument parsing, and failure propagation.
+ * 验证 {@link SummerApplication#invokeRunners}：发现 {@link ApplicationRunner} Bean、
+ * 基于 {@link Order @Order} 的排序、参数解析以及失败传播。
  *
- * <p>Beans are registered programmatically (not via component scanning) so the test stays isolated
- * and does not depend on the data/web layers. {@link DefaultApplicationContext#registerBean} keeps
- * the real bean class visible to {@code getType}, so {@code @Order} is read from the target class.
+ * <p>Bean 以编程方式注册（非组件扫描），使测试保持隔离、不依赖 data/web 层。
+ * {@link DefaultApplicationContext#registerBean} 保留真实 Bean 类型供 {@code getType} 可见，
+ * 因此 {@code @Order} 从目标类读取。
  */
 public class ApplicationRunnerTest {
 
@@ -64,7 +64,7 @@ public class ApplicationRunnerTest {
         context.registerBean("first", new FirstRunner());
         context.registerBean("unordered", new UnorderedRunner());
         SummerApplication.invokeRunners(context, new String[0]);
-        // ordered first (ascending), then unordered (registration order preserved)
+        // 有序的先执行（升序），无序的随后（保持注册顺序）
         Assert.assertEquals(List.of("first", "third", "unordered"), executed);
     }
 

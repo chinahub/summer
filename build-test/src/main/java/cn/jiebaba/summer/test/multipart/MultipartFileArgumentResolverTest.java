@@ -16,7 +16,7 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 
-/** End-to-end resolver glue: real multipart HTTP request -> WebRequest -> @RequestPart injection. */
+/** 端到端解析器联调：真实 multipart HTTP 请求 -> WebRequest -> @RequestPart 注入。 */
 public class MultipartFileArgumentResolverTest {
 
     public static class Handler {
@@ -94,7 +94,7 @@ public class MultipartFileArgumentResolverTest {
     void optionalFieldAbsentIsNull() throws Exception {
         WebRequest request = multipartRequest(bodyWith("bytes", "present"));
         MultipartFileArgumentResolver resolver = new MultipartFileArgumentResolver(new Environment());
-        // description present -> should resolve to the value, not throw
+        // description 存在 -> 应解析为对应值，而非抛异常
         Method method = Handler.class.getMethod("handle", MultipartFile.class, String.class);
         Parameter descParam = method.getParameters()[1];
         String value = (String) resolver.resolveArgument(descParam, descParam.getParameterizedType(), null, request, null);

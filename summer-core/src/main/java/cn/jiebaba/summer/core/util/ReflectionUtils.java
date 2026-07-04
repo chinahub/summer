@@ -27,7 +27,7 @@ public final class ReflectionUtils {
         }
     }
 
-    /** Collect all declared fields up the class hierarchy, excluding synthetic fields. */
+    /** 收集类层级中所有声明字段，排除合成字段。 */
     public static List<Field> collectFields(Class<?> type) {
         List<Field> fields = new ArrayList<>();
         Class<?> current = type;

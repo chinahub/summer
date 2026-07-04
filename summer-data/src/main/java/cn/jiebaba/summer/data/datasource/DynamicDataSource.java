@@ -12,15 +12,13 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 /**
- * A {@link DataSource} that routes {@link #getConnection()} to one of several
- * underlying pools based on {@link DsContext#current()}. When no routing key is
- * set, the default (primary) datasource is used.
+ * 一种 {@link DataSource}，依据 {@link DsContext#current()} 将 {@link #getConnection()}
+ * 路由到若干底层连接池之一。未设置路由键时使用默认（主）数据源。
  *
- * <p>This is the single {@code DataSource} bean registered in the context.
- * {@link SqlExecutor SqlExecutor} and
- * {@link TransactionManager TransactionManager} use it
- * transparently — they see one DataSource, but the actual connection comes from
- * the pool selected by {@code @DS}/{@code @Master}/{@code @Slave}.
+ * <p>这是注册到 context 中的单一 {@code DataSource} bean。
+ * {@link SqlExecutor SqlExecutor} 与 {@link TransactionManager TransactionManager}
+ * 透明地使用它——它们看到的是单个 DataSource，但实际连接来自由
+ * {@code @DS}/{@code @Master}/{@code @Slave} 选定的连接池。
  */
 public final class DynamicDataSource implements DataSource {
 
@@ -38,7 +36,7 @@ public final class DynamicDataSource implements DataSource {
         }
     }
 
-    /** Returns the datasource selected by the current routing context (or default). */
+    /** 返回当前路由上下文选中的数据源（或默认）。 */
     public DataSource routed() {
         String key = DsContext.current();
         if (key == null) key = defaultKey;
@@ -49,7 +47,7 @@ public final class DynamicDataSource implements DataSource {
         return ds;
     }
 
-    /** Returns the datasource for a specific name (no routing). */
+    /** 按名称返回对应数据源（不做路由）。 */
     public DataSource forName(String name) {
         DataSource ds = dataSources.get(name);
         if (ds == null) {

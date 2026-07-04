@@ -1,9 +1,9 @@
 package cn.jiebaba.summer.web.server;
 
 /**
- * Exception carrying an HTTP status and reason, translated by the dispatcher into
- * a matching response. Generic (not security-specific); lets higher layers (e.g.
- * security) signal 401/403 without {@code summer-web} depending on them.
+ * 携带 HTTP 状态码与原因的异常，由 dispatcher 转换为对应的响应。它是通用的
+ * （非 security 专属）；使上层（如 security）能表达 401/403，而无需 {@code summer-web}
+ * 依赖它们。
  */
 public class ResponseStatusException extends RuntimeException {
 

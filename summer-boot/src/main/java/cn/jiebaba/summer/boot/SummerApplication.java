@@ -52,7 +52,7 @@ public final class SummerApplication {
     public ApplicationContext context() { return context; }
     public SummerWebServer webServer() { return webServer; }
 
-    /** Run with an explicit primary source (typically the main class). */
+    /** 以显式主源（通常是主类）运行。 */
     public static SummerApplication run(Class<?> primarySource, String[] args) {
         long start = System.currentTimeMillis();
         Set<String> basePackages = resolveBasePackages(primarySource);
@@ -95,7 +95,7 @@ public final class SummerApplication {
         return app;
     }
 
-    /** Convenience entry that infers the primary source from the caller's main class. */
+    /** 便捷入口：从调用方主类推断主源。 */
     public static SummerApplication run(String[] args) {
         Class<?> caller = StackWalker
                 .getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
@@ -119,6 +119,13 @@ public final class SummerApplication {
     private static final java.util.List<Class<?>> AUTO_CONFIG_CLASSES =
             java.util.List.of(DataAutoConfiguration.class, SecurityAutoConfiguration.class, WebAutoConfiguration.class);
 
+    /**
+     * 解析组件扫描的基础包：依次从 {@link SummerBootApplication} 与 {@link ComponentScan}
+     * 中收集 {@code scanBasePackages}/{@code scanBasePackageClasses}；若均为空则回退到主源所在包。
+     *
+     * @param primarySource 主源类
+     * @return 需扫描的包名集合
+     */
     private static Set<String> resolveBasePackages(Class<?> primarySource) {
         Set<String> packages = new LinkedHashSet<>();
         SummerBootApplication app =
@@ -162,13 +169,12 @@ public final class SummerApplication {
     }
 
     /**
-     * Discover every {@link ApplicationRunner} bean in the context and invoke its
-     * {@link ApplicationRunner#run} method, in ascending {@link Order @Order} sequence
-     * (runners without {@code @Order} run last, preserving discovery order). Invoked
-     * automatically by {@link #run(Class, String[])} once the web server is listening and
-     * all beans are initialized; may also be called manually on an already-refreshed context.
+     * 发现上下文中的每个 {@link ApplicationRunner} Bean，并按 {@link Order @Order} 升序
+     * 调用其 {@link ApplicationRunner#run} 方法（未设置 {@code @Order} 的 runner 排在最后，
+     * 保持发现顺序）。在 Web 服务器开始监听且所有 Bean 初始化完成后，由
+     * {@link #run(Class, String[])} 自动调用；也可在已刷新的上下文上手动调用。
      *
-     * @throws IllegalStateException if any runner throws; later runners are skipped
+     * @throws IllegalStateException 若任一 runner 抛出异常；后续 runner 将被跳过
      */
     public static void invokeRunners(ApplicationContext context, String[] args) {
         Map<String, ApplicationRunner> runners = context.getBeansOfType(ApplicationRunner.class);

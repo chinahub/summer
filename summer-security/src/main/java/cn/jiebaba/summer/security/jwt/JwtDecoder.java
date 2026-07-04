@@ -6,8 +6,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 /**
- * Decodes and verifies a compact JWS (HS256) produced by {@link JwtEncoder}.
- * Verifies the signature in constant time and enforces {@code exp} expiry.
+ * 解码并校验由 {@link JwtEncoder} 生成的紧凑 JWS（HS256）。
+ * 以常数时间校验签名，并强制 {@code exp} 过期判断。
  */
 public final class JwtDecoder {
 
@@ -24,6 +24,9 @@ public final class JwtDecoder {
         this(secret == null ? new byte[0] : secret.getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * 解码并校验 JWT：拆分三段、校验签名与过期时间，返回声明集合。
+     */
     public JwtClaims decode(String token) throws JwtException {
         if (token == null || token.isBlank()) {
             throw new JwtException("Missing JWT token");

@@ -18,17 +18,17 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * JSON helpers inspired by {@code cn.hutool.json.JSONUtil}.
+ * JSON 工具，灵感来自 {@code cn.hutool.json.JSONUtil}。
  *
- * <p>A self-contained JSON serializer/parser built only on the JDK: supports records,
- * JavaBeans (getters/fields), maps, collections, arrays, primitives, enums, {@link Optional},
- * {@code java.time} types and {@link java.util.Date}. No third-party dependency.
+ * <p>仅基于 JDK 实现的自包含 JSON 序列化器/解析器：支持 records、JavaBean（getter/字段）、
+ * map、集合、数组、基本类型、枚举、{@link Optional}、{@code java.time} 类型与
+ * {@link java.util.Date}。无第三方依赖。
  */
 public final class JsonUtil {
 
     private JsonUtil() {}
 
-    // ---- serialization -------------------------------------------------------
+    // ---- 序列化 -------------------------------------------------------
 
     public static String toJsonStr(Object value) {
         StringBuilder sb = new StringBuilder();
@@ -55,6 +55,9 @@ public final class JsonUtil {
         return sb.toString();
     }
 
+    /**
+     * 将值序列化为 JSON 写入缓冲：按运行时类型分派，支持缩进美化。
+     */
     private static void write(StringBuilder sb, Object value, int depth, boolean pretty) {
         if (value == null) {
             sb.append("null");
@@ -134,6 +137,9 @@ public final class JsonUtil {
         sb.append('}');
     }
 
+    /**
+     * 将 record 序列化为 JSON 对象，逐个写出其组件。
+     */
     private static void writeRecord(StringBuilder sb, Object record, int depth, boolean pretty) {
         sb.append('{');
         RecordComponent[] components = record.getClass().getRecordComponents();
@@ -157,6 +163,9 @@ public final class JsonUtil {
         sb.append('}');
     }
 
+    /**
+     * 将普通对象序列化为 JSON 对象：遍历 getter 与字段写出键值对。
+     */
     private static void writeObject(StringBuilder sb, Object object, int depth, boolean pretty) {
         sb.append('{');
         boolean first = true;
@@ -253,7 +262,7 @@ public final class JsonUtil {
     private static Object tryParse(String t) {
         try { return parse(t); } catch (Exception e) { return null; }
     }
-    // ---- parsing -------------------------------------------------------------
+    // ---- 解析 -------------------------------------------------------------
 
     public static Object parse(String json) {
         if (json == null) return null;
@@ -304,6 +313,9 @@ public final class JsonUtil {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * 将解析值绑定到目标类型：处理基本类型、枚举、数字窄化、时间及 Bean/集合转换。
+     */
     private static Object bind(Object value, Class<?> rawType, Type genericType) {
         if (value == null) return defaultValue(rawType);
         if (rawType == Object.class) return value;
@@ -408,6 +420,9 @@ public final class JsonUtil {
                 || type == double.class || type == Double.class || type == float.class || type == Float.class;
     }
 
+    /**
+     * 将数字窄化转换为目标数值类型，对 int/short/byte 做范围校验。
+     */
     private static Object coerceNumber(Number num, Class<?> type) {
         if (type == int.class || type == Integer.class) {
             long v = num.longValue();
@@ -599,7 +614,7 @@ public final class JsonUtil {
         }
     }
 
-    /** A JSON object backed by a {@link LinkedHashMap} with typed accessors (hutool-style). */
+    /** 以 {@link LinkedHashMap} 支撑、带类型访问器的 JSON 对象（hutool 风格）。 */
     public static class JSONObject extends LinkedHashMap<String, Object> {
         private static final long serialVersionUID = 1L;
 
@@ -617,7 +632,7 @@ public final class JsonUtil {
         public JSONObject putFluent(String key, Object value) { put(key, value); return this; }
     }
 
-    /** A JSON array backed by an {@link ArrayList} with typed accessors (hutool-style). */
+    /** 以 {@link ArrayList} 支撑、带类型访问器的 JSON 数组（hutool 风格）。 */
     public static class JSONArray extends ArrayList<Object> {
         private static final long serialVersionUID = 1L;
 

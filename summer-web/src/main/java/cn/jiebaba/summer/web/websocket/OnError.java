@@ -6,7 +6,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/** Called when an error occurs on the connection. Method may take a {@link Throwable}. */
+/** 当连接发生错误时调用。方法可接收一个 {@link Throwable} 参数。 */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented

@@ -4,9 +4,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Matches a URL path against a pattern such as {@code /users/{id}/repos/{name}}.
- * Supports single-segment variables {@code {var}}, single-segment wildcards {@code *}
- * and a trailing catch-all {@code /**}.
+ * 将 URL 路径与模式匹配，例如 {@code /users/{id}/repos/{name}}。
+ * 支持单段变量 {@code {var}}、单段通配符 {@code *} 以及末尾全捕获 {@code /**}。
  */
 public final class RoutePattern {
     private final String pattern;
@@ -27,6 +26,13 @@ public final class RoutePattern {
 
     public String pattern() { return pattern; }
 
+    /**
+     * 将请求路径与本模式匹配：逐段比对，支持 {@code {var}} 变量捕获与 {@code *} 通配符，
+     * 命中时返回路径变量映射，否则返回空。catch-all 模式允许请求路径更长。
+     *
+     * @param requestPath 规范化后的请求路径
+     * @return 命中时包含路径变量的 {@link Optional}，否则为空
+     */
     public Optional<Map<String, String>> match(String requestPath) {
         String normalized = normalize(requestPath);
         if (catchAll && normalized.endsWith("/")) {
@@ -46,7 +52,7 @@ public final class RoutePattern {
                 String name = seg.substring(1, seg.length() - 1);
                 variables.put(name, value);
             } else if (seg.equals("*")) {
-                // wildcard, no capture
+                // 通配符，不捕获变量
             } else if (!seg.equals(value)) {
                 return Optional.empty();
             }
@@ -54,7 +60,7 @@ public final class RoutePattern {
         return Optional.of(variables);
     }
 
-    /** Specificity score: literals beat variables, longer patterns beat shorter. */
+    /** 特异性分值：字面量优先于变量，更长的模式优先于更短的模式。 */
     public int specificity() {
         int score = segments.length * 10;
         for (String seg : segments) {

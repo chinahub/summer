@@ -6,8 +6,8 @@ import cn.jiebaba.summer.web.http.WebResponse;
 import java.util.List;
 
 /**
- * Sequentially invokes the remaining filters, then a {@link TerminalHandler} that
- * performs the actual route dispatch. Pure JDK, no servlet API.
+ * 依次调用剩余过滤器，随后调用执行实际路由分派的 {@link TerminalHandler}。
+ * 纯 JDK 实现，不依赖 Servlet API。
  */
 public final class FilterChain {
 
@@ -20,7 +20,7 @@ public final class FilterChain {
         this.terminal = terminal;
     }
 
-    /** Advance to the next filter, or to the terminal handler once filters are exhausted. */
+    /** 前进到下一个过滤器，过滤器耗尽后调用终端处理器。 */
     public void doFilter(WebRequest request, WebResponse response) throws Exception {
         if (index < filters.size()) {
             Filter filter = filters.get(index);

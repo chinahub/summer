@@ -20,17 +20,16 @@ public interface ApplicationContext {
     void close();
 
     /**
-     * Register an existing object as a singleton bean under the given name so it can be
-     * resolved by {@link #getBean(String)} and discovered by {@link #containsBean(String)}.
-     * A {@link cn.jiebaba.summer.core.context.BeansException} is thrown if a bean with the
-     * same name already exists; unregister it first to replace it.
+     * 将一个已有对象以给定名称注册为单例 bean，使其可由 {@link #getBean(String)} 解析、
+     * 由 {@link #containsBean(String)} 发现。若已存在同名 bean 则抛出
+     * {@link cn.jiebaba.summer.core.context.BeansException}；如需替换请先注销。
      */
     void registerBean(String name, Object bean);
 
     /**
-     * Remove the bean definition and singleton instance registered under the given name,
-     * invoking its destroy lifecycle callbacks (PreDestroy / DisposableBean / destroy method).
-     * Returns {@code true} if a bean was removed, {@code false} if no such bean existed.
+     * 移除以给定名称注册的 bean 定义与单例实例，并调用其销毁生命周期回调
+     * （PreDestroy / DisposableBean / destroy method）。若移除了 bean 返回 {@code true}，
+     * 若不存在该 bean 返回 {@code false}。
      */
     boolean unregisterBean(String name);
 }

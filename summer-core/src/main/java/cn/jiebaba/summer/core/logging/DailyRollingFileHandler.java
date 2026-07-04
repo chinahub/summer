@@ -18,9 +18,8 @@ import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 
 /**
- * A self-contained file {@link Handler} that rolls over once per day, with an
- * optional per-file size cap and history retention. Pure JDK, no third-party
- * dependencies. Implements both time-based and time+size-based rolling.
+ * 自包含的文件 {@link Handler}，每天滚动一次，可选的单文件大小上限与历史保留。
+ * 纯 JDK 实现，无第三方依赖。同时支持基于时间的滚动与基于时间+大小的滚动。
  */
 public final class DailyRollingFileHandler extends Handler {
 
@@ -51,6 +50,9 @@ public final class DailyRollingFileHandler extends Handler {
     }
 
     @Override
+    /**
+     * 写入一条日志记录，按需触发按日滚动与旧文件清理。
+     */
     public synchronized void publish(LogRecord record) {
         if (!isLoggable(record) || out == null) return;
         String msg;
@@ -127,6 +129,9 @@ public final class DailyRollingFileHandler extends Handler {
         }
     }
 
+    /**
+     * 清理早于保留天数的过期日志文件。
+     */
     private void purgeOlderThan(LocalDate today) {
         if (maxHistory <= 0) return;
         LocalDate cutoff = today.minusDays(maxHistory);
@@ -149,7 +154,7 @@ public final class DailyRollingFileHandler extends Handler {
                     }
                     break;
                 } catch (Exception ignore) {
-                    // not a date segment, continue scanning parts
+                    // 非日期段，继续扫描各部分
                 }
             }
         }

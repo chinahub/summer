@@ -9,9 +9,8 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 /**
- * Intercepts methods annotated with {@link DS}, {@link Master}, or {@link Slave}
- * and pushes the datasource name onto {@link DsContext} for the duration of the
- * call, restoring the previous routing key afterwards.
+ * 拦截带 {@link DS}、{@link Master} 或 {@link Slave} 注解的方法，在调用期间将
+ * 数据源名称压入 {@link DsContext}，调用结束后恢复此前的路由键。
  */
 public final class DsInterceptor implements MethodInterceptor, ProxyAdvisor {
 
@@ -35,7 +34,7 @@ public final class DsInterceptor implements MethodInterceptor, ProxyAdvisor {
 
     @Override
     public int order() {
-        return 200; // outer to @Transactional so the routing is set before tx begin
+        return 200; // 排在 @Transactional 外层，使路由在事务开始前设置
     }
 
     @Override
@@ -52,6 +51,10 @@ public final class DsInterceptor implements MethodInterceptor, ProxyAdvisor {
         }
     }
 
+    /**
+     * 解析方法应使用的数据源名称：依次检查方法级 @DS/@Master/@Slave，再回退到类级注解；
+     * 均未命中则返回 {@code null}。
+     */
     private String resolveDsName(Method method, Object target) {
         DS ds = method.getAnnotation(DS.class);
         if (ds == null) ds = AnnotationUtils.findAnnotation(method, DS.class);
@@ -66,7 +69,7 @@ public final class DsInterceptor implements MethodInterceptor, ProxyAdvisor {
             return DsContext.SLAVE;
         }
 
-        // check class-level
+        // 检查类级别注解
         Class<?> targetClass = target != null ? target.getClass() : method.getDeclaringClass();
         DS classDs = AnnotationUtils.findAnnotation(targetClass, DS.class);
         if (classDs != null) return classDs.value();

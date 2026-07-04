@@ -11,19 +11,23 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
 /**
- * In-process WebSocket smoke test: starts the app, opens a raw TCP socket,
- * performs the WebSocket handshake, and verifies echo round-trip.
+ * 进程内 WebSocket 冒烟测试：启动应用，打开原始 TCP socket，
+ * 完成 WebSocket 握手并验证 echo 往返。
  */
 public class WebSocketSmokeTest {
 
     private static int passed = 0;
 
+    /**
+     * WebSocket 冒烟测试入口：启动应用，完成握手后验证 @OnOpen 消息、文本 echo、
+     * 以及 ping/pong 保活，结束时关闭 Web 服务与上下文。
+     */
     public static void main(String[] args) throws Exception {
         SummerApplication app = SummerApplication.run(Application.class, args);
         int port = app.webServer().port();
         Thread.sleep(500);
         try {
-            // WebSocket handshake
+            // WebSocket 握手
             String key = "dGhlIHNhbXBsZSBub25jZQ==";
             try (Socket s = new Socket("127.0.0.1", port)) {
                 s.setSoTimeout(5000);
@@ -42,16 +46,16 @@ public class WebSocketSmokeTest {
                 String accept = WebSocketHandshake.computeAccept(key);
                 expect("sec-websocket-accept present", true, resp.contains("Sec-WebSocket-Accept: " + accept));
 
-                // read the "connected" message sent on @OnOpen
+                // 读取 @OnOpen 触发时发送的 "connected" 消息
                 String connected = readTextFrame(s.getInputStream());
                 expect("onOpen message 'connected'", "connected", connected);
 
-                // send a text frame (masked, as client must)
+                // 发送文本帧（客户端必须掩码）
                 sendTextFrame(out, "hello summer");
                 String echo = readTextFrame(s.getInputStream());
                 expect("echo response", "echo: hello summer", echo);
 
-                // send binary frame and verify server still alive (ping/pong)
+                // 发送二进制帧并验证服务端仍存活（ping/pong）
                 sendPingFrame(out, new byte[]{1, 2, 3});
                 String pong = readTextFrameOrPong(s.getInputStream());
                 expect("pong or response received", true, pong != null);
@@ -80,6 +84,10 @@ public class WebSocketSmokeTest {
         return buf.toStr(StandardCharsets.UTF_8);
     }
 
+    /**
+     * 读取一个 WebSocket 文本帧：解析 FIN/opcode、长度（含 126/127 扩展长度）与掩码，
+     * 解除掩码后返回文本内容。
+     */
     static String readTextFrame(InputStream in) throws Exception {
         int b0 = in.read();
         int b1 = in.read();
@@ -91,7 +99,7 @@ public class WebSocketSmokeTest {
             len = ((hi & 0xFF) << 8) | (lo & 0xFF);
         } else if (len == 127) {
             for (int i = 0; i < 8; i++) in.read();
-            len = 0; // not expected in test
+            len = 0; // 测试中不应出现此分支
         }
         byte[] mask = null;
         if (masked) {
@@ -126,7 +134,7 @@ public class WebSocketSmokeTest {
         byte[] mask = {(byte) 0x12, (byte) 0x34, (byte) 0x56, (byte) 0x78};
         byte[] masked = new byte[payload.length];
         for (int i = 0; i < payload.length; i++) masked[i] = (byte) (payload[i] ^ mask[i % 4]);
-        out.write(0x81); // FIN + text
+        out.write(0x81); // FIN + 文本帧
         writePayloadLen(out, payload.length, true);
         out.write(mask);
         out.write(masked);
@@ -137,7 +145,7 @@ public class WebSocketSmokeTest {
         byte[] mask = {(byte) 0xAA, (byte) 0xBB, (byte) 0xCC, (byte) 0xDD};
         byte[] masked = new byte[data.length];
         for (int i = 0; i < data.length; i++) masked[i] = (byte) (data[i] ^ mask[i % 4]);
-        out.write(0x89); // FIN + ping
+        out.write(0x89); // FIN + ping 帧
         writePayloadLen(out, data.length, true);
         out.write(mask);
         out.write(masked);
