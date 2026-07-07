@@ -26,6 +26,18 @@ public final class RoutePattern {
 
     public String pattern() { return pattern; }
 
+    /** 模式分段（已规范化；catch-all 模式不含末尾 {@code /**}）。 */
+    String[] segments() { return segments; }
+
+    /** 是否为末尾全捕获模式（{@code /**}）。 */
+    boolean catchAll() { return catchAll; }
+
+    /** 将请求路径规范化并分段，供路由索引匹配使用。 */
+    static String[] requestSegments(String requestPath) {
+        String normalized = normalize(requestPath);
+        return normalized.isEmpty() ? new String[0] : normalized.split("/");
+    }
+
     /**
      * 将请求路径与本模式匹配：逐段比对，支持 {@code {var}} 变量捕获与 {@code *} 通配符，
      * 命中时返回路径变量映射，否则返回空。catch-all 模式允许请求路径更长。

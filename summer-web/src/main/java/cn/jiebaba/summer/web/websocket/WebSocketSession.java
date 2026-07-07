@@ -1,28 +1,25 @@
 package cn.jiebaba.summer.web.websocket;
 
-import java.io.IOException;
 import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.channels.ByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * 表示单个 WebSocket 连接。握手完成后，{@link #runLoop()} 阻塞于 socket 读取帧并
- * 分派到端点回调。设计为运行在虚拟线程上（阻塞式 IO）。
+ * 表示单个 WebSocket 连接。握手完成后，{@link #runLoop()} 阻塞于通道读取帧并
+ * 分派到端点回调。设计为运行在虚拟线程上（阻塞式 IO，复用连接级缓冲）。
  */
 public final class WebSocketSession {
 
     private static final Logger LOG = Logger.getLogger(WebSocketSession.class.getName());
 
-    private final Socket socket;
-    private final InputStream in;
-    private final OutputStream out;
+    private final ByteChannel channel;
+    private final ByteBuffer readBuf;
     private final WebSocketEndpointInfo endpoint;
     private final String id;
     private volatile boolean closed = false;
@@ -30,10 +27,9 @@ public final class WebSocketSession {
     private final ByteArrayOutputStream fragmentBuffer = new ByteArrayOutputStream();
     private int currentFragmentOpcode = -1;
 
-    public WebSocketSession(Socket socket, WebSocketEndpointInfo endpoint) throws IOException {
-        this.socket = socket;
-        this.in = socket.getInputStream();
-        this.out = socket.getOutputStream();
+    public WebSocketSession(ByteChannel channel, ByteBuffer readBuf, WebSocketEndpointInfo endpoint) {
+        this.channel = channel;
+        this.readBuf = readBuf;
         this.endpoint = endpoint;
         this.id = Integer.toHexString(System.identityHashCode(this));
     }
@@ -210,8 +206,9 @@ public final class WebSocketSession {
         if (closed) return;
         try {
             ByteBuffer buf = encodeFrame(opcode, payload);
-            out.write(buf.array(), 0, buf.limit());
-            out.flush();
+            while (buf.hasRemaining()) {
+                channel.write(buf);
+            }
         } catch (IOException e) {
             LOG.log(Level.FINE, "Failed to send frame on session " + id, e);
             closeSocket();
@@ -251,11 +248,11 @@ public final class WebSocketSession {
         return buf;
     }
 
-    /** 从流中读取单个 WebSocket 帧（阻塞）。 */
+    /** 从通道与复用缓冲读取单个 WebSocket 帧（阻塞）。 */
     private Frame readFrame() throws IOException {
-        int b0 = in.read();
+        int b0 = readByte();
         if (b0 == -1) return null;
-        int b1 = in.read();
+        int b1 = readByte();
         if (b1 == -1) return null;
 
         boolean fin = (b0 & 0x80) != 0;
@@ -264,14 +261,14 @@ public final class WebSocketSession {
         long len = b1 & 0x7F;
 
         if (len == 126) {
-            int high = in.read();
-            int low = in.read();
+            int high = readByte();
+            int low = readByte();
             if (low == -1) return null;
             len = ((high & 0xFF) << 8) | (low & 0xFF);
         } else if (len == 127) {
             long ext = 0;
             for (int i = 0; i < 8; i++) {
-                int b = in.read();
+                int b = readByte();
                 if (b == -1) return null;
                 ext = (ext << 8) | (b & 0xFF);
             }
@@ -281,24 +278,14 @@ public final class WebSocketSession {
         byte[] maskKey = null;
         if (masked) {
             maskKey = new byte[4];
-            int read = 0;
-            while (read < 4) {
-                int r = in.read(maskKey, read, 4 - read);
-                if (r == -1) return null;
-                read += r;
-            }
+            if (readFully(maskKey) < 4) return null;
         }
 
         if (len < 0 || len > 16 * 1024 * 1024) {
             throw new IOException("Frame payload too large: " + len);
         }
         byte[] payload = new byte[(int) len];
-        int read = 0;
-        while (read < len) {
-            int r = in.read(payload, read, (int) len - read);
-            if (r == -1) return null;
-            read += r;
-        }
+        if (len > 0 && readFully(payload) < len) return null;
 
         if (masked && maskKey != null) {
             for (int i = 0; i < payload.length; i++) {
@@ -309,10 +296,32 @@ public final class WebSocketSession {
         return new Frame(fin, opcode, payload);
     }
 
+    /** 从复用缓冲读取单字节，耗尽后从通道块读填充；返回 -1 表示连接结束。 */
+    private int readByte() throws IOException {
+        if (!readBuf.hasRemaining()) {
+            readBuf.clear();
+            int r = channel.read(readBuf);
+            if (r == -1) return -1;
+            readBuf.flip();
+        }
+        return readBuf.get() & 0xFF;
+    }
+
+    /** 从复用缓冲读取若干字节填入数组，返回实际读取数；-1 表示一开始即遇 EOF。 */
+    private int readFully(byte[] dst) throws IOException {
+        int read = 0;
+        while (read < dst.length) {
+            int b = readByte();
+            if (b == -1) return read == 0 ? -1 : read;
+            dst[read++] = (byte) b;
+        }
+        return read;
+    }
+
     private void closeSocket() {
         if (closed) return;
         closed = true;
-        try { socket.close(); } catch (IOException ignore) {}
+        try { channel.close(); } catch (IOException ignore) {}
     }
 
     /** 已解析的 WebSocket 帧。 */

@@ -1,5 +1,6 @@
 package cn.jiebaba.summer.data.datasource;
 
+import cn.jiebaba.summer.core.context.DisposableBean;
 import cn.jiebaba.summer.data.support.SqlExecutor;
 import cn.jiebaba.summer.data.transaction.TransactionManager;
 
@@ -20,7 +21,7 @@ import java.util.logging.Logger;
  * 透明地使用它——它们看到的是单个 DataSource，但实际连接来自由
  * {@code @DS}/{@code @Master}/{@code @Slave} 选定的连接池。
  */
-public final class DynamicDataSource implements DataSource {
+public final class DynamicDataSource implements DataSource, DisposableBean {
 
     private final Map<String, DataSource> dataSources;
     private final String defaultKey;
@@ -62,6 +63,21 @@ public final class DynamicDataSource implements DataSource {
 
     public String defaultKey() {
         return defaultKey;
+    }
+
+    /** 关闭所有底层数据源（释放各连接池资源），由上下文关闭时触发；单个失败不影响其余。 */
+    @Override
+    public void destroy() {
+        for (DataSource ds : dataSources.values()) {
+            if (ds instanceof DisposableBean db) {
+                try {
+                    db.destroy();
+                } catch (Exception e) {
+                    Logger.getLogger(DynamicDataSource.class.getName())
+                            .warning("Error closing datasource: " + e.getMessage());
+                }
+            }
+        }
     }
 
     @Override

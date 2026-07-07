@@ -15,7 +15,13 @@ public final class JsonMessageConverter implements MessageConverter {
 
     @Override
     public Object read(String body, Class<?> type, Type genericType) {
-        return Json.bind(Json.parse(body), type, genericType);
+        return read(body.getBytes(StandardCharsets.UTF_8), type, genericType);
+    }
+
+    /** 直接以字节流式绑定，不经中间字符串与通用树，热路径减分配。 */
+    @Override
+    public Object read(byte[] body, Class<?> type, Type genericType) {
+        return Json.read(body, genericType);
     }
 
     @Override
@@ -25,7 +31,7 @@ public final class JsonMessageConverter implements MessageConverter {
 
     @Override
     public byte[] write(Object value, String contentType) {
-        return Json.stringify(value).getBytes(StandardCharsets.UTF_8);
+        return Json.toUtf8Bytes(value);
     }
 
     @Override

@@ -1,5 +1,6 @@
 package cn.jiebaba.summer.data.support;
 
+import cn.jiebaba.summer.core.context.DisposableBean;
 import cn.jiebaba.summer.core.env.Environment;
 
 import javax.sql.DataSource;
@@ -105,7 +106,7 @@ public final class DataSourceFactory {
         }
     }
 
-    static final class PooledDataSource implements DataSource {
+    static final class PooledDataSource implements DataSource, DisposableBean {
         private static final Logger LOG = Logger.getLogger(PooledDataSource.class.getName());
 
         private final DataProperties props;
@@ -116,6 +117,7 @@ public final class DataSourceFactory {
         private final AtomicBoolean filling = new AtomicBoolean();
         private final Map<PooledConnection, LeaseInfo> leases = new ConcurrentHashMap<>();
         private final List<Thread> maintenanceThreads = new ArrayList<>();
+        private final AtomicBoolean closed = new AtomicBoolean();
 
         record LeaseInfo(long borrowedAt, StackTraceElement[] stack) {}
 
@@ -149,6 +151,43 @@ public final class DataSourceFactory {
                     || props.keepaliveTimeMillis() > 0) {
                 startMaintenance("summer-pool-housekeeping", () -> housekeepingLoop(computeHousekeepingInterval()));
             }
+        }
+
+        /**
+         * 关闭连接池：先停止后台维护线程，再关闭全部空闲与借出中的物理连接。幂等。
+         * 由 {@link DisposableBean#destroy()} 在上下文关闭时触发，释放数据库连接与
+         * 维护线程资源（对应 JVM 退出时的资源回收，避免连接泄漏到数据库服务端）。
+         */
+        public void close() {
+            if (!closed.compareAndSet(false, true)) {
+                return;
+            }
+            for (Thread t : maintenanceThreads) {
+                t.interrupt();
+            }
+            for (Thread t : maintenanceThreads) {
+                try {
+                    t.join(1000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+            List<PooledConnection> idleConns = new ArrayList<>();
+            idle.drainTo(idleConns);
+            for (PooledConnection pc : idleConns) {
+                safeClose(pc);
+            }
+            for (PooledConnection pc : new ArrayList<>(leases.keySet())) {
+                safeClose(pc);
+            }
+            totalConnections.set(0);
+            LOG.info("summer connection pool closed: " + props.url());
+        }
+
+        @Override
+        public void destroy() {
+            close();
         }
 
         private long computeHousekeepingInterval() {
@@ -364,6 +403,9 @@ public final class DataSourceFactory {
          * 超时则抛出 {@link SQLException}。
          */
         private PooledConnection borrow() throws SQLException {
+            if (closed.get()) {
+                throw new SQLException("connection pool is closed: " + props.url());
+            }
             long deadline = System.currentTimeMillis() + props.connectionTimeoutMillis();
             while (true) {
                 PooledConnection pc = idle.poll();
@@ -450,6 +492,10 @@ public final class DataSourceFactory {
          */
         private void returnConnection(PooledConnection pc) {
             leases.remove(pc);
+            if (closed.get()) {
+                safeClose(pc);
+                return;
+            }
             try {
                 if (!pc.raw.getAutoCommit()) {
                     pc.raw.setAutoCommit(true);

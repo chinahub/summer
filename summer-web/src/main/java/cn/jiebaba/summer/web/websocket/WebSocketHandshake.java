@@ -1,7 +1,8 @@
 package cn.jiebaba.summer.web.websocket;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Base64;
@@ -29,7 +30,7 @@ public final class WebSocketHandshake {
      * 写出 101 Switching Protocols 响应以完成握手。
      * @return 成功时返回 true
      */
-    public static boolean completeHandshake(Map<String, List<String>> headers, OutputStream out) throws IOException {
+    public static boolean completeHandshake(Map<String, List<String>> headers, WritableByteChannel out) throws IOException {
         String key = firstHeader(headers, "sec-websocket-key");
         if (key == null || key.isBlank()) return false;
         String accept = computeAccept(key);
@@ -39,8 +40,10 @@ public final class WebSocketHandshake {
         sb.append("Connection: Upgrade\r\n");
         sb.append("Sec-WebSocket-Accept: ").append(accept).append("\r\n");
         sb.append("\r\n");
-        out.write(sb.toString().getBytes(StandardCharsets.UTF_8));
-        out.flush();
+        ByteBuffer buf = ByteBuffer.wrap(sb.toString().getBytes(StandardCharsets.UTF_8));
+        while (buf.hasRemaining()) {
+            out.write(buf);
+        }
         return true;
     }
 

@@ -4,7 +4,7 @@
 
 - [x] 工具链验证（JDK 25 + 离线 Maven）
 - [x] summer-core：IoC/DI/扫描/配置
-- [x] summer-web：ServerSocket + 虚拟线程 + 路由 + JSON + 绑定 + 全局异常
+- [x] summer-web：ServerSocketChannel（阻塞，参考 Helidon NIMA）+ 虚拟线程 + TLS + chunked 请求体 + 路由 + JSON + 绑定 + 全局异常
 - [x] summer-boot：启动器 + 自动配置 + 关闭钩子
 - [x] summer-sample：示例 + SmokeTest（11 路由全通）
 
@@ -51,8 +51,8 @@
 
 ### P2 — 协议与扩展
 - [x] WebSocket（`@WebSocketEndpoint`，纯 JDK 握手+帧协议，见 [WebSocket](../使用文档/websocket.md)）
-- [ ] HTTP keep-alive（当前每连接单请求，`Connection: close`）
-- [ ] chunked transfer-encoding
+- [x] HTTP keep-alive（连接复用 + idle 超时中断 + maxRequestsPerConnection 上限，`Connection: keep-alive`）
+- [x] chunked transfer-encoding（请求体 `Transfer-Encoding: chunked` 解码：chunk-size 行 + 扩展 + trailer）
 - [x] 多数据源（@DS/@Master/@Slave + @DSTransactional 跨源事务）
 - [ ] 静态资源（当前定位微服务框架，暂不实现）
 

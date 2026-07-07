@@ -81,6 +81,8 @@ java -jar summer-sample\target\summer-sample-3.0.0-boot.jar
 
 与 `spring-boot-maven-plugin` 内置 `spring-boot-loader` 相同，`summer-boot-loader`（含 `JarLauncher`）是 `summer-pack-maven-plugin` 的**插件依赖**，打包时从插件自身 classpath 读取并写入 jar 根。应用项目的 `pom.xml` **不需要**也**不应该**声明 `summer-boot-loader` 或 `summer-loader`，否则会被自动过滤，避免重复打入 `BOOT-INF/lib`。
 
+> 为何 `summer-boot-loader` 独立成模块而非并入插件，设计动机见 [architecture.md](../开发文档/architecture.md)。
+
 ### 典型依赖
 
 应用项目只需声明 `summer-boot` 即可，打包相关的 loader 由插件内置：

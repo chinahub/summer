@@ -7,6 +7,9 @@ import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
 import java.lang.reflect.Type;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -15,6 +18,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
+import java.nio.charset.StandardCharsets;
 
 /**
  * 仅用 JDK 实现的极简 JSON 序列化器与解析器。
@@ -115,18 +121,16 @@ public final class Json {
 
     private static void writeRecord(StringBuilder sb, Object record) {
         sb.append('{');
-        RecordComponent[] components = record.getClass().getRecordComponents();
-        boolean first = true;
-        for (RecordComponent rc : components) {
-            if (!first) sb.append(',');
-            first = false;
-            writeString(sb, rc.getName());
+        PropertyWriter[] props = writeSchema(record.getClass());
+        for (int i = 0; i < props.length; i++) {
+            if (i > 0) sb.append(',');
+            writeString(sb, props[i].name);
             sb.append(':');
             try {
-                Method accessor = rc.getAccessor();
-                accessor.setAccessible(true);
-                write(sb, accessor.invoke(record));
-            } catch (ReflectiveOperationException e) {
+                write(sb, props[i].read(record));
+            } catch (Error e) {
+                throw e;
+            } catch (Throwable t) {
                 sb.append("null");
             }
         }
@@ -142,38 +146,16 @@ public final class Json {
      */
     private static void writeObject(StringBuilder sb, Object object) {
         sb.append('{');
-        boolean first = true;
-        Set<String> seen = new LinkedHashSet<>();
-        for (Method m : object.getClass().getMethods()) {
-            String name = m.getName();
-            if (m.getParameterCount() != 0) continue;
-            if (m.getReturnType() == void.class) continue;
-            if (m.isSynthetic() || m.isBridge()) continue;
-            if ("getClass".equals(name)) continue;
-            String property = propertyNameFromGetter(name);
-            if (property == null) continue;
-            if (!seen.add(property)) continue;
-            if (!first) sb.append(',');
-            first = false;
-            writeString(sb, property);
+        PropertyWriter[] props = writeSchema(object.getClass());
+        for (int i = 0; i < props.length; i++) {
+            if (i > 0) sb.append(',');
+            writeString(sb, props[i].name);
             sb.append(':');
             try {
-                m.setAccessible(true);
-                write(sb, m.invoke(object));
-            } catch (ReflectiveOperationException e) {
-                sb.append("null");
-            }
-        }
-        for (Field f : collectFields(object.getClass())) {
-            if (!seen.add(f.getName())) continue;
-            if (!first) sb.append(',');
-            first = false;
-            writeString(sb, f.getName());
-            sb.append(':');
-            try {
-                f.setAccessible(true);
-                write(sb, f.get(object));
-            } catch (IllegalAccessException e) {
+                write(sb, props[i].read(object));
+            } catch (Error e) {
+                throw e;
+            } catch (Throwable t) {
                 sb.append("null");
             }
         }
@@ -203,6 +185,195 @@ public final class Json {
             current = current.getSuperclass();
         }
         return fields;
+    }
+
+    private static final ConcurrentHashMap<Class<?>, PropertyWriter[]> WRITE_CACHE = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Class<?>, Object> READ_CACHE = new ConcurrentHashMap<>();
+
+    /** 缓存的序列化属性写入器：名称 + 读取句柄，构造失败回退到 Method/Field。 */
+    private static final class PropertyWriter {
+        final String name;
+        final MethodHandle getter;
+        final Method method;
+        final Field field;
+
+        PropertyWriter(String name, MethodHandle getter, Method method, Field field) {
+            this.name = name;
+            this.getter = getter;
+            this.method = method;
+            this.field = field;
+        }
+
+        Object read(Object target) throws Throwable {
+            if (getter != null) return (Object) getter.invokeExact(target);
+            if (method != null) return method.invoke(target);
+            return field.get(target);
+        }
+    }
+
+    /** 缓存的反序列化字段绑定：名称/类型 + 设置句柄，失败回退到 Field。 */
+    private static final class FieldBinding {
+        final String name;
+        final Class<?> type;
+        final Type genericType;
+        final MethodHandle setter;
+        final Field field;
+
+        FieldBinding(String name, Class<?> type, Type genericType, MethodHandle setter, Field field) {
+            this.name = name;
+            this.type = type;
+            this.genericType = genericType;
+            this.setter = setter;
+            this.field = field;
+        }
+    }
+
+    private static final class BeanSchema {
+        final Constructor<?> ctor;
+        final FieldBinding[] fields;
+        final Map<String, FieldBinding> byName;
+        BeanSchema(Constructor<?> ctor, FieldBinding[] fields, Map<String, FieldBinding> byName) {
+            this.ctor = ctor; this.fields = fields; this.byName = byName;
+        }
+    }
+
+    private static final class ComponentBinding {
+        final String name;
+        final Class<?> type;
+        final Type genericType;
+        ComponentBinding(String name, Class<?> type, Type genericType) {
+            this.name = name; this.type = type; this.genericType = genericType;
+        }
+    }
+
+    private static final class RecordSchema {
+        final Constructor<?> canonical;
+        final ComponentBinding[] components;
+        final Map<String, Integer> byIndex;
+        RecordSchema(Constructor<?> canonical, ComponentBinding[] components, Map<String, Integer> byIndex) {
+            this.canonical = canonical; this.components = components; this.byIndex = byIndex;
+        }
+    }
+
+    /** 取得类的序列化属性写入器数组（首次构建后缓存）。 */
+    private static PropertyWriter[] writeSchema(Class<?> type) {
+        return WRITE_CACHE.computeIfAbsent(type, Json::buildWriteSchema);
+    }
+
+    /**
+     * 构建序列化属性写入器：record 取访问器；普通对象先取无参 getter 再补未出现的字段，
+     * 读取句柄优先用 MethodHandle，构造失败回退到 Method/Field。
+     */
+    private static PropertyWriter[] buildWriteSchema(Class<?> type) {
+        List<PropertyWriter> writers = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+        if (type.isRecord()) {
+            for (RecordComponent rc : type.getRecordComponents()) {
+                if (!seen.add(rc.getName())) continue;
+                Method accessor = rc.getAccessor();
+                accessor.setAccessible(true);
+                writers.add(new PropertyWriter(rc.getName(), unreflectGetter(accessor), accessor, null));
+            }
+        } else {
+            for (Method m : type.getMethods()) {
+                String name = m.getName();
+                if (m.getParameterCount() != 0) continue;
+                if (m.getReturnType() == void.class) continue;
+                if (m.isSynthetic() || m.isBridge()) continue;
+                if ("getClass".equals(name)) continue;
+                String property = propertyNameFromGetter(name);
+                if (property == null) continue;
+                if (!seen.add(property)) continue;
+                m.setAccessible(true);
+                writers.add(new PropertyWriter(property, unreflectGetter(m), m, null));
+            }
+            for (Field f : collectFields(type)) {
+                if (!seen.add(f.getName())) continue;
+                f.setAccessible(true);
+                writers.add(new PropertyWriter(f.getName(), unreflectGetter(f), null, f));
+            }
+        }
+        return writers.toArray(new PropertyWriter[0]);
+    }
+
+    /** 将方法反射为 (Object)Object 读取句柄；失败返回 null 走 Method 回退。 */
+    private static MethodHandle unreflectGetter(Method m) {
+        try {
+            return MethodHandles.lookup().unreflect(m).asType(MethodType.methodType(Object.class, Object.class));
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** 将字段反射为 (Object)Object 读取句柄；失败返回 null 走 Field 回退。 */
+    private static MethodHandle unreflectGetter(Field f) {
+        try {
+            return MethodHandles.lookup().unreflectGetter(f).asType(MethodType.methodType(Object.class, Object.class));
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** 构建反序列化 schema：record 返回 RecordSchema，否则返回 BeanSchema。 */
+    private static Object buildReadSchema(Class<?> type) {
+        return type.isRecord() ? buildRecordSchema(type) : buildBeanSchema(type);
+    }
+
+    private static BeanSchema buildBeanSchema(Class<?> type) {
+        try {
+            Constructor<?> ctor = type.getDeclaredConstructor();
+            ctor.setAccessible(true);
+            List<FieldBinding> fields = new ArrayList<>();
+            for (Field f : collectFields(type)) {
+                f.setAccessible(true);
+                fields.add(new FieldBinding(f.getName(), f.getType(), f.getGenericType(), unreflectSetter(f), f));
+            }
+            FieldBinding[] arr = fields.toArray(new FieldBinding[0]);
+            Map<String, FieldBinding> byName = new HashMap<>(arr.length * 2);
+            for (FieldBinding fb : arr) byName.put(fb.name, fb);
+            return new BeanSchema(ctor, arr, byName);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException("No no-arg constructor for " + type.getName(), e);
+        }
+    }
+
+    private static RecordSchema buildRecordSchema(Class<?> type) {
+        RecordComponent[] components = type.getRecordComponents();
+        Class<?>[] paramTypes = new Class<?>[components.length];
+        ComponentBinding[] bindings = new ComponentBinding[components.length];
+        for (int i = 0; i < components.length; i++) {
+            paramTypes[i] = components[i].getType();
+            bindings[i] = new ComponentBinding(components[i].getName(), components[i].getType(), components[i].getGenericType());
+        }
+        try {
+            Constructor<?> canonical = type.getDeclaredConstructor(paramTypes);
+            canonical.setAccessible(true);
+            Map<String, Integer> byIndex = new HashMap<>(bindings.length * 2);
+            for (int i = 0; i < bindings.length; i++) byIndex.put(bindings[i].name, i);
+            return new RecordSchema(canonical, bindings, byIndex);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException("No canonical constructor for record " + type.getName(), e);
+        }
+    }
+
+    /** 将字段反射为 (Object,Object)V 设置句柄；失败返回 null 走 Field 回退。 */
+    private static MethodHandle unreflectSetter(Field f) {
+        try {
+            return MethodHandles.lookup().unreflectSetter(f)
+                    .asType(MethodType.methodType(void.class, Object.class, Object.class));
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** 直接将对象序列化为 UTF-8 字节，避免中间 String 拷贝。 */
+    public static byte[] toUtf8Bytes(Object value) {
+        StringBuilder sb = new StringBuilder();
+        write(sb, value);
+        java.nio.ByteBuffer bb = java.nio.charset.StandardCharsets.UTF_8.encode(java.nio.CharBuffer.wrap(sb));
+        byte[] out = new byte[bb.remaining()];
+        bb.get(out);
+        return out;
     }
 
     /**
@@ -249,9 +420,8 @@ public final class Json {
         return value;
     }
 
-    @SuppressWarnings("unchecked")
     public static <T> T parse(String json, Class<T> type) {
-        return (T) bind(parse(json), type, type);
+        return read(json.getBytes(StandardCharsets.UTF_8), type);
     }
 
     /**
@@ -260,11 +430,183 @@ public final class Json {
      */
     @SuppressWarnings("unchecked")
     public static <T> T parse(String json, Type type) {
-        return (T) bind(parse(json), erase(type), type);
+        return (T) read(json.getBytes(StandardCharsets.UTF_8), type);
     }
 
     public static <T> T parse(String json, TypeReference<T> typeRef) {
         return parse(json, typeRef.getType());
+    }
+
+    // ---- streaming-bind 反序列化（按 schema 直连，无中间通用树）----------------
+
+    /**
+     * 直接从 UTF-8 字节流式读取并按目标类型绑定：解析器边读 token 边按 schema 构造目标对象，
+     * 不构建中间 Map/List 通用树，减少分配与一次遍历。用于请求体热路径。
+     *
+     * @param json UTF-8 JSON 字节
+     * @param type 目标类型（可为泛型 {@link Type}）
+     * @return 绑定后的对象
+     */
+    public static Object read(byte[] json, Type type) {
+        if (json == null || json.length == 0) {
+            throw new IllegalArgumentException("empty JSON");
+        }
+        JsonReader r = new JsonReader(json);
+        Object value = bindStreaming(r, erase(type), type);
+        r.checkTrailing();
+        return value;
+    }
+
+    /**
+     * 直接从 UTF-8 字节流式读取并按目标类绑定，等价于 {@code read(json, (Type) type)}。
+     *
+     * @param json UTF-8 JSON 字节
+     * @param type 目标类
+     * @param <T>  目标类型
+     * @return 绑定后的对象
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T read(byte[] json, Class<T> type) {
+        return (T) read(json, (Type) type);
+    }
+
+    /**
+     * 流式绑定的类型分派：依据当前 token 与目标类型直接读取并构造对应值。处理 null、字符串、
+     * 数字、布尔、对象（Bean/Record/Map）、数组/集合，以及字符串到数值/布尔的弱转换；
+     * 类型不匹配时回退为通用字面量，保持与树式 bind 一致的行为。
+     *
+     * @param r           字节读取器
+     * @param rawType     目标原始类型
+     * @param genericType 目标泛型类型
+     * @return 绑定后的值
+     */
+    @SuppressWarnings("unchecked")
+    private static Object bindStreaming(JsonReader r, Class<?> rawType, Type genericType) {
+        r.skipWs();
+        int c = r.peek();
+        if (c == 'n') { r.nextNull(); return defaultValue(rawType); }
+        if (rawType == Object.class) return r.nextLiteral();
+        if (rawType == String.class || rawType == CharSequence.class) {
+            return c == '"' ? r.nextString() : r.nextLiteral().toString();
+        }
+        if (rawType.isEnum()) {
+            String s = c == '"' ? r.nextString() : r.nextLiteral().toString();
+            return Enum.valueOf((Class<? extends Enum>) rawType, s);
+        }
+        if (c == '"') {
+            String s = r.nextString();
+            if (rawType == char.class || rawType == Character.class) return s.isEmpty() ? '\0' : s.charAt(0);
+            if (isNumeric(rawType)) return coerceNumber(Double.valueOf(s), rawType);
+            if (rawType == boolean.class || rawType == Boolean.class) return Boolean.parseBoolean(s);
+            if (isTemporal(rawType)) return parseTemporal(rawType, s);
+            return s;
+        }
+        if (c == '{') {
+            if (Map.class.isAssignableFrom(rawType)) return bindMap(r, rawType, genericType);
+            if (Collection.class.isAssignableFrom(rawType) || rawType.isArray()) return r.nextLiteral();
+            return rawType.isRecord() ? bindRecord(r, rawType) : bindBean(r, rawType);
+        }
+        if (c == '[') {
+            if (rawType.isArray()) return bindArray(r, rawType.getComponentType());
+            if (Collection.class.isAssignableFrom(rawType)) return bindCollection(r, rawType, genericType);
+            return r.nextLiteral();
+        }
+        if (c == 't' || c == 'f') return r.nextBoolean();
+        Number num = r.nextNumber();
+        if (isNumeric(rawType)) return coerceNumber(num, rawType);
+        return num;
+    }
+
+    /** 流式绑定到 Bean：按字段名查 schema 的 byName 映射，命中则递归绑定字段值，未命中则跳过该值。 */
+    private static Object bindBean(JsonReader r, Class<?> rawType) {
+        try {
+            BeanSchema schema = (BeanSchema) READ_CACHE.computeIfAbsent(rawType, Json::buildReadSchema);
+            Object bean = schema.ctor.newInstance();
+            r.beginObject();
+            while (r.hasNext()) {
+                String name = r.nextName();
+                FieldBinding fb = schema.byName.get(name);
+                if (fb == null) { r.skipValue(); continue; }
+                Object fv = bindStreaming(r, fb.type, fb.genericType);
+                if (fb.setter != null) {
+                    fb.setter.invokeExact(bean, fv);
+                } else {
+                    fb.field.set(bean, fv);
+                }
+            }
+            r.endObject();
+            return bean;
+        } catch (Error e) {
+            throw e;
+        } catch (Throwable t) {
+            throw new IllegalArgumentException("Cannot bind JSON to " + rawType.getName(), t);
+        }
+    }
+
+    /** 流式绑定到 Record：先以类型默认值填充各分量，再按名查 byIndex 覆盖命中的分量，最后调用规范构造器。 */
+    private static Object bindRecord(JsonReader r, Class<?> rawType) {
+        try {
+            RecordSchema schema = (RecordSchema) READ_CACHE.computeIfAbsent(rawType, Json::buildReadSchema);
+            ComponentBinding[] comps = schema.components;
+            Object[] args = new Object[comps.length];
+            for (int i = 0; i < comps.length; i++) args[i] = defaultValue(comps[i].type);
+            r.beginObject();
+            while (r.hasNext()) {
+                String name = r.nextName();
+                Integer idx = schema.byIndex.get(name);
+                if (idx == null) { r.skipValue(); continue; }
+                ComponentBinding cb = comps[idx];
+                args[idx] = bindStreaming(r, cb.type, cb.genericType);
+            }
+            r.endObject();
+            return schema.canonical.newInstance(args);
+        } catch (Error e) {
+            throw e;
+        } catch (Throwable t) {
+            throw new IllegalArgumentException("Cannot bind JSON to record " + rawType.getName(), t);
+        }
+    }
+
+    /** 流式绑定到数组：先收集到临时 List（长度未知），再拷贝为目标类型数组。 */
+    private static Object bindArray(JsonReader r, Class<?> componentType) {
+        r.beginArray();
+        List<Object> tmp = new ArrayList<>();
+        while (r.hasNext()) tmp.add(bindStreaming(r, componentType, componentType));
+        r.endArray();
+        Object array = Array.newInstance(componentType, tmp.size());
+        for (int i = 0; i < tmp.size(); i++) Array.set(array, i, tmp.get(i));
+        return array;
+    }
+
+    /** 流式绑定到集合：按泛型元素类型逐个递归绑定并加入目标集合。 */
+    @SuppressWarnings("unchecked")
+    private static Object bindCollection(JsonReader r, Class<?> rawType, Type genericType) {
+        Collection<Object> result = newCollection(rawType);
+        Type[] ta = typeArguments(genericType);
+        Type elemGen = ta.length > 0 ? ta[0] : Object.class;
+        Class<?> elemType = erase(elemGen);
+        r.beginArray();
+        while (r.hasNext()) result.add(bindStreaming(r, elemType, elemGen));
+        r.endArray();
+        return result;
+    }
+
+    /** 流式绑定到 Map：键按字符串/键类型绑定，值按泛型值类型递归绑定。 */
+    @SuppressWarnings("unchecked")
+    private static Object bindMap(JsonReader r, Class<?> rawType, Type genericType) {
+        Map<Object, Object> result = newMap(rawType);
+        Type[] ta = typeArguments(genericType);
+        Class<?> keyType = ta.length > 0 ? erase(ta[0]) : String.class;
+        Class<?> valueType = ta.length > 1 ? erase(ta[1]) : Object.class;
+        Type valueGen = ta.length > 1 ? ta[1] : valueType;
+        r.beginObject();
+        while (r.hasNext()) {
+            String name = r.nextName();
+            Object key = bind(name, keyType, keyType);
+            result.put(key, bindStreaming(r, valueType, valueGen));
+        }
+        r.endObject();
+        return result;
     }
 
     /**
@@ -293,7 +635,7 @@ public final class Json {
         if (value instanceof String s && (rawType == char.class || rawType == Character.class)) {
             return s.isEmpty() ? '\0' : s.charAt(0);
         }
-        if (rawType == java.time.temporal.TemporalAccessor.class || rawType.getName().startsWith("java.time")) {
+        if (isTemporal(rawType)) {
             return parseTemporal(rawType, value.toString());
         }
         if (value instanceof Map<?, ?> map && !isCollectionOrMap(rawType)) {
@@ -315,38 +657,36 @@ public final class Json {
     }
 
     private static Object bindToBean(Map<?, ?> map, Class<?> rawType) {
+        if (rawType.isRecord()) {
+            return bindToRecord(map, rawType);
+        }
         try {
-            if (rawType.isRecord()) {
-                return bindToRecord(map, rawType);
-            }
-            Constructor<?> ctor = rawType.getDeclaredConstructor();
-            ctor.setAccessible(true);
-            Object bean = ctor.newInstance();
-            for (Field f : collectFields(rawType)) {
-                if (!map.containsKey(f.getName())) continue;
-                Object fieldValue = bind(map.get(f.getName()), f.getType(), f.getGenericType());
-                f.setAccessible(true);
-                f.set(bean, fieldValue);
+            BeanSchema schema = (BeanSchema) READ_CACHE.computeIfAbsent(rawType, Json::buildReadSchema);
+            Object bean = schema.ctor.newInstance();
+            for (FieldBinding fb : schema.fields) {
+                if (!map.containsKey(fb.name)) continue;
+                Object fieldValue = bind(map.get(fb.name), fb.type, fb.genericType);
+                if (fb.setter != null) {
+                    fb.setter.invokeExact(bean, fieldValue);
+                } else {
+                    fb.field.set(bean, fieldValue);
+                }
             }
             return bean;
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalArgumentException("Cannot bind JSON to " + rawType.getName(), e);
+        } catch (Throwable t) {
+            throw new IllegalArgumentException("Cannot bind JSON to " + rawType.getName(), t);
         }
     }
 
     private static Object bindToRecord(Map<?, ?> map, Class<?> rawType) {
-        RecordComponent[] components = rawType.getRecordComponents();
-        Class<?>[] paramTypes = new Class<?>[components.length];
-        Object[] args = new Object[components.length];
-        for (int i = 0; i < components.length; i++) {
-            paramTypes[i] = components[i].getType();
-            Object raw = map.get(components[i].getName());
-            args[i] = bind(raw, components[i].getType(), components[i].getGenericType());
-        }
         try {
-            Constructor<?> canonical = rawType.getDeclaredConstructor(paramTypes);
-            canonical.setAccessible(true);
-            return canonical.newInstance(args);
+            RecordSchema schema = (RecordSchema) READ_CACHE.computeIfAbsent(rawType, Json::buildReadSchema);
+            Object[] args = new Object[schema.components.length];
+            for (int i = 0; i < schema.components.length; i++) {
+                ComponentBinding cb = schema.components[i];
+                args[i] = bind(map.get(cb.name), cb.type, cb.genericType);
+            }
+            return schema.canonical.newInstance(args);
         } catch (ReflectiveOperationException e) {
             throw new IllegalArgumentException("Cannot construct record " + rawType.getName(), e);
         }
@@ -391,6 +731,10 @@ public final class Json {
         } catch (ReflectiveOperationException e) {
             return text;
         }
+    }
+
+    private static boolean isTemporal(Class<?> type) {
+        return type == java.time.temporal.TemporalAccessor.class || type.getName().startsWith("java.time");
     }
 
     private static boolean isNumeric(Class<?> type) {

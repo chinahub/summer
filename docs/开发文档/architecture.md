@@ -5,7 +5,7 @@
 ```
 summer-parent (pom)
 ├── summer-core            IoC 容器 / 依赖注入 / 组件扫描 / 配置环境 / 日志 / AOP / 定时任务 / 工具集（utils） / 自研测试微框架（core.test 包）
-├── summer-web             嵌入式 HTTP 服务器（ServerSocket+虚拟线程）/ 路由 / JSON / 参数绑定 / 异常 / 校验
+├── summer-web             嵌入式 HTTP 服务器（ServerSocketChannel 阻塞 + 虚拟线程，参考 Helidon NIMA；支持 TLS / chunked）/ 路由 / JSON / 参数绑定 / 异常 / 校验
 ├── summer-data            ORM：BaseMapper/Wrapper/分页/IService/事务/多方言，纯 JDBC，零第三方依赖
 ├── summer-boot            SummerApplication.run() 启动器 / 自动配置 / 数据源 / Mapper装配 / 关闭钩子
 ├── summer-boot-loader     可执行 jar 启动器 JarLauncher（java -jar 入口，BOOT-INF 解压+类路径重建），由 summer-pack-maven-plugin 内置打包
@@ -28,6 +28,17 @@ build-test ──depends──> summer-sample / summer-boot / summer-data / summ
 - `summer-data` 依赖 `summer-core`（用 JDK 的 `java.sql`）；
 - `summer-boot` 组装 core + web + data，提供启动入口；`summer-boot-loader` 提供可执行 jar 启动器，作为 `summer-pack-maven-plugin` 的依赖被内置打包，应用项目无需单独声明；
 - `summer-sample` 是使用者，仅需依赖 boot，打包由 `summer-pack-maven-plugin` 内置 loader，业务包无需额外声明（classpath 模式，反射不受强封装限制）。
+
+### 为何 summer-boot-loader 独立成模块
+
+`summer-boot-loader`（运行期启动器 `JarLauncher`）与 `summer-pack-maven-plugin`（构建期 Mojo）刻意拆为两个 artifact，参照 Spring Boot 把 `spring-boot-loader` 与 `spring-boot-maven-plugin` 分开的做法：
+
+- **生命周期不同**：`JarLauncher` 在 `java -jar app-boot.jar` 时作为 jar 根的 `Main-Class` 最先运行，引导整个应用；`RepackageMojo`/`BootJarBuilder` 只在 `mvn package` 的构建期内运行。运行期与构建期混在同一 jar 没有意义。
+- **依赖图不同**：`JarLauncher` 零第三方依赖，仅用 JDK（`java.io`/`java.net`/`java.nio`/`java.util.jar`），是它能在任意环境最先加载的前提；插件则依赖 Maven API（`maven-plugin-api`/`maven-core` 等，均 `provided`）。合并会让零依赖的启动器与重依赖的构建代码耦合。
+- **loader 必须进产物、插件类不能进产物**：打包时插件把 loader 的 `JarLauncher.class` 拷进产物 jar 根作 `Main-Class`；`RepackageMojo`/`BootJarBuilder` 是构建工具，绝不能出现在交付物里。拆分让“该进产物的”与“不该进产物的”在物理 artifact 上隔开。
+- **合并会污染产物 jar**：当前 `RepackageMojo.findLoaderJar()` 定位的是纯净的 loader jar，`BootJarBuilder.addJarEntries()` 把它全部非 `META-INF` 条目拷进产物根目录——loader jar 里只有 `JarLauncher`，拷过去即干净。若 loader 并入插件 jar，`findLoaderJar()` 找到的将是插件自身，`addJarEntries` 会连 `RepackageMojo`/`BootJarBuilder` 一起拷进产物；这些类引用 Maven API，而运行期没有它们 → `NoClassDefFoundError` 风险且体积虚增。规避需额外加“仅拷 `cn/jiebaba/summer/loader/**`”的过滤，恰是当前拆分所要避免的脆弱特判。
+- **离线可解析**：loader 零传递依赖，是 pom 中明确强调的 offline-resolvable 前提；插件自身的 Maven 依赖全部 `provided` + 通配排除，互不污染。
+- **独立演进**：loader 的清单契约（`Main-Class`/`Start-Class`/`BOOT-INF` 布局）是运行期协议，插件是构建工具，二者发版节奏不同，可各自修复与演进。
 
 ## summer-core 职责
 
@@ -58,22 +69,25 @@ build-test ──depends──> summer-sample / summer-boot / summer-data / summ
 | 包 | 内容 |
 | --- | --- |
 | `cn.jiebaba.summer.web.annotation` | `@RestController/@RequestMapping/@GetMapping...`、`@PathVariable/@RequestParam/@RequestBody/@RequestHeader`、`@RestControllerAdvice/@ExceptionHandler/@ResponseStatus` |
-| `cn.jiebaba.summer.web.http` | `HttpMethod/MediaType/HttpStatus`、`RawHttpRequest`（HTTP/1.1 解析）、`WebRequest/WebResponse` |
+| `cn.jiebaba.summer.web.http` | `HttpMethod/MediaType/HttpStatus`、`RawHttpRequest`（HTTP/1.1 解析，支持 `Content-Length` 与 `Transfer-Encoding: chunked`，通道+流双入口）、`WebRequest/WebResponse`（`WritableByteChannel` + 聚集写） |
 | `cn.jiebaba.summer.web.json` | `Json`：手写序列化器 + 递归下降解析器 + 对象绑定 |
 | `cn.jiebaba.summer.web.routing` | `RoutePattern`（路径变量/通配符匹配 + 特异性评分）、`Router` |
 | `cn.jiebaba.summer.web.convert` | `MessageConverter` / `JsonMessageConverter` |
 | `cn.jiebaba.summer.web.bind` | `HandlerMethodInvoker`（参数绑定，含 `@Valid` 校验触发） |
 | `cn.jiebaba.summer.web.support` | `WebRouteRegistrar`（控制器→路由）、`ExceptionHandlerRegistry` |
 | `cn.jiebaba.summer.web.validation` | `@Valid` + `@NotNull/@NotBlank/@NotEmpty/@Min/@Max/@Size/@Pattern/@Email`、`Validator`（递归嵌套）、`ValidationException`、`ConstraintViolation` |
-| `cn.jiebaba.summer.web.server` | `SummerWebServer`（ServerSocket + 虚拟线程执行器）、`RequestDispatcher`、`WebServerProperties` |
+| `cn.jiebaba.summer.web.server` | `SummerWebServer`（`ServerSocketChannel` 阻塞 + 虚拟线程/连接，参考 Helidon NIMA）、`SslByteChannel`（TLS 通道适配）、`RequestDispatcher`、`WebServerProperties`（含 `Ssl` 配置） |
 
 ### 请求处理流程
 
 ```
-Socket.accept()  (虚拟线程)
+ServerSocketChannel.accept()  →  虚拟线程 handleConnection
    │
    ▼
-RawHttpRequest.parse(InputStream)
+（启用 TLS?）wrapTls → SslByteChannel（SSLSocket 服务端模式 + 握手）
+   │
+   ▼
+RawHttpRequest.parse(ReadableByteChannel, ByteBuffer)   （Content-Length 或 chunked）
    │
    ├─ WebSocket Upgrade? → 101 握手 → WebSocketSession.runLoop()（帧循环）
    │
@@ -97,7 +111,7 @@ HandlerMethodInvoker.invoke
 writeResult：@ResponseBody → JSON；String → text；byte[] → octet-stream
    │  异常 → ExceptionHandlerRegistry → @ExceptionHandler 或默认错误体
    ▼
-WebResponse.commit（写状态行+头+body 到 socket）
+WebResponse.commit（聚集写：状态行+头+body 一次发到通道）
 ```
 
 ### 路由匹配

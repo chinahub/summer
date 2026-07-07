@@ -161,9 +161,22 @@ public final class SummerApplication {
     private static void registerShutdownHook(SummerApplication app) {
         Thread hook = new Thread(() -> {
             LOG.info("SummerApplication shutdown requested");
-            app.scheduler.shutdown();
-            app.webServer().stop();
-            app.context().close();
+            // 各步独立捕获异常，确保前一步失败不阻断后续资源释放（参考 Spring Boot 关闭钩子）。
+            try {
+                app.scheduler.shutdown();
+            } catch (Throwable t) {
+                LOG.warning("Error stopping scheduler: " + t.getMessage());
+            }
+            try {
+                app.webServer().stop();
+            } catch (Throwable t) {
+                LOG.warning("Error stopping web server: " + t.getMessage());
+            }
+            try {
+                app.context().close();
+            } catch (Throwable t) {
+                LOG.warning("Error closing application context: " + t.getMessage());
+            }
         }, "summer-shutdown");
         Runtime.getRuntime().addShutdownHook(hook);
     }

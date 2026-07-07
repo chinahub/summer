@@ -6,7 +6,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
-| [技术栈](开发文档/tech-stack.md) | 技术选型：JDK 25、虚拟线程、ServerSocket、JUL、Maven、零第三方依赖 |
+| [技术栈](开发文档/tech-stack.md) | 技术选型：JDK 25、虚拟线程、ServerSocketChannel(NIMA)、TLS、JUL、Maven、零第三方依赖 |
 | [架构设计](开发文档/architecture.md) | 模块划分、依赖关系、运行时模型、启动流程 |
 | [安装](使用文档/installation.md) | 环境准备、纯离线 Maven 配置、编码注意 |
 | [发布到 Maven Central](开发文档/publishing.md) | release profile、GPG 签名（Git Bash）、Central Portal 上传、build-test 排除发布 |
@@ -31,7 +31,7 @@
 ```
 summer-parent (pom)
 ├── summer-core            IoC/DI/扫描/配置 + 日志 + AOP + 定时任务
-├── summer-web             嵌入式 HTTP 服务器(ServerSocket+虚拟线程)/路由/JSON/绑定/异常/校验/WebSocket
+├── summer-web             嵌入式 HTTP 服务器(ServerSocketChannel+虚拟线程,NIMA;TLS/chunked)/路由/JSON/绑定/异常/校验/WebSocket
 ├── summer-data            ORM：BaseMapper/Wrapper/分页/IService/事务/多方言/多数据源，纯 JDBC，零第三方依赖
 ├── summer-boot            SummerApplication.run() 启动器/自动配置/数据源/Mapper装配/关闭钩子
 ├── summer-boot-loader     可执行 jar 启动器 JarLauncher（java -jar 入口），由插件内置打包
@@ -42,4 +42,4 @@ summer-parent (pom)
 
 ## 一句话定位
 
-用 JDK 25 的 `java.net.ServerSocket` 做嵌入式 HTTP 服务器，用 `Executors.newVirtualThreadPerTaskExecutor()` 把每个请求跑在虚拟线程（协程）上，通过 `java -jar` 运行——全程不开 Servlet、尽量不引第三方库；并内置 MyBatis-Plus 风格的 JDBC ORM、AOP、声明式事务、定时任务与参数校验。
+用 JDK 25 的 `ServerSocketChannel`（阻塞，参考 Helidon NIMA）做嵌入式 HTTP 服务器（支持 TLS 与 chunked 请求体），用 `Executors.newVirtualThreadPerTaskExecutor()` 把每个请求跑在虚拟线程（协程）上，通过 `java -jar` 运行——全程不开 Servlet、尽量不引第三方库；并内置 MyBatis-Plus 风格的 JDBC ORM、AOP、声明式事务、定时任务与参数校验。
