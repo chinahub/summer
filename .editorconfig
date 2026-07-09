@@ -1,0 +1,32 @@
+# summer 仓库 EditorConfig：https://editorconfig.org
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Java / XML：4 空格缩进
+[*.{java,xml}]
+indent_style = space
+indent_size = 4
+
+# YAML / JSON / Properties：2 空格缩进
+[*.{yml,yaml,json,properties}]
+indent_style = space
+indent_size = 2
+
+# Markdown：2 空格缩进
+[*.md]
+indent_style = space
+indent_size = 2
+
+# 脚本
+[*.{sh,ps1}]
+indent_style = space
+indent_size = 4
+
+# Windows 批处理必须 CRLF
+[*.{bat,cmd}]
+end_of_line = crlf
