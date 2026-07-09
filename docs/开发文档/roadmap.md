@@ -91,3 +91,22 @@
 - [ ] 多 SecurityFilterChain（多链匹配）
 - [ ] CSRF / CORS 过滤器
 - [ ] OAuth2 / OIDC 集成
+
+## 第八阶段：大模型对话（AI）✅
+
+- [x] summer-ai：纯 JDK 国内大模型对话抽象（OpenAI 兼容），零第三方依赖，不依赖 summer-boot
+- [x] `ChatModel` 接口：同步 `call` 与 SSE 流式 `stream` 两种调用方式
+- [x] `OpenAiCompatibleChatModel`：`HttpURLConnection` 阻塞式实现（无 selector），覆盖 DeepSeek/GLM/MiniMax
+- [x] `ChatClient` fluent 门面：链式拼装 system/user/assistant 消息与 `ChatOptions`
+- [x] 思维链解析：`reasoning_content`（思考模型特有）与 token 用量（含 `prompt_cache_hit_tokens`）
+- [x] `Provider` 枚举：内置厂商默认 base-url 与模型名，配置覆盖即可切换新版本
+- [x] summer-boot 自动配置：`AiAutoConfiguration` 按 `summer.ai.*` 装配，classpath 探测条件激活（opt-in）
+- [x] 独立可用：summer-ai 仅依赖 summer-core，可脱离 summer-boot 单独使用
+
+### 后续扩展
+- [ ] Embedding 向量抽象与向量库集成
+- [ ] Function Calling / Tool Use 调用支持
+- [ ] RAG 检索增强与文档分块工具
+- [ ] 多模态（图片/语音）消息支持
+- [ ] 对话记忆与会话管理（Memory 抽象）
+- [ ] 重试、限流与超时熔断策略

@@ -17,17 +17,19 @@
 | 定时任务 | `ScheduledThreadPoolExecutor` + 虚拟线程 | `@Scheduled`：cron 5 段 + fixedRate/fixedDelay |
 | 参数校验 | 手写 Bean Validation 子集 | `@Valid` + 约束注解，递归校验，400 违规列表 |
 | 工具集（utils） | 纯 JDK 手写 | `StringUtil`/`DateUtil`/`JsonUtil`/`SecurityUtil`/`SummerUtil`，参考 commons-lang3 与 hutool，详见 [工具集](../使用文档/utils.md) |
+| 大模型对话（AI） | 纯 JDK `HttpURLConnection` + 自研 `ChatModel`/`ChatClient` | OpenAI 兼容协议直连 DeepSeek/GLM/MiniMax；阻塞式无 selector，支持 SSE 流式与思维链；不依赖 summer-boot，复用 summer-core `JsonUtil`，零第三方依赖，详见 [AI 对话](../使用文档/ai.md) |
 | 构建 | Maven（pom modelVersion 4.0.0） | 多模块；离线模式 |
 | 测试 | 进程内冒烟测试（`SmokeTest`/`OrmSmokeTest`/`DbSmokeTest`） | 沙箱限制进程间 loopback，用同进程自验证全链路 |
 
 ## 零第三方依赖原则
 
-- 框架核心（core/web/data/boot）运行期**不依赖任何第三方库**，只 `requires` JDK 模块（`java.base`、`java.logging`、`java.sql`）；
+- 框架核心（core/web/data/security/ai/boot）运行期**不依赖任何第三方库**，只 `requires` JDK 模块（`java.base`、`java.logging`、`java.sql`）；
 - HTTP 服务器用 `ServerSocketChannel`（阻塞模式）+ NIO 通道自研，不开 `com.sun.net.httpserver`（其 NIO selector 的 loopback 管道在受限沙箱里被阻断）；TLS 直接用 JDK `SSLContext`/`SSLSocket`，无第三方加密库；
 - 反射、注解处理、字节码读取均用 JDK 内置 API；
 - 组件扫描直接读类路径的 `.class`/`.jar` 文件；
 - 唯一运行期外部依赖是 **JDBC 驱动**（由使用者自备，如 `postgresql`、`mysql-connector-j`）。
 - SLF4J 绑定为**可选**：`summer-core` 以 `optional` 引入 `slf4j-api`，仅当使用方显式引入时才由 SLF4J `ServiceLoader` 激活，框架自身运行期仍是零第三方依赖。
+- **summer-ai** 同样零第三方依赖：仅依赖 summer-core（用其 `JsonUtil`），不依赖 summer-boot；以 `optional` 被 summer-boot 引入，启动时按 classpath 探测条件激活（详见 [AI 对话](../使用文档/ai.md)）。
 
 ## 为什么不用 Servlet
 

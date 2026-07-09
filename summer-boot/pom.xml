@@ -32,6 +32,12 @@
             <artifactId>summer-security</artifactId>
             <version>${summer.version}</version>
         </dependency>
+        <dependency>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-ai</artifactId>
+            <version>${summer.version}</version>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 </project>
 

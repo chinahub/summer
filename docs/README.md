@@ -17,6 +17,7 @@
 | [多数据源](使用文档/multi-datasource.md) | @DS/@Master/@Slave + @DSTransactional 跨源事务 |
 | [AOP](使用文档/aop.md) | `@Aspect` 切面、`execution()` 切点、环绕/前置/后置通知、JDK 动态代理 + 无接口子类代理 |
 | [安全](使用文档/security.md) | JWT 无状态认证、BCrypt、URL/方法级授权、HttpSecurity DSL |
+| [AI 对话](使用文档/ai.md) | 纯 JDK 国内大模型对话抽象（DeepSeek/GLM/MiniMax）、OpenAI 兼容、同步与 SSE 流式、ChatClient 门面 |
 | [定时任务](使用文档/scheduling.md) | `@Scheduled`：cron 表达式 + fixedRate/fixedDelay，虚拟线程执行 |
 | [ApplicationRunner](使用文档/application-runner.md) | 启动就绪回调：上下文启动 + 端口监听后执行初始化（缓存预热/字典加载），按 `@Order` 排序 |
 | [WebSocket](使用文档/websocket.md) | `@WebSocketEndpoint`，纯 JDK 握手+帧协议（RFC 6455） |
@@ -33,6 +34,8 @@ summer-parent (pom)
 ├── summer-core            IoC/DI/扫描/配置 + 日志 + AOP + 定时任务
 ├── summer-web             嵌入式 HTTP 服务器(ServerSocketChannel+虚拟线程,NIMA;TLS/chunked)/路由/JSON/绑定/异常/校验/WebSocket
 ├── summer-data            ORM：BaseMapper/Wrapper/分页/IService/事务/多方言/多数据源，纯 JDBC，零第三方依赖
+├── summer-security        安全模块：JWT 无状态认证、BCrypt、URL/方法级授权，纯 JDK，零第三方依赖
+├── summer-ai              大模型对话抽象：ChatModel/ChatClient，OpenAI 兼容（DeepSeek/GLM/MiniMax），同步与 SSE 流式，纯 JDK
 ├── summer-boot            SummerApplication.run() 启动器/自动配置/数据源/Mapper装配/关闭钩子
 ├── summer-boot-loader     可执行 jar 启动器 JarLauncher（java -jar 入口），由插件内置打包
 ├── summer-pack-maven-plugin  mvn package 自动产出 BOOT-INF 可执行 jar
@@ -42,4 +45,4 @@ summer-parent (pom)
 
 ## 一句话定位
 
-用 JDK 25 的 `ServerSocketChannel`（阻塞，参考 Helidon NIMA）做嵌入式 HTTP 服务器（支持 TLS 与 chunked 请求体），用 `Executors.newVirtualThreadPerTaskExecutor()` 把每个请求跑在虚拟线程（协程）上，通过 `java -jar` 运行——全程不开 Servlet、尽量不引第三方库；并内置 MyBatis-Plus 风格的 JDBC ORM、AOP、声明式事务、定时任务与参数校验。
+用 JDK 25 的 `ServerSocketChannel`（阻塞，参考 Helidon NIMA）做嵌入式 HTTP 服务器（支持 TLS 与 chunked 请求体），用 `Executors.newVirtualThreadPerTaskExecutor()` 把每个请求跑在虚拟线程（协程）上，通过 `java -jar` 运行——全程不开 Servlet、尽量不引第三方库；并内置 MyBatis-Plus 风格的 JDBC ORM、AOP、声明式事务、定时任务与参数校验，以及 JWT 安全与国内大模型对话抽象。

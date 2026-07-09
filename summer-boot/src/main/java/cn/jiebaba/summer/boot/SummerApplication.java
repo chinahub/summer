@@ -19,6 +19,7 @@ import cn.jiebaba.summer.web.support.ExceptionHandlerRegistry;
 import cn.jiebaba.summer.boot.data.DataAutoConfiguration;
 import cn.jiebaba.summer.boot.security.SecurityAutoConfiguration;
 import cn.jiebaba.summer.boot.web.WebAutoConfiguration;
+import cn.jiebaba.summer.boot.ai.AiAutoConfiguration;
 import cn.jiebaba.summer.boot.data.MapperRegistrar;
 import cn.jiebaba.summer.core.context.BeanDefinition;
 import cn.jiebaba.summer.web.support.WebRouteRegistrar;
@@ -61,6 +62,7 @@ public final class SummerApplication {
         int port = environment.getProperty("server.port", Integer.class, 8080);
         String host = environment.getProperty("server.host", String.class, "0.0.0.0");
         printBanner();
+        LOG.info("with PID " + ProcessHandle.current().pid());
 
         DefaultApplicationContext context = new DefaultApplicationContext(
                 primarySource.getClassLoader(), environment, basePackages);
@@ -109,7 +111,14 @@ public final class SummerApplication {
     }
 
     private static void registerAutoConfigurations(DefaultApplicationContext context) {
-        for (Class<?> config : AUTO_CONFIG_CLASSES) {
+        List<Class<?>> configs = new ArrayList<>(AUTO_CONFIG_CLASSES);
+        // 可选模块 summer-ai：仅当其在 classpath 时注册自动配置。仿 spring-boot 的
+        // @ConditionalOnClass，但用存在性探测代替 ASM 读注解，零字节码第三方库依赖；
+        // summer-ai 不在时 AiAutoConfiguration 永不被加载，故不会 NoClassDefFoundError。
+        if (isClassPresent("cn.jiebaba.summer.ai.chat.ChatModel")) {
+            configs.add(AiAutoConfiguration.class);
+        }
+        for (Class<?> config : configs) {
             BeanDefinition def = new BeanDefinition(
                     DefaultApplicationContext.decapitalize(config.getSimpleName()), config);
             context.registerBeanDefinition(def.getName(), def);
@@ -118,6 +127,16 @@ public final class SummerApplication {
 
     private static final java.util.List<Class<?>> AUTO_CONFIG_CLASSES =
             java.util.List.of(DataAutoConfiguration.class, SecurityAutoConfiguration.class, WebAutoConfiguration.class);
+
+    /** 探测类是否在 classpath（不初始化），用于可选自动配置的条件激活。 */
+    private static boolean isClassPresent(String name) {
+        try {
+            Class.forName(name, false, SummerApplication.class.getClassLoader());
+            return true;
+        } catch (Throwable e) {
+            return false;
+        }
+    }
 
     /**
      * 解析组件扫描的基础包：依次从 {@link SummerBootApplication} 与 {@link ComponentScan}

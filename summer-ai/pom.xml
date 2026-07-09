@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>cn.jiebaba.summer</groupId>
+        <artifactId>summer-parent</artifactId>
+        <version>3.0.0</version>
+    </parent>
+    <artifactId>summer-ai</artifactId>
+    <name>summer-ai</name>
+    <description>summer AI 核心库：纯 JDK 的国内大模型对话抽象与 OpenAI 兼容实现（DeepSeek/GLM/MiniMax），零第三方依赖，不依赖 summer-boot。</description>
+    <dependencies>
+        <dependency>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-core</artifactId>
+            <version>${summer.version}</version>
+        </dependency>
+    </dependencies>
+</project>

@@ -7,6 +7,8 @@ summer-parent (pom)
 ├── summer-core            IoC 容器 / 依赖注入 / 组件扫描 / 配置环境 / 日志 / AOP / 定时任务 / 工具集（utils） / 自研测试微框架（core.test 包）
 ├── summer-web             嵌入式 HTTP 服务器（ServerSocketChannel 阻塞 + 虚拟线程，参考 Helidon NIMA；支持 TLS / chunked）/ 路由 / JSON / 参数绑定 / 异常 / 校验
 ├── summer-data            ORM：BaseMapper/Wrapper/分页/IService/事务/多方言，纯 JDBC，零第三方依赖
+├── summer-security        安全模块：JWT 无状态认证 / BCrypt / URL·方法级授权，纯 JDK，零第三方依赖
+├── summer-ai              大模型对话抽象：ChatModel/ChatClient，OpenAI 兼容（DeepSeek/GLM/MiniMax），同步与 SSE 流式，纯 JDK
 ├── summer-boot            SummerApplication.run() 启动器 / 自动配置 / 数据源 / Mapper装配 / 关闭钩子
 ├── summer-boot-loader     可执行 jar 启动器 JarLauncher（java -jar 入口，BOOT-INF 解压+类路径重建），由 summer-pack-maven-plugin 内置打包
 ├── summer-pack-maven-plugin  repackage goal：mvn package 自动产出 BOOT-INF 可执行 jar
@@ -19,6 +21,7 @@ summer-parent (pom)
 ```
 summer-sample ──depends──> summer-boot ──depends──> summer-data ──depends──> summer-core
                                 └──depends──> summer-web  ──depends──> summer-core
+                                └──depends──> summer-ai   ──depends──> summer-core  （optional，按 classpath 探测条件激活）
 summer-pack-maven-plugin ──depends──> summer-boot-loader  （可执行 jar 启动器，插件内置）
 build-test ──depends──> summer-sample / summer-boot / summer-data / summer-core  （集中式测试）
 ```
@@ -26,7 +29,8 @@ build-test ──depends──> summer-sample / summer-boot / summer-data / summ
 - `summer-core` 是地基，零第三方依赖；
 - `summer-web` 依赖 `summer-core`（不再依赖 `jdk.httpserver`，改用 `java.net`）；
 - `summer-data` 依赖 `summer-core`（用 JDK 的 `java.sql`）；
-- `summer-boot` 组装 core + web + data，提供启动入口；`summer-boot-loader` 提供可执行 jar 启动器，作为 `summer-pack-maven-plugin` 的依赖被内置打包，应用项目无需单独声明；
+- `summer-ai` 依赖 `summer-core`（用其 `JsonUtil`），不依赖 summer-boot；`summer-boot` 以 `optional` 引入并在启动时按 classpath 探测条件注册 `AiAutoConfiguration`；
+- `summer-boot` 组装 core + web + data + security + ai（后两者 optional），提供启动入口；`summer-boot-loader` 提供可执行 jar 启动器，作为 `summer-pack-maven-plugin` 的依赖被内置打包，应用项目无需单独声明；
 - `summer-sample` 是使用者，仅需依赖 boot，打包由 `summer-pack-maven-plugin` 内置 loader，业务包无需额外声明（classpath 模式，反射不受强封装限制）。
 
 ### 为何 summer-boot-loader 独立成模块
@@ -155,18 +159,32 @@ private Map<String, Object> config;
 
 > 边界：`WHERE` 条件值（`AbstractWrapper.params`）仍为裸 `Object`，JSON 列条件查询暂不套 handler（与 MyBatis-Plus 同理，需后续增强）；多数据源按数据源各自解析方言（per-DS dialect）为第二阶段，当前为「单 dialect + URL 推断」。
 
+## summer-ai 职责
+
+| 包 | 内容 |
+| --- | --- |
+| `cn.jiebaba.summer.ai.chat` | `ChatModel` 接口（`call`/`stream`）、`ChatClient` fluent 门面、`Prompt`/`Message`/`ChatOptions`/`ChatResponse`/`ChatResponseMetadata` |
+| `cn.jiebaba.summer.ai.model` | `Provider` 枚举（DeepSeek/GLM/MiniMax，内置默认 base-url 与模型名） |
+| `cn.jiebaba.summer.ai.model.openai` | `OpenAiCompatibleChatModel`：`HttpURLConnection` 阻塞式实现，同步解析 JSON、流式解析 SSE |
+| `cn.jiebaba.summer.ai` | `AiException` 统一运行期异常 |
+
+- **纯 JDK**：用 `HttpURLConnection`（阻塞式，无 selector）直连各厂商 `OpenAI 兼容` 端点，JSON 序列化/解析复用 summer-core 的 `JsonUtil`，零第三方依赖；
+- **OpenAI 兼容**：DeepSeek、GLM（智谱）、MiniMax 仅 base-url 与模型名不同，请求/响应/SSE 流式协议一致；
+- **思维链与用量**：解析 `reasoning_content`（思考模型特有）与 `usage`（含 `prompt_cache_hit_tokens`），详见 [AI 对话](../使用文档/ai.md)。
+
 ## summer-boot 职责
 
 - `SummerApplication.run(Class<?> primarySource, String[] args)`：
   1. 推断主类所在包为扫描根包（支持 `@SummerApplication(scanBasePackages=...)` / `@ComponentScan` 覆盖）；
   2. 构建 `Environment`（加载 `application.yml`/`.properties`）、`LoggingInitializer.initialize`；
-  3. 注册自动配置类（`DataAutoConfiguration`）+ `MapperRegistrar.registerDefinitions`（mapper bean 定义）；
+  3. 注册自动配置类（`DataAutoConfiguration`、`SecurityAutoConfiguration`、`WebAutoConfiguration`，并按 classpath 探测可选注册 `AiAutoConfiguration`）+ `MapperRegistrar.registerDefinitions`（mapper bean 定义）；
   4. `context.refresh()` 完成扫描与 Bean 装配（含 AOP 代理织入）；
   5. `WebRouteRegistrar.build(context)` 构建路由与异常注册表；
   6. `SummerWebServer.createDefault(...).start()`；
   7. `ScheduledTaskRegistrar.scheduleAll(context)` 调度定时任务；
   8. 注册 JVM 关闭钩子：停定时任务 + 停服务器 + `context.close()`。
 - `DataAutoConfiguration`（`@Configuration`）：配置了 `summer.datasource.url` 时创建 `DataSource/SqlExecutor/Dialect` + 事务组件，并注册 Mapper 代理；`Dialect` 由 `Dialect.detect(driver, url)` 自动映射（按 JDBC 驱动类名，如 `org.postgresql.Driver`→PostgreSQL；驱动为空则按 URL 推断），无需配置 `dialect`，`SqlExecutor` 注入该方言供读写时透传 TypeHandler。
+- `AiAutoConfiguration`（`@Configuration`，opt-in）：当 classpath 存在 `cn.jiebaba.summer.ai.chat.ChatModel` 时注册，按 `summer.ai.*` 装配 `AiProperties`/`ChatModel`/`ChatClient`；不在 classpath 时永不被加载，对未引入 summer-ai 的应用零影响。详见 [AI 对话](../使用文档/ai.md)。
 
 ## 运行时模型
 
