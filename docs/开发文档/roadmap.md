@@ -89,7 +89,8 @@
 - [ ] 服务层方法级安全（需增强 SubclassProxyFactory 复制方法注解）
 - [ ] JWT refresh token
 - [ ] 多 SecurityFilterChain（多链匹配）
-- [ ] CSRF / CORS 过滤器
+- [x] CORS 过滤器：summer-web 新增 `CorsFilter`，`summer.web.cors.*` 配置（来源/方法/请求头/凭证/缓存时长），预检短路 + 跨域响应头，自动装配且先于安全过滤器执行
+- [ ] CSRF 过滤器
 - [ ] OAuth2 / OIDC 集成
 
 ## 第八阶段：大模型对话（AI）✅

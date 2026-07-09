@@ -168,6 +168,8 @@ server:
 | `@RestControllerAdvice` `@ExceptionHandler` | 全局异常处理 |
 | `@ResponseStatus` | 自定义响应状态码 |
 
+跨域（CORS）通过 `summer.web.cors.*` 配置自动启用，详见 [CORS](cors.md)。
+
 ### 校验约束（summer-web）
 
 | 注解 | 说明 |

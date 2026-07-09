@@ -76,10 +76,10 @@ public final class SummerApplication {
         ExceptionHandlerRegistry exceptions = registration.exceptionHandlers();
 
         MessageConverter converter = resolveConverter(context);
-        List<Filter> securityFilters = resolveSecurityFilters(context);
+        List<Filter> filters = resolveFilters(context);
         HandlerMethodAccessChecker accessChecker = resolveAccessChecker(context);
         SummerWebServer server = new SummerWebServer(context, router, exceptions, converter,
-                WebServerProperties.from(environment), securityFilters, accessChecker);
+                WebServerProperties.from(environment), filters, accessChecker);
         WebSocketRegistry wsRegistry = new WebSocketRegistry();
         wsRegistry.scan(context);
         server.setWebSocketRegistry(wsRegistry);
@@ -231,13 +231,20 @@ public final class SummerApplication {
         return order != null ? order.value() : Integer.MAX_VALUE;
     }
 
-    private static List<Filter> resolveSecurityFilters(ApplicationContext context) {
+    /**
+     * 解析路由前置过滤器链。先收集 Web 层 Filter Bean（如 CorsFilter），
+     * 再追加安全过滤器链中的过滤器，使 CORS 预检先于认证执行。
+     * 安全模块未启用时仅含 Web 层过滤器。
+     */
+    private static List<Filter> resolveFilters(ApplicationContext context) {
+        List<Filter> filters = new ArrayList<>(context.getBeansOfType(Filter.class).values());
         try {
             SecurityFilterChain chain = context.getBean(SecurityFilterChain.class);
-            return chain.filters();
+            filters.addAll(chain.filters());
         } catch (Exception e) {
-            return List.of();
+            // 安全模块未启用，过滤器链仅含 Web 层过滤器
         }
+        return filters;
     }
 
     private static HandlerMethodAccessChecker resolveAccessChecker(ApplicationContext context) {
