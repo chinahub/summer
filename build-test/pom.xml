@@ -33,6 +33,12 @@
             <artifactId>summer-boot</artifactId>
             <version>${summer.version}</version>
         </dependency>
+        <!-- summer-ai 单测：向量库/记忆/RAG/工具调用/弹性策略/多模态序列化 -->
+        <dependency>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-ai</artifactId>
+            <version>${summer.version}</version>
+        </dependency>
         <!-- SmokeTest 依赖 sample 的 entity/mapper/service -->
         <dependency>
             <groupId>cn.jiebaba.summer</groupId>

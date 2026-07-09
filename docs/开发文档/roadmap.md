@@ -105,9 +105,9 @@
 - [x] 独立可用：summer-ai 仅依赖 summer-core，可脱离 summer-boot 单独使用
 
 ### 后续扩展
-- [ ] Embedding 向量抽象与向量库集成
-- [ ] Function Calling / Tool Use 调用支持
-- [ ] RAG 检索增强与文档分块工具
-- [ ] 多模态（图片/语音）消息支持
-- [ ] 对话记忆与会话管理（Memory 抽象）
-- [ ] 重试、限流与超时熔断策略
+- [x] Embedding 向量抽象与向量库集成（EmbeddingModel/OpenAiCompatibleEmbeddingModel/VectorStore/InMemoryVectorStore/相似度检索）
+- [x] Function Calling / Tool Use 调用支持（ToolCallback/Tool/ToolCallingChatModel 工具循环）
+- [x] RAG 检索增强与文档分块工具（Document/TokenTextSplitter/Retriever/RetrievalAugmentationAdvisor/RagClient）
+- [x] 多模态（图片/语音）消息支持（ContentPart：TextPart/ImageUrlPart/InputAudioPart）
+- [x] 对话记忆与会话管理（ChatMemory/MessageWindowChatMemory/MemoryChatClient）
+- [x] 重试、限流与超时熔断策略（ResilientChatModel + RetryPolicy/RateLimiter/CircuitBreaker）

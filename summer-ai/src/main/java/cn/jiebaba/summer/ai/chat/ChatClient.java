@@ -53,6 +53,14 @@ public class ChatClient {
             return this;
         }
 
+        /** 直接追加消息列表，便于回放历史或注入多模态/工具消息。 */
+        public PromptBuilder messages(List<Message> messages) {
+            if (messages != null) {
+                this.messages.addAll(messages);
+            }
+            return this;
+        }
+
         public PromptBuilder options(ChatOptions options) {
             this.options = options;
             return this;

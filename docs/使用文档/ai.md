@@ -70,6 +70,13 @@ public class AiController {
 | `summer.ai.timeout-seconds` | 否 | `60` | 连接与读取超时（秒） |
 | `summer.ai.temperature` | 否 | `0.7` | 采样温度，全局默认，可被单次 `ChatOptions` 覆盖 |
 | `summer.ai.max-tokens` | 否 | `2048` | 最大生成 token 数，可被单次 `ChatOptions` 覆盖 |
+| `summer.ai.retry.max-attempts` | 否 | `1` | 最大重试次数（>1 启用重试，包装为 `ResilientChatModel`） |
+| `summer.ai.retry.initial-backoff-millis` | 否 | `500` | 首次退避毫秒 |
+| `summer.ai.retry.multiplier` | 否 | `2.0` | 退避倍率（指数退避） |
+| `summer.ai.retry.max-backoff-millis` | 否 | `20000` | 退避上限毫秒 |
+| `summer.ai.rate-limit.permits-per-second` | 否 | `0` | 令牌桶限流速率（>0 启用，0 禁用） |
+| `summer.ai.circuit-breaker.failure-threshold` | 否 | `0` | 熔断失败阈值（>0 启用熔断） |
+| `summer.ai.circuit-breaker.wait-millis` | 否 | `30000` | 熔断开启后冷却毫秒 |
 
 ## 厂商档案
 
@@ -162,6 +169,108 @@ public class ChatSession {
 ```
 
 > 注意：`PromptBuilder` 每次调用重置，本身不持有跨调用状态，多轮上下文需由调用方维护消息列表。
+## 扩展能力
+
+summer-ai 在对话核心之外提供向量库、工具调用、RAG、多模态、记忆与弹性六大扩展能力，均为纯 JDK 实现，零第三方依赖，可按需组合：
+
+```
+ResilientChatModel ──> ToolCallingChatModel ──> ChatClient ──> MemoryChatClient / RagClient
+        (弹性)              (工具循环)          (fluent 门面)        (记忆 / RAG)
+```
+
+### Embedding 与向量库
+
+`EmbeddingModel` 抽象向量化，`OpenAiCompatibleEmbeddingModel` 直连各厂商 `/embeddings` 端点；`VectorStore` 抽象存储与检索，`InMemoryVectorStore` 提供余弦相似度内存实现：
+
+```java
+EmbeddingModel embedding = new OpenAiCompatibleEmbeddingModel(
+        "https://api.deepseek.com", "sk-xxx", "text-embedding", Duration.ofSeconds(60));
+
+VectorStore store = new InMemoryVectorStore(embedding);
+store.add(List.of(Document.of("summer 是一个 Java 微服务框架")));
+List<RetrievalResult> hits = store.similaritySearch(
+        SearchRequest.builder().query("Java 框架").topK(3).similarityThreshold(0.3).build());
+```
+
+- `Document` 含 `id`/`content`/`metadata`，`id` 缺省时自动生成 UUID。
+- `SearchRequest` 支持 `topK` 与 `similarityThreshold`（过滤低相关结果）。
+- `SimilarityUtil.cosine(a, b)` 提供余弦相似度计算。
+
+### Function Calling / 工具调用
+
+`ToolCallingChatModel` 在任意 `ChatModel` 之上叠加工具循环：注入工具定义 -> 模型返回 `tool_calls` -> 执行工具 -> 回填结果 -> 继续，直到给出最终回复或达到最大轮数：
+
+```java
+Tool weather = new Tool("getWeather", "查询城市天气",
+        List.of(ToolParameter.string("city", "城市名称")),
+        args -> Map.of("city", args.get("city"), "weather", "晴"));
+
+ChatModel model = new ToolCallingChatModel(chatModel, List.of(weather));
+String answer = ChatClient.create(model).prompt().user("北京天气").call().content();
+```
+
+- `Tool` 由 `ToolParameter` 自动生成 JSON Schema，执行体接收参数 `Map`、返回任意对象（自动序列化为 JSON）。
+- 同步 `call` 执行完整工具循环；流式 `stream` 直接透传底层模型。
+- 未知工具返回错误 JSON，超过最大轮数（默认 10）抛 `AiException`。
+
+### RAG 检索增强与文档分块
+
+`Document`/`DocumentReader`/`TextSplitter`/`TokenTextSplitter` 负责加载与分块；`Retriever`/`VectorStoreRetriever` 负责检索；`RetrievalAugmentationAdvisor` 将检索到的资料注入提问；`RagClient` 一步完成「检索 + 增强 + 调用」：
+
+```java
+VectorStore store = new InMemoryVectorStore(embedding);
+List<Document> docs = new TokenTextSplitter(300, 30).split(longDocument);
+store.add(docs);
+
+RetrievalAugmentationAdvisor advisor = new RetrievalAugmentationAdvisor(new VectorStoreRetriever(store, 3));
+RagClient rag = new RagClient(ChatClient.create(chatModel), advisor);
+String answer = rag.ask("你是助手", "summer 如何使用 AOP").content();
+```
+
+- `TokenTextSplitter` 兼顾中英文近似 token 切分并带 overlap，切块取原始子串、保留空白与标点。
+- `RetrievalAugmentationAdvisor.augment(Prompt)` 在用户提问前插入「参考资料」system 消息；无结果时不改写。
+
+### 多模态消息
+
+`UserMessage` 支持 `ContentPart` 内容片段：`TextPart`（文本）、`ImageUrlPart`（图片，支持 http 链接或 base64 数据 URI）、`InputAudioPart`（语音，base64 + wav/mp3）：
+
+```java
+UserMessage msg = UserMessage.of(
+        new TextPart("这张图里是什么？"),
+        new ImageUrlPart("https://example.com/cat.png", "high"));
+
+ChatResponse resp = chatClient.prompt().messages(List.of(msg)).call();
+```
+
+- 纯文本用户消息仍以字符串 `content` 发送，保持原有请求格式不变。
+- 多片段时序列化为 OpenAI `content` 数组；assistant 消息可携带 `tool_calls`，`ToolMessage` 承载工具结果。
+
+### 对话记忆与会话管理
+
+`ChatMemory` 抽象按会话 id 维护历史，`MessageWindowChatMemory` 保留最近 N 条且始终保留首条 system 消息；`MemoryChatClient` 自动载入/回存历史：
+
+```java
+ChatMemory memory = new MessageWindowChatMemory(20);
+MemoryChatClient client = new MemoryChatClient(ChatClient.create(chatModel), memory, "user-1");
+String r1 = client.call("我叫小明").content();
+String r2 = client.call("我叫什么").content();  // 可记忆上一轮
+client.clear();  // 清空会话
+```
+
+### 重试、限流与超时熔断
+
+`ResilientChatModel` 在底层模型之上叠加 `RetryPolicy`（指数退避重试）、`RateLimiter`（令牌桶限流）、`CircuitBreaker`（CLOSED/OPEN/HALF_OPEN 熔断），三者均可选：
+
+```java
+ChatModel resilient = new ResilientChatModel(
+        chatModel,
+        new RateLimiter(5),                                   // 5 次/秒
+        RetryPolicy.builder().maxAttempts(3).build(),        // 最多 3 次
+        new CircuitBreaker(5, Duration.ofSeconds(30)));      // 5 次失败熔断 30s
+```
+
+- 配置 `summer.ai.retry.*`/`summer.ai.rate-limit.*`/`summer.ai.circuit-breaker.*` 后，`AiAutoConfiguration` 自动将 `ChatModel` 包装为 `ResilientChatModel`；不配置则行为与原来完全一致。
+- 熔断开启时抛 `CircuitBreakerOpenException` 快速失败，避免持续冲击下游；流式调用仅做限流与熔断许可、不重试。
 
 ## 底层 ChatModel 接口
 
