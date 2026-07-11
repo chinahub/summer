@@ -7,6 +7,7 @@ import cn.jiebaba.summer.web.bind.HandlerMethodAccessChecker;
 import cn.jiebaba.summer.web.convert.JsonMessageConverter;
 import cn.jiebaba.summer.web.convert.MessageConverter;
 import cn.jiebaba.summer.web.filter.Filter;
+import cn.jiebaba.summer.web.filter.FilterChainSelector;
 import cn.jiebaba.summer.web.http.HttpStatus;
 import cn.jiebaba.summer.web.http.MediaType;
 import cn.jiebaba.summer.web.http.RawHttpRequest;
@@ -69,6 +70,7 @@ public final class SummerWebServer {
     private final ApplicationContext context;
     private WebSocketRegistry webSocketRegistry;
     private List<Filter> securityFilters = List.of();
+    private FilterChainSelector filterChainSelector;
     private HandlerMethodAccessChecker accessChecker;
 
     private ServerSocketChannel serverChannel;
@@ -86,16 +88,26 @@ public final class SummerWebServer {
     public SummerWebServer(ApplicationContext context, Router router, ExceptionHandlerRegistry exceptions,
                            MessageConverter converter, WebServerProperties properties,
                            List<Filter> securityFilters, HandlerMethodAccessChecker accessChecker) {
+        this(context, router, exceptions, converter, properties, securityFilters, null, accessChecker);
+    }
+
+    /** 以按请求选择器装配，支持多 {@code SecurityFilterChain} 分发。 */
+    public SummerWebServer(ApplicationContext context, Router router, ExceptionHandlerRegistry exceptions,
+                           MessageConverter converter, WebServerProperties properties,
+                           List<Filter> securityFilters, FilterChainSelector filterChainSelector,
+                           HandlerMethodAccessChecker accessChecker) {
         this.context = context;
         this.router = router;
         this.exceptions = exceptions;
         this.converter = converter;
         this.properties = properties;
         this.securityFilters = securityFilters == null ? List.of() : securityFilters;
+        this.filterChainSelector = filterChainSelector;
         this.accessChecker = accessChecker;
     }
 
     public void setSecurityFilters(List<Filter> filters) { this.securityFilters = filters == null ? List.of() : filters; }
+    public void setFilterChainSelector(FilterChainSelector selector) { this.filterChainSelector = selector; }
     public void setAccessChecker(HandlerMethodAccessChecker checker) { this.accessChecker = checker; }
 
     /**
@@ -128,14 +140,16 @@ public final class SummerWebServer {
         });
         HandlerMethodInvoker invoker = new HandlerMethodInvoker(context, converter);
         RequestDispatcher dispatcher = new RequestDispatcher(router, invoker, converter, exceptions,
-                properties.contextPath(), securityFilters, accessChecker);
+                properties.contextPath(), securityFilters, filterChainSelector, accessChecker);
 
         acceptThread = Thread.ofPlatform().name("summer-accept").daemon(false).start(() -> acceptLoop(dispatcher));
 
         LOG.info("summer web server started on " + properties.host() + ":" + port()
                 + " (virtual threads, " + router.routes().size() + " routes)"
                 + (properties.contextPath().isEmpty() ? "" : " context-path=" + properties.contextPath())
-                + (securityFilters.isEmpty() ? "" : " security-filters=" + securityFilters.size())
+                + (filterChainSelector != null
+                        ? " security=multi-chain"
+                        : (securityFilters.isEmpty() ? "" : " security-filters=" + securityFilters.size()))
                 + (sslSocketFactory != null ? " TLS=enabled" : ""));
     }
 

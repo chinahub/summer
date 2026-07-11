@@ -27,7 +27,31 @@ public final class JwtDecoder {
     /**
      * 解码并校验 JWT：拆分三段、校验签名与过期时间，返回声明集合。
      */
+    /**
+     * 解码并校验 JWT：仅校验签名与过期时间，不校验令牌类型。
+     * 保留此重载以兼容既有调用方与单元测试。
+     */
     public JwtClaims decode(String token) throws JwtException {
+        return decode(token, null);
+    }
+
+    /**
+     * 解码并校验 JWT：除签名与过期时间外，额外校验 typ claim 是否等于 expectedType（非 null 时）。
+     * 用于区分访问令牌与刷新令牌，防止刷新令牌被当作访问令牌使用（或反之）。
+     */
+    public JwtClaims decode(String token, String expectedType) throws JwtException {
+        JwtClaims claims = decodeRaw(token);
+        if (expectedType != null) {
+            Object typ = claims.get("typ");
+            if (typ == null || !expectedType.equals(typ.toString())) {
+                throw new JwtException("JWT type mismatch: expected " + expectedType);
+            }
+        }
+        return claims;
+    }
+
+    /** 解码并校验签名与过期时间，返回声明集合，不校验令牌类型。 */
+    private JwtClaims decodeRaw(String token) throws JwtException {
         if (token == null || token.isBlank()) {
             throw new JwtException("Missing JWT token");
         }

@@ -39,6 +39,12 @@
             <artifactId>summer-ai</artifactId>
             <version>${summer.version}</version>
         </dependency>
+        <!-- summer-office OCR 冒烟测试：FFM 调用 onnxruntime，PP-OCRv6 流水线 -->
+        <dependency>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-office</artifactId>
+            <version>${summer.version}</version>
+        </dependency>
         <!-- SmokeTest 依赖 sample 的 entity/mapper/service -->
         <dependency>
             <groupId>cn.jiebaba.summer</groupId>

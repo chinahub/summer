@@ -73,6 +73,23 @@ public class SecuritySmokeTest {
             // 9. 以 admin 访问 /admin/info -> 200
             expect(200, "admin as admin", request(port, "GET", "/admin/info", null, adminToken));
 
+            // 刷新令牌：用 refreshToken 换取新的访问令牌
+            String adminRefresh = extract(login.body, "\"refreshToken\":\"([^\"]+)\"");
+            check(adminRefresh != null, "admin refresh token present");
+            Response refreshResp = request(port, "POST", "/refresh",
+                    "{\"refreshToken\":\"" + adminRefresh + "\"}", null);
+            expect(200, "refresh token ok", refreshResp);
+            String refreshedAccess = extract(refreshResp.body, "\"accessToken\":\"([^\"]+)\"");
+            check(refreshedAccess != null, "refreshed access token present");
+            // 用刷新后的 access 令牌访问 /me 应成功
+            expect(200, "me with refreshed token", request(port, "GET", "/me", null, refreshedAccess));
+            // access 令牌不能当作 refreshToken 使用 -> 401
+            expect(401, "access token cannot refresh", request(port, "POST", "/refresh",
+                    "{\"refreshToken\":\"" + adminToken + "\"}", null));
+            // 篡改的 refreshToken -> 401
+            expect(401, "tampered refresh token", request(port, "POST", "/refresh",
+                    "{\"refreshToken\":\"" + adminRefresh + "x\"}", null));
+
             // 10. 以 user 访问 /secret -> 403（方法级 @PreAuthorize，URL permitAll）
             expect(403, "secret as user", request(port, "GET", "/secret", null, userToken));
 

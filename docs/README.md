@@ -36,6 +36,7 @@ summer-parent (pom)
 ├── summer-data            ORM：BaseMapper/Wrapper/分页/IService/事务/多方言/多数据源，纯 JDBC，零第三方依赖
 ├── summer-security        安全模块：JWT 无状态认证、BCrypt、URL/方法级授权，纯 JDK，零第三方依赖
 ├── summer-ai              大模型对话抽象：ChatModel/ChatClient，OpenAI 兼容（DeepSeek/GLM/MiniMax），同步与 SSE 流式，纯 JDK
+├── summer-office          文档处理：解析与生成 xlsx/docx/pdf/xml/csv/md，纯 JDK 实现 csv/md/xml，xlsx/docx/pdf 按 classpath 探测激活（POI/PDFBox）
 ├── summer-boot            SummerApplication.run() 启动器/自动配置/数据源/Mapper装配/关闭钩子
 ├── summer-boot-loader     可执行 jar 启动器 JarLauncher（java -jar 入口），由插件内置打包
 ├── summer-pack-maven-plugin  mvn package 自动产出 BOOT-INF 可执行 jar

@@ -9,6 +9,7 @@ summer-parent (pom)
 ├── summer-data            ORM：BaseMapper/Wrapper/分页/IService/事务/多方言，纯 JDBC，零第三方依赖
 ├── summer-security        安全模块：JWT 无状态认证 / BCrypt / URL·方法级授权，纯 JDK，零第三方依赖
 ├── summer-ai              大模型对话抽象：ChatModel/ChatClient，OpenAI 兼容（DeepSeek/GLM/MiniMax），同步与 SSE 流式，纯 JDK
+├── summer-office          文档处理：解析与生成 xlsx/docx/pdf/xml/csv/md，纯 JDK 实现 csv/md/xml，xlsx/docx/pdf 按 classpath 探测激活第三方实现（POI/PDFBox）
 ├── summer-boot            SummerApplication.run() 启动器 / 自动配置 / 数据源 / Mapper装配 / 关闭钩子
 ├── summer-boot-loader     可执行 jar 启动器 JarLauncher（java -jar 入口，BOOT-INF 解压+类路径重建），由 summer-pack-maven-plugin 内置打包
 ├── summer-pack-maven-plugin  repackage goal：mvn package 自动产出 BOOT-INF 可执行 jar
@@ -22,6 +23,7 @@ summer-parent (pom)
 summer-sample ──depends──> summer-boot ──depends──> summer-data ──depends──> summer-core
                                 └──depends──> summer-web  ──depends──> summer-core
                                 └──depends──> summer-ai   ──depends──> summer-core  （optional，按 classpath 探测条件激活）
+                                └──depends──> summer-office ──depends──> summer-core  （optional，按 classpath 探测条件激活）
 summer-pack-maven-plugin ──depends──> summer-boot-loader  （可执行 jar 启动器，插件内置）
 build-test ──depends──> summer-sample / summer-boot / summer-data / summer-core  （集中式测试）
 ```
@@ -30,7 +32,7 @@ build-test ──depends──> summer-sample / summer-boot / summer-data / summ
 - `summer-web` 依赖 `summer-core`（不再依赖 `jdk.httpserver`，改用 `java.net`）；
 - `summer-data` 依赖 `summer-core`（用 JDK 的 `java.sql`）；
 - `summer-ai` 依赖 `summer-core`（用其 `JsonUtil`），不依赖 summer-boot；`summer-boot` 以 `optional` 引入并在启动时按 classpath 探测条件注册 `AiAutoConfiguration`；
-- `summer-boot` 组装 core + web + data + security + ai（后两者 optional），提供启动入口；`summer-boot-loader` 提供可执行 jar 启动器，作为 `summer-pack-maven-plugin` 的依赖被内置打包，应用项目无需单独声明；
+- `summer-boot` 组装 core + web + data + security + ai + office（后四者 optional），提供启动入口；`summer-boot-loader` 提供可执行 jar 启动器，作为 `summer-pack-maven-plugin` 的依赖被内置打包，应用项目无需单独声明；
 - `summer-sample` 是使用者，仅需依赖 boot，打包由 `summer-pack-maven-plugin` 内置 loader，业务包无需额外声明（classpath 模式，反射不受强封装限制）。
 
 ### 为何 summer-boot-loader 独立成模块
@@ -172,6 +174,22 @@ private Map<String, Object> config;
 - **OpenAI 兼容**：DeepSeek、GLM（智谱）、MiniMax 仅 base-url 与模型名不同，请求/响应/SSE 流式协议一致；
 - **思维链与用量**：解析 `reasoning_content`（思考模型特有）与 `usage`（含 `prompt_cache_hit_tokens`），详见 [AI 对话](../使用文档/ai.md)。
 
+## summer-office 职责
+
+| 包 | 内容 |
+| --- | --- |
+| `cn.jiebaba.summer.office` | `Office` 门面（`create()` 统一入口）、`OfficeReader`/`OfficeWriter`（文本类）、`TableReader`/`TableWriter`（表格类）、`TableData`、`OfficeFormat`、`OfficeException` |
+| `cn.jiebaba.summer.office.csv` | `CsvReader`/`CsvWriter`：RFC 4180 兼容，支持引号转义、自定义分隔符、可选 BOM |
+| `cn.jiebaba.summer.office.md` | `MarkdownReader`/`MarkdownWriter`：UTF-8 纯文本读写 |
+| `cn.jiebaba.summer.office.xml` | `XmlReader`/`XmlWriter`：StAX 流式，禁用外部实体与 DTD（防 XXE） |
+| `cn.jiebaba.summer.office.excel` | `ExcelReader`/`ExcelWriter`：FastExcel 引擎（SAX 流式低内存）；`Excel` fluent 门面支持 TableData 与 Bean 双模式 |
+| `cn.jiebaba.summer.office.docx` | `DocxReader`/`DocxWriter`：Apache POI XWPF（FastExcel 传递引入） |
+| `cn.jiebaba.summer.office.pdf` | `PdfReader`/`PdfWriter`：iText 7（`PdfTextExtractor` 提取文本、`Document`+`Paragraph` 自动分页） |
+
+- **纯 JDK**：csv/md/xml 零第三方依赖，与框架核心原则一致；
+- **第三方按需激活**：xlsx（Apache POI XSSF）、docx（POI XWPF）、pdf（Apache PDFBox）以 `optional` 引入，运行期按 classpath 探测条件激活；
+- **许可证说明**：xlsx/docx 使用 Apache-2.0 兼容库（FastExcel/POI）；pdf 使用 iText（AGPL-3.0 开源），使用者须遵守 AGPL 或替换为 Apache PDFBox（Apache-2.0）；
+- **独立可用**：summer-office 仅依赖 summer-core，可脱离 summer-boot 单独使用（与 summer-ai 同构）。
 ## summer-boot 职责
 
 - `SummerApplication.run(Class<?> primarySource, String[] args)`：
@@ -185,6 +203,7 @@ private Map<String, Object> config;
   8. 注册 JVM 关闭钩子：停定时任务 + 停服务器 + `context.close()`。
 - `DataAutoConfiguration`（`@Configuration`）：配置了 `summer.datasource.url` 时创建 `DataSource/SqlExecutor/Dialect` + 事务组件，并注册 Mapper 代理；`Dialect` 由 `Dialect.detect(driver, url)` 自动映射（按 JDBC 驱动类名，如 `org.postgresql.Driver`→PostgreSQL；驱动为空则按 URL 推断），无需配置 `dialect`，`SqlExecutor` 注入该方言供读写时透传 TypeHandler。
 - `AiAutoConfiguration`（`@Configuration`，opt-in）：当 classpath 存在 `cn.jiebaba.summer.ai.chat.ChatModel` 时注册，按 `summer.ai.*` 装配 `AiProperties`/`ChatModel`/`ChatClient`；不在 classpath 时永不被加载，对未引入 summer-ai 的应用零影响。详见 [AI 对话](../使用文档/ai.md)。
+- `OfficeAutoConfiguration`（`@Configuration`，opt-in）：当 classpath 存在 `cn.jiebaba.summer.office.Office` 时注册，装配 `Office` 门面 Bean；不在 classpath 时永不被加载。详见 [开发路线图](../开发文档/roadmap.md) 第九阶段。
 
 ## 运行时模型
 

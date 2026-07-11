@@ -15,6 +15,9 @@ summer:
     jwt:
       secret: your-256-bit-secret-here-must-be-32-bytes!   # 至少 32 字节
       access-token-ttl: 3600           # token 有效期（秒）
+      refresh-token-ttl: 604800        # 刷新令牌有效期（秒），默认 7 天
+      refresh-url: /refresh            # 刷新端点
+      rotate-refresh-token: true       # 刷新时是否轮转刷新令牌（滑动过期）
       login-url: /login                # 登录端点
     password:
       bcrypt:
@@ -46,6 +49,8 @@ Content-Type: application/json
   "accessToken": "eyJhbGci...",
   "tokenType": "Bearer",
   "expiresIn": 3600,
+  "refreshToken": "eyJhbGci...",
+  "refreshExpiresIn": 604800,
   "username": "admin",
   "authorities": ["ROLE_ADMIN","ROLE_USER"]
 }
@@ -57,6 +62,35 @@ Content-Type: application/json
 GET /me
 Authorization: Bearer eyJhbGci...
 ```
+
+### 4. 刷新令牌（Refresh Token）
+
+访问令牌有效期较短（默认 1 小时），过期后可凭刷新令牌换取新的访问令牌，无需重新输入用户名密码。
+登录时已返回 `refreshToken`，调用刷新端点：
+
+```
+POST /refresh
+Content-Type: application/json
+
+{"refreshToken":"eyJhbGci..."}
+```
+
+响应（`rotate-refresh-token=true` 时同时签发新的刷新令牌，实现滑动过期）：
+
+```json
+{
+  "accessToken": "eyJhbGci...",
+  "tokenType": "Bearer",
+  "expiresIn": 3600,
+  "refreshToken": "eyJhbGci...",
+  "refreshExpiresIn": 604800,
+  "username": "admin",
+  "authorities": ["ROLE_ADMIN","ROLE_USER"]
+}
+```
+
+> 注意：当前为纯无状态实现，刷新令牌在其过期前仍然有效（无法服务端吊销）。
+> access 令牌不能当作 refresh 令牌使用（反之亦然），令牌类型由 `typ` claim 区分并在解码时校验。
 
 ## 授权配置
 
@@ -131,7 +165,9 @@ public class AdminController {
 
 方法注解优先于类注解。
 
-注意：方法级 @PreAuthorize 仅作用于 Web 处理器方法（Controller 方法）。服务层方法级安全需先增强字节码代理以复制注解，计划在后续版本支持。
+> **范围说明**：方法级 `@PreAuthorize`/`@PermitAll`/`@DenyAll` 仅作用于 Web 处理器方法（Controller 方法），由调度器在路由匹配后强制。
+
+**服务层方法级安全暂不实现**。控制器层鉴权已覆盖绝大多数场景；服务层方法安全主要用于“纵深防御”（service 被 HTTP 之外的入口如定时任务、消息监听器调用时补一道鉴权），对轻量框架投入产出比偏低，故暂缓。若将来确有需求，将走拦截器路线（镜像 `@Transactional` 的 `TransactionInterceptor`）而非增强字节码代理复制注解，因为拦截器经 `JoinPoint.getMethod()` 已可直接读取目标方法 `@PreAuthorize`，无需改字节码。详见 [开发路线图](../开发文档/roadmap.md)。
 
 ## 注入认证信息
 

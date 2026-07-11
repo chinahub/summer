@@ -9,6 +9,7 @@ import cn.jiebaba.summer.web.bind.HandlerMethodInvoker;
 import cn.jiebaba.summer.web.convert.MessageConverter;
 import cn.jiebaba.summer.web.filter.Filter;
 import cn.jiebaba.summer.web.filter.FilterChain;
+import cn.jiebaba.summer.web.filter.FilterChainSelector;
 import cn.jiebaba.summer.web.http.HttpMethod;
 import cn.jiebaba.summer.web.http.HttpStatus;
 import cn.jiebaba.summer.web.validation.ValidationException;
@@ -37,32 +38,48 @@ public final class RequestDispatcher {
     private final ExceptionHandlerRegistry exceptions;
     private final String contextPath;
     private final List<Filter> securityFilters;
+    private final FilterChainSelector filterChainSelector;
     private final HandlerMethodAccessChecker accessChecker;
 
     /** 向后兼容的构造器：不含安全过滤器与访问检查器。 */
     public RequestDispatcher(Router router, HandlerMethodInvoker invoker, MessageConverter converter,
                              ExceptionHandlerRegistry exceptions, String contextPath) {
-        this(router, invoker, converter, exceptions, contextPath, List.of(), null);
+        this(router, invoker, converter, exceptions, contextPath, List.of(), null, null);
     }
 
+    /** 向后兼容：以扁平过滤器列表装配（所有请求共用同一组过滤器）。 */
     public RequestDispatcher(Router router, HandlerMethodInvoker invoker, MessageConverter converter,
                              ExceptionHandlerRegistry exceptions, String contextPath,
                              List<Filter> securityFilters, HandlerMethodAccessChecker accessChecker) {
+        this(router, invoker, converter, exceptions, contextPath, securityFilters, null, accessChecker);
+    }
+
+    /**
+     * 以按请求选择器装配：{@code filterChainSelector} 优先使用，为 {@code null} 时回退到
+     * {@code securityFilters} 扁平列表。支持多条 {@code SecurityFilterChain} 按请求分发。
+     */
+    public RequestDispatcher(Router router, HandlerMethodInvoker invoker, MessageConverter converter,
+                             ExceptionHandlerRegistry exceptions, String contextPath,
+                             List<Filter> securityFilters, FilterChainSelector filterChainSelector,
+                             HandlerMethodAccessChecker accessChecker) {
         this.router = router;
         this.invoker = invoker;
         this.converter = converter;
         this.exceptions = exceptions;
         this.contextPath = contextPath == null ? "" : contextPath;
         this.securityFilters = securityFilters == null ? List.of() : securityFilters;
+        this.filterChainSelector = filterChainSelector;
         this.accessChecker = accessChecker;
     }
 
     public void dispatch(WebRequest request, WebResponse response) {
         try {
-            if (securityFilters.isEmpty()) {
+            List<Filter> filters = filterChainSelector != null
+                    ? filterChainSelector.selectFilters(request) : securityFilters;
+            if (filters == null || filters.isEmpty()) {
                 dispatchInternal(request, response);
             } else {
-                FilterChain chain = new FilterChain(securityFilters, this::dispatchInternal);
+                FilterChain chain = new FilterChain(filters, this::dispatchInternal);
                 chain.doFilter(request, response);
             }
         } catch (Throwable t) {

@@ -20,13 +20,20 @@ import cn.jiebaba.summer.boot.data.DataAutoConfiguration;
 import cn.jiebaba.summer.boot.security.SecurityAutoConfiguration;
 import cn.jiebaba.summer.boot.web.WebAutoConfiguration;
 import cn.jiebaba.summer.boot.ai.AiAutoConfiguration;
+import cn.jiebaba.summer.boot.office.OfficeAutoConfiguration;
+import cn.jiebaba.summer.boot.ocr.OcrAutoConfiguration;
 import cn.jiebaba.summer.boot.data.MapperRegistrar;
 import cn.jiebaba.summer.core.context.BeanDefinition;
 import cn.jiebaba.summer.web.support.WebRouteRegistrar;
 import cn.jiebaba.summer.web.bind.HandlerMethodAccessChecker;
 import cn.jiebaba.summer.web.filter.Filter;
+import cn.jiebaba.summer.web.filter.FilterChainSelector;
 import java.util.List;
+import cn.jiebaba.summer.security.authentication.AuthenticationManager;
+import cn.jiebaba.summer.security.jwt.JwtDecoder;
+import cn.jiebaba.summer.security.jwt.JwtEncoder;
 import cn.jiebaba.summer.security.web.SecurityFilterChain;
+import cn.jiebaba.summer.security.web.csrf.CsrfProperties;
 import cn.jiebaba.summer.web.websocket.WebSocketRegistry;
 
 import java.util.ArrayList;
@@ -76,10 +83,14 @@ public final class SummerApplication {
         ExceptionHandlerRegistry exceptions = registration.exceptionHandlers();
 
         MessageConverter converter = resolveConverter(context);
-        List<Filter> filters = resolveFilters(context);
+        List<Filter> webFilters = new ArrayList<>(context.getBeansOfType(Filter.class).values());
+        List<SecurityFilterChain> securityChains = resolveSecurityChains(context);
         HandlerMethodAccessChecker accessChecker = resolveAccessChecker(context);
         SummerWebServer server = new SummerWebServer(context, router, exceptions, converter,
-                WebServerProperties.from(environment), filters, accessChecker);
+                WebServerProperties.from(environment), webFilters, accessChecker);
+        if (!securityChains.isEmpty()) {
+            server.setFilterChainSelector(buildFilterChainSelector(webFilters, securityChains));
+        }
         WebSocketRegistry wsRegistry = new WebSocketRegistry();
         wsRegistry.scan(context);
         server.setWebSocketRegistry(wsRegistry);
@@ -117,6 +128,14 @@ public final class SummerApplication {
         // summer-ai 不在时 AiAutoConfiguration 永不被加载，故不会 NoClassDefFoundError。
         if (isClassPresent("cn.jiebaba.summer.ai.chat.ChatModel")) {
             configs.add(AiAutoConfiguration.class);
+        }
+        // 可选模块 summer-office：仅当其在 classpath 时注册自动配置。
+        if (isClassPresent("cn.jiebaba.summer.office.Office")) {
+            configs.add(OfficeAutoConfiguration.class);
+        }
+        // 可选模块 summer-office OCR：仅当 OCR 类在 classpath 时注册自动配置
+        if (isClassPresent("cn.jiebaba.summer.office.ocr.Ocr")) {
+            configs.add(OcrAutoConfiguration.class);
         }
         for (Class<?> config : configs) {
             BeanDefinition def = new BeanDefinition(
@@ -232,19 +251,58 @@ public final class SummerApplication {
     }
 
     /**
-     * 解析路由前置过滤器链。先收集 Web 层 Filter Bean（如 CorsFilter），
-     * 再追加安全过滤器链中的过滤器，使 CORS 预检先于认证执行。
-     * 安全模块未启用时仅含 Web 层过滤器。
+     * 解析安全过滤器链：收集上下文中所有用户定义的 {@link SecurityFilterChain} Bean，
+     * 按 {@code order()} 升序（稳定）排序后返回；若用户未定义任何链，则依据
+     * {@code summer.security.*} / {@code summer.security.csrf.*} 构建默认链。
+     *
+     * @param context 应用上下文
+     * @return 有序的安全过滤器链列表（可能为空，表示无安全配置）
      */
-    private static List<Filter> resolveFilters(ApplicationContext context) {
-        List<Filter> filters = new ArrayList<>(context.getBeansOfType(Filter.class).values());
-        try {
-            SecurityFilterChain chain = context.getBean(SecurityFilterChain.class);
-            filters.addAll(chain.filters());
-        } catch (Exception e) {
-            // 安全模块未启用，过滤器链仅含 Web 层过滤器
+    private static List<SecurityFilterChain> resolveSecurityChains(ApplicationContext context) {
+        Map<String, SecurityFilterChain> beans = context.getBeansOfType(SecurityFilterChain.class);
+        if (!beans.isEmpty()) {
+            List<SecurityFilterChain> chains = new ArrayList<>(beans.values());
+            chains.sort(Comparator.comparingInt(SecurityFilterChain::order));
+            return chains;
         }
-        return filters;
+        // 无用户链：构建默认链（依据 summer.security.* / summer.security.csrf.* 配置）
+        try {
+            Environment env = context.getEnvironment();
+            CsrfProperties csrf = context.getBean(CsrfProperties.class);
+            AuthenticationManager auth = context.getBean(AuthenticationManager.class);
+            JwtEncoder encoder = context.getBean(JwtEncoder.class);
+            JwtDecoder decoder = context.getBean(JwtDecoder.class);
+            SecurityFilterChain chain =
+                    SecurityAutoConfiguration.buildDefaultSecurityFilterChain(env, csrf, auth, encoder, decoder);
+            return chain.isEnabled() ? List.of(chain) : List.of();
+        } catch (Exception e) {
+            // 缺少必要组件（如安全模块未启用）：视为无安全配置
+            return List.of();
+        }
+    }
+
+    /**
+     * 构建按请求分发多链的选择器：对每个请求先应用 Web 层过滤器（如 CORS），
+     * 再选取第一条 {@link SecurityFilterChain#matches 匹配} 的链的过滤器；若无链匹配则仅 Web 层过滤器。
+     *
+     * @param webFilters Web 层过滤器（所有请求恒定应用）
+     * @param chains     按 order 升序的安全过滤器链
+     * @return 按请求选择过滤器列表的选择器
+     */
+    private static FilterChainSelector buildFilterChainSelector(List<Filter> webFilters,
+                                                                List<SecurityFilterChain> chains) {
+        List<Filter> base = List.copyOf(webFilters);
+        List<SecurityFilterChain> ordered = List.copyOf(chains);
+        return request -> {
+            List<Filter> filters = new ArrayList<>(base);
+            for (SecurityFilterChain chain : ordered) {
+                if (chain.matches(request)) {
+                    filters.addAll(chain.filters());
+                    return filters;
+                }
+            }
+            return filters;
+        };
     }
 
     private static HandlerMethodAccessChecker resolveAccessChecker(ApplicationContext context) {

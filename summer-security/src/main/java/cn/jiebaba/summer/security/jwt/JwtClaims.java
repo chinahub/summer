@@ -13,6 +13,11 @@ import cn.jiebaba.summer.security.core.GrantedAuthority;
  */
 public final class JwtClaims {
 
+    /** 访问令牌类型，写入 typ claim。 */
+    public static final String TYPE_ACCESS = "access";
+    /** 刷新令牌类型，写入 typ claim。 */
+    public static final String TYPE_REFRESH = "refresh";
+
     private final Map<String, Object> claims;
 
     public JwtClaims(Map<String, Object> claims) {
@@ -44,6 +49,18 @@ public final class JwtClaims {
         return claims.get(name);
     }
 
+    /** 返回 typ claim（access / refresh），未设置时为 null。 */
+    public String getType() {
+        Object v = claims.get("typ");
+        return v == null ? null : v.toString();
+    }
+
+    /** 返回 jti claim（令牌唯一标识），未设置时为 null。 */
+    public String getId() {
+        Object v = claims.get("jti");
+        return v == null ? null : v.toString();
+    }
+
     public Map<String, Object> asMap() {
         return new LinkedHashMap<>(claims);
     }
@@ -62,6 +79,8 @@ public final class JwtClaims {
         public Builder subject(String subject) { claims.put("sub", subject); return this; }
         public Builder issuedAt(long epochSeconds) { claims.put("iat", epochSeconds); return this; }
         public Builder expiresAt(long epochSeconds) { claims.put("exp", epochSeconds); return this; }
+        public Builder type(String type) { claims.put("typ", type); return this; }
+        public Builder id(String id) { claims.put("jti", id); return this; }
         public Builder authorities(Collection<? extends GrantedAuthority> authorities) {
             claims.put("authorities", authorities.stream().map(GrantedAuthority::getAuthority).toList());
             return this;

@@ -16,6 +16,8 @@ import cn.jiebaba.summer.security.web.AuthenticationPrincipalArgumentResolver;
 import cn.jiebaba.summer.security.web.HttpSecurity;
 import cn.jiebaba.summer.security.web.MethodSecurityEnforcer;
 import cn.jiebaba.summer.security.web.SecurityFilterChain;
+import cn.jiebaba.summer.security.web.csrf.CookieCsrfTokenRepository;
+import cn.jiebaba.summer.security.web.csrf.CsrfProperties;
 import cn.jiebaba.summer.web.bind.HandlerMethodAccessChecker;
 import cn.jiebaba.summer.web.bind.HandlerMethodArgumentResolver;
 
@@ -92,37 +94,55 @@ public class SecurityAutoConfiguration {
         return new AuthenticationPrincipalArgumentResolver(userDetailsService);
     }
 
+    /** 绑定 summer.security.csrf.* 配置项为 CsrfProperties。 */
     @Bean
+    public CsrfProperties csrfProperties(Environment env) {
+        return CsrfProperties.from(env);
+    }
+
     /**
-     * 构建安全过滤器链。当 {@code summer.security.enabled=false} 时返回空过滤器链；
-     * 否则基于 JWT 配置登录地址与令牌有效期等组装过滤器链。
+     * 构建安全过滤器链。当 {@code summer.security.enabled} 与 {@code summer.security.csrf.enabled}
+     * 均为 false 时返回空过滤器链；否则分别按需装配 CSRF 与 JWT（登录/认证/授权）过滤器。
+     * CSRF 过滤器置于链首，先于认证执行。
      *
      * @param env                  环境配置
+     * @param csrfProperties       CSRF 配置
      * @param authenticationManager 认证管理器
      * @param jwtEncoder           JWT 编码器
      * @param jwtDecoder           JWT 解码器
      * @return 安全过滤器链
      */
-    public SecurityFilterChain securityFilterChain(Environment env,
+    public static SecurityFilterChain buildDefaultSecurityFilterChain(Environment env,
+                                                   CsrfProperties csrfProperties,
                                                    AuthenticationManager authenticationManager,
                                                    JwtEncoder jwtEncoder, JwtDecoder jwtDecoder) {
-        boolean enabled = env.getProperty("summer.security.enabled", Boolean.class, false);
-        if (!enabled) {
+        boolean securityEnabled = env.getProperty("summer.security.enabled", Boolean.class, false);
+        boolean csrfEnabled = csrfProperties.enabled();
+        if (!securityEnabled && !csrfEnabled) {
             return new SecurityFilterChain(List.of());
         }
-        long ttl = env.getProperty("summer.security.jwt.access-token-ttl", Long.class, 3600L);
-        String loginUrl = env.getProperty("summer.security.jwt.login-url", "/login");
-
-        HttpSecurity.AuthorizationSpec anyRequest = HttpSecurity.anyRequest().authenticated();
-        return HttpSecurity.security()
-                .authorize(anyRequest)
-                .jwt(jwt -> jwt
-                        .encoder(jwtEncoder)
-                        .decoder(jwtDecoder)
-                        .authenticationManager(authenticationManager)
-                        .loginUrl(loginUrl)
-                        .tokenTtl(ttl))
-                .build();
+        HttpSecurity http = HttpSecurity.security();
+        if (csrfEnabled) {
+            http.csrf(csrf -> csrf.repository(CookieCsrfTokenRepository.from(csrfProperties)));
+        }
+        if (securityEnabled) {
+            long ttl = env.getProperty("summer.security.jwt.access-token-ttl", Long.class, 3600L);
+            String loginUrl = env.getProperty("summer.security.jwt.login-url", "/login");
+            long refreshTtl = env.getProperty("summer.security.jwt.refresh-token-ttl", Long.class, 604800L);
+            String refreshUrl = env.getProperty("summer.security.jwt.refresh-url", "/refresh");
+            boolean rotate = env.getProperty("summer.security.jwt.rotate-refresh-token", Boolean.class, true);
+            http.authorize(HttpSecurity.anyRequest().authenticated())
+                    .jwt(jwt -> jwt
+                            .encoder(jwtEncoder)
+                            .decoder(jwtDecoder)
+                            .authenticationManager(authenticationManager)
+                            .loginUrl(loginUrl)
+                            .tokenTtl(ttl)
+                            .refreshTokenTtl(refreshTtl)
+                            .refreshUrl(refreshUrl)
+                            .rotateRefreshToken(rotate));
+        }
+        return http.build();
     }
 
     /** 共享的 HS256 密钥：仅计算一次，编码器与解码器共用。 */

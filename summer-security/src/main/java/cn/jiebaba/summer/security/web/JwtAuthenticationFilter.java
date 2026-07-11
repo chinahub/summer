@@ -43,7 +43,7 @@ public final class JwtAuthenticationFilter implements Filter {
         if (header != null && header.startsWith(BEARER)) {
             String token = header.substring(BEARER.length()).trim();
             try {
-                JwtClaims claims = decoder.decode(token);
+                JwtClaims claims = decoder.decode(token, JwtClaims.TYPE_ACCESS);
                 List<? extends GrantedAuthority> authorities = claims.getAuthorities().stream()
                         .map(SimpleGrantedAuthority::new)
                         .map(a -> (GrantedAuthority) a)

@@ -18,6 +18,7 @@
 | 参数校验 | 手写 Bean Validation 子集 | `@Valid` + 约束注解，递归校验，400 违规列表 |
 | 工具集（utils） | 纯 JDK 手写 | `StringUtil`/`DateUtil`/`JsonUtil`/`SecurityUtil`/`SummerUtil`，参考 commons-lang3 与 hutool，详见 [工具集](../使用文档/utils.md) |
 | 大模型对话（AI） | 纯 JDK `HttpURLConnection` + 自研 `ChatModel`/`ChatClient` | OpenAI 兼容协议直连 DeepSeek/GLM/MiniMax；阻塞式无 selector，支持 SSE 流式与思维链；不依赖 summer-boot，复用 summer-core `JsonUtil`，零第三方依赖，详见 [AI 对话](../使用文档/ai.md) |
+| 文档处理（Office） | 纯 JDK（csv/md/xml）+ FastExcel/iText（optional） | 自研 `OfficeReader`/`OfficeWriter`/`TableReader`/`TableWriter` 抽象；csv/md/xml 零第三方依赖；xlsx/docx 用 FastExcel（Apache-2.0），pdf 用 iText 7（AGPL-3.0），均 optional 按 classpath 探测条件激活；`Excel` fluent API 支持 TableData 与 Bean 双模式，详见 [路线图](roadmap.md) 第九阶段 |
 | 构建 | Maven（pom modelVersion 4.0.0） | 多模块；离线模式 |
 | 测试 | 进程内冒烟测试（`SmokeTest`/`OrmSmokeTest`/`DbSmokeTest`） | 沙箱限制进程间 loopback，用同进程自验证全链路 |
 
@@ -30,6 +31,7 @@
 - 唯一运行期外部依赖是 **JDBC 驱动**（由使用者自备，如 `postgresql`、`mysql-connector-j`）。
 - SLF4J 绑定为**可选**：`summer-core` 以 `optional` 引入 `slf4j-api`，仅当使用方显式引入时才由 SLF4J `ServiceLoader` 激活，框架自身运行期仍是零第三方依赖。
 - **summer-ai** 同样零第三方依赖：仅依赖 summer-core（用其 `JsonUtil`），不依赖 summer-boot；以 `optional` 被 summer-boot 引入，启动时按 classpath 探测条件激活（详见 [AI 对话](../使用文档/ai.md)）。
+- **summer-office** 核心零第三方依赖：csv/md/xml 纯 JDK 实现；xlsx/docx 以 `optional` 引入 FastExcel（Apache-2.0，传递引入 POI），pdf 以 `optional` 引入 iText 7（AGPL-3.0 开源），按 classpath 探测条件激活；商业的 Aspose.Words 不引入。
 
 ## 为什么不用 Servlet
 

@@ -30,13 +30,15 @@ public final class JwtLoginFilter implements Filter {
     private final AuthenticationManager authenticationManager;
     private final JwtEncoder jwtEncoder;
     private final long tokenTtlSeconds;
+    private final long refreshTokenTtlSeconds;
     private final String loginPath;
 
     public JwtLoginFilter(AuthenticationManager authenticationManager, JwtEncoder jwtEncoder,
-                          long tokenTtlSeconds, String loginPath) {
+                          long tokenTtlSeconds, long refreshTokenTtlSeconds, String loginPath) {
         this.authenticationManager = authenticationManager;
         this.jwtEncoder = jwtEncoder;
         this.tokenTtlSeconds = tokenTtlSeconds;
+        this.refreshTokenTtlSeconds = refreshTokenTtlSeconds;
         this.loginPath = loginPath;
     }
 
@@ -64,18 +66,30 @@ public final class JwtLoginFilter implements Filter {
             Authentication result = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(username, password));
             long now = System.currentTimeMillis() / 1000L;
-            JwtClaims claims = JwtClaims.builder()
+            JwtClaims accessClaims = JwtClaims.builder()
                     .subject(result.getName())
                     .issuedAt(now)
                     .expiresAt(now + tokenTtlSeconds)
+                    .type(JwtClaims.TYPE_ACCESS)
                     .authorities(result.getAuthorities())
                     .build();
-            String token = jwtEncoder.encode(claims);
+            String accessToken = jwtEncoder.encode(accessClaims);
+            JwtClaims refreshClaims = JwtClaims.builder()
+                    .subject(result.getName())
+                    .issuedAt(now)
+                    .expiresAt(now + refreshTokenTtlSeconds)
+                    .type(JwtClaims.TYPE_REFRESH)
+                    .id(java.util.UUID.randomUUID().toString())
+                    .authorities(result.getAuthorities())
+                    .build();
+            String refreshToken = jwtEncoder.encode(refreshClaims);
 
             Map<String, Object> resp = new LinkedHashMap<>();
-            resp.put("accessToken", token);
+            resp.put("accessToken", accessToken);
             resp.put("tokenType", "Bearer");
             resp.put("expiresIn", tokenTtlSeconds);
+            resp.put("refreshToken", refreshToken);
+            resp.put("refreshExpiresIn", refreshTokenTtlSeconds);
             resp.put("username", result.getName());
             resp.put("authorities", result.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList());
             response.status(HttpStatus.OK.code());

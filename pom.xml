@@ -28,6 +28,7 @@
         <module>summer-data</module>
         <module>summer-security</module>
         <module>summer-ai</module>
+        <module>summer-office</module>
         <module>summer-boot</module>
         <module>summer-boot-loader</module>
         <module>summer-pack-maven-plugin</module>

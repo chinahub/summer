@@ -63,4 +63,48 @@ public class SecurityJwtTest {
         Assert.assertThrows(JwtException.class, () -> decoder.decode("not.a.jwt"), "malformed token must fail");
         Assert.assertThrows(JwtException.class, () -> decoder.decode(""), "empty token must fail");
     }
+
+    @Test
+    public void typedDecodeEnforcesTokenType() {
+        long now = System.currentTimeMillis() / 1000L;
+        JwtClaims access = JwtClaims.builder()
+                .subject("alice")
+                .issuedAt(now)
+                .expiresAt(now + 60)
+                .type(JwtClaims.TYPE_ACCESS)
+                .authorities(List.of(SimpleGrantedAuthority.roleOf("USER")))
+                .build();
+        JwtClaims refresh = JwtClaims.builder()
+                .subject("alice")
+                .issuedAt(now)
+                .expiresAt(now + 600)
+                .type(JwtClaims.TYPE_REFRESH)
+                .id("refresh-jti-1")
+                .authorities(List.of(SimpleGrantedAuthority.roleOf("USER")))
+                .build();
+        String accessToken = encoder.encode(access);
+        String refreshToken = encoder.encode(refresh);
+
+        // 类型匹配时正常解码，且 typ/jti 可读
+        JwtClaims decodedAccess = decoder.decode(accessToken, JwtClaims.TYPE_ACCESS);
+        Assert.assertEquals(JwtClaims.TYPE_ACCESS, decodedAccess.getType(), "access typ preserved");
+        JwtClaims decodedRefresh = decoder.decode(refreshToken, JwtClaims.TYPE_REFRESH);
+        Assert.assertEquals(JwtClaims.TYPE_REFRESH, decodedRefresh.getType(), "refresh typ preserved");
+        Assert.assertEquals("refresh-jti-1", decodedRefresh.getId(), "jti preserved");
+
+        // refresh 令牌不能当作 access 令牌使用（反之亦然）
+        Assert.assertThrows(JwtException.class,
+                () -> decoder.decode(refreshToken, JwtClaims.TYPE_ACCESS),
+                "refresh token must not be accepted as access token");
+        Assert.assertThrows(JwtException.class,
+                () -> decoder.decode(accessToken, JwtClaims.TYPE_REFRESH),
+                "access token must not be accepted as refresh token");
+
+        // 无类型声明（typ 缺失）的令牌在按类型校验时被拒绝
+        JwtClaims untyped = JwtClaims.builder().subject("bob").issuedAt(now).expiresAt(now + 60).build();
+        String untypedToken = encoder.encode(untyped);
+        Assert.assertThrows(JwtException.class,
+                () -> decoder.decode(untypedToken, JwtClaims.TYPE_ACCESS),
+                "token without typ must be rejected when type is expected");
+    }
 }

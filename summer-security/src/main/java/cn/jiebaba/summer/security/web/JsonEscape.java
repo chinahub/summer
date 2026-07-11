@@ -1,10 +1,10 @@
 package cn.jiebaba.summer.security.web;
 
 /** 用于内联错误响应体的简易 JSON 字符串转义器。 */
-final class JsonEscape {
+public final class JsonEscape {
     private JsonEscape() {}
 
-    static String escape(String s) {
+    public static String escape(String s) {
         if (s == null) return "";
         StringBuilder sb = new StringBuilder(s.length());
         for (int i = 0; i < s.length(); i++) {

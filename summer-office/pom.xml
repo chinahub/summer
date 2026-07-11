@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>cn.jiebaba.summer</groupId>
+        <artifactId>summer-parent</artifactId>
+        <version>3.0.0</version>
+    </parent>
+    <artifactId>summer-office</artifactId>
+    <name>summer-office</name>
+    <description>summer 文档处理模块：纯 JDK 解析与生成 xlsx/docx/pdf/xml/csv/md 等格式文件，零第三方依赖。xlsx（SAX 读取 + ZipOutputStream 写出）、docx（ZipFile + StAX）、pdf（直接生成/解析 PDF 对象结构）均为自研实现。</description>
+    <dependencies>
+        <dependency>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-core</artifactId>
+            <version>${summer.version}</version>
+        </dependency>
+    </dependencies>
+</project>

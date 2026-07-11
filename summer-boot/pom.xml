@@ -38,6 +38,12 @@
             <version>${summer.version}</version>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-office</artifactId>
+            <version>${summer.version}</version>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 </project>
 
