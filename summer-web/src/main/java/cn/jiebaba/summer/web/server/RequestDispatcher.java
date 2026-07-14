@@ -16,7 +16,7 @@ import cn.jiebaba.summer.web.validation.ValidationException;
 import cn.jiebaba.summer.web.http.MediaType;
 import cn.jiebaba.summer.web.http.WebRequest;
 import cn.jiebaba.summer.web.http.WebResponse;
-import cn.jiebaba.summer.web.json.Json;
+import cn.jiebaba.summer.core.json.Json;
 import cn.jiebaba.summer.web.routing.RouteMatch;
 import cn.jiebaba.summer.web.routing.Router;
 import cn.jiebaba.summer.web.support.ExceptionHandlerRegistry;

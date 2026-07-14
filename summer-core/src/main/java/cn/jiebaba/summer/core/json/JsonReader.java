@@ -1,4 +1,4 @@
-package cn.jiebaba.summer.web.json;
+package cn.jiebaba.summer.core.json;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;

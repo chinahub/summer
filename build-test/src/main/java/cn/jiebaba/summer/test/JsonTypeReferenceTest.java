@@ -3,8 +3,8 @@ package cn.jiebaba.summer.test;
 import cn.jiebaba.summer.core.test.Assert;
 import cn.jiebaba.summer.core.test.Test;
 import cn.jiebaba.summer.test.di.Widget;
-import cn.jiebaba.summer.web.json.Json;
-import cn.jiebaba.summer.web.json.TypeReference;
+import cn.jiebaba.summer.core.json.Json;
+import cn.jiebaba.summer.core.json.TypeReference;
 
 import java.util.List;
 import java.util.Map;

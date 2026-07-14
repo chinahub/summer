@@ -1,4 +1,4 @@
-﻿# summer 构建脚本
+# summer 构建脚本
 # 用法: .\build.ps1                       (默认 clean package)
 #       .\build.ps1 clean compile
 #       .\build.ps1 deploy                (deploy 自动经 Git Bash 执行, 让 Git 自带 gpg 在 MSYS2 环境运行)

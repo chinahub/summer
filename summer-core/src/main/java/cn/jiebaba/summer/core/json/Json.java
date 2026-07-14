@@ -1,4 +1,4 @@
-package cn.jiebaba.summer.web.json;
+package cn.jiebaba.summer.core.json;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -34,12 +34,14 @@ public final class Json {
 
     public static String stringify(Object value) {
         StringBuilder sb = new StringBuilder();
-        write(sb, value);
+        write(sb, value, 0, false);
         return sb.toString();
     }
 
     public static String toPretty(Object value) {
-        return stringify(value);
+        StringBuilder sb = new StringBuilder();
+        write(sb, value, 0, true);
+        return sb.toString();
     }
 
     /**
@@ -49,11 +51,11 @@ public final class Json {
      * @param sb    目标缓冲区
      * @param value 待序列化的值
      */
-    private static void write(StringBuilder sb, Object value) {
+    private static void write(StringBuilder sb, Object value, int depth, boolean pretty) {
         if (value == null) {
             sb.append("null");
         } else if (value instanceof Optional<?> opt) {
-            write(sb, opt.orElse(null));
+            write(sb, opt.orElse(null), depth, pretty);
         } else if (value instanceof Boolean b) {
             sb.append(b);
         } else if (value instanceof Number n) {
@@ -66,32 +68,41 @@ public final class Json {
                 || value instanceof java.util.Date) {
             writeString(sb, value.toString());
         } else if (value.getClass().isArray()) {
-            writeArray(sb, value);
+            writeArray(sb, value, depth, pretty);
         } else if (value instanceof Iterable<?> it) {
             sb.append('[');
             boolean first = true;
             for (Object item : it) {
-                if (!first) sb.append(',');
+                if (!first) sb.append(pretty ? ",\n" : ",");
                 first = false;
-                write(sb, item);
+                if (pretty) indent(sb, depth + 1);
+                write(sb, item, depth + 1, pretty);
             }
+            if (pretty && !first) { sb.append('\n'); indent(sb, depth); }
             sb.append(']');
         } else if (value instanceof Map<?, ?> map) {
             sb.append('{');
+            if (pretty && !map.isEmpty()) sb.append('\n');
             boolean first = true;
             for (Map.Entry<?, ?> entry : map.entrySet()) {
-                if (!first) sb.append(',');
+                if (!first) sb.append(pretty ? ",\n" : ",");
                 first = false;
+                if (pretty) indent(sb, depth + 1);
                 writeString(sb, String.valueOf(entry.getKey()));
-                sb.append(':');
-                write(sb, entry.getValue());
+                sb.append(pretty ? ": " : ":");
+                write(sb, entry.getValue(), depth + 1, pretty);
             }
+            if (pretty && !first) { sb.append('\n'); indent(sb, depth); }
             sb.append('}');
         } else if (value instanceof Record) {
-            writeRecord(sb, value);
+            writeRecord(sb, value, depth, pretty);
         } else {
-            writeObject(sb, value);
+            writeObject(sb, value, depth, pretty);
         }
+    }
+
+    private static void indent(StringBuilder sb, int depth) {
+        for (int i = 0; i < depth; i++) sb.append("  ");
     }
 
     private static void writeNumber(StringBuilder sb, Number n) {
@@ -109,31 +120,37 @@ public final class Json {
         }
     }
 
-    private static void writeArray(StringBuilder sb, Object array) {
+    private static void writeArray(StringBuilder sb, Object array, int depth, boolean pretty) {
         sb.append('[');
         int len = Array.getLength(array);
+        if (pretty && len > 0) sb.append('\n');
         for (int i = 0; i < len; i++) {
-            if (i > 0) sb.append(',');
-            write(sb, Array.get(array, i));
+            if (i > 0) sb.append(pretty ? ",\n" : ",");
+            if (pretty) indent(sb, depth + 1);
+            write(sb, Array.get(array, i), depth + 1, pretty);
         }
+        if (pretty && len > 0) { sb.append('\n'); indent(sb, depth); }
         sb.append(']');
     }
 
-    private static void writeRecord(StringBuilder sb, Object record) {
+    private static void writeRecord(StringBuilder sb, Object record, int depth, boolean pretty) {
         sb.append('{');
         PropertyWriter[] props = writeSchema(record.getClass());
+        if (pretty && props.length > 0) sb.append('\n');
         for (int i = 0; i < props.length; i++) {
-            if (i > 0) sb.append(',');
+            if (i > 0) sb.append(pretty ? ",\n" : ",");
+            if (pretty) indent(sb, depth + 1);
             writeString(sb, props[i].name);
-            sb.append(':');
+            sb.append(pretty ? ": " : ":");
             try {
-                write(sb, props[i].read(record));
+                write(sb, props[i].read(record), depth + 1, pretty);
             } catch (Error e) {
                 throw e;
             } catch (Throwable t) {
                 sb.append("null");
             }
         }
+        if (pretty && props.length > 0) { sb.append('\n'); indent(sb, depth); }
         sb.append('}');
     }
 
@@ -144,21 +161,24 @@ public final class Json {
      * @param sb     目标缓冲区
      * @param object 待序列化对象
      */
-    private static void writeObject(StringBuilder sb, Object object) {
+    private static void writeObject(StringBuilder sb, Object object, int depth, boolean pretty) {
         sb.append('{');
         PropertyWriter[] props = writeSchema(object.getClass());
+        if (pretty && props.length > 0) sb.append('\n');
         for (int i = 0; i < props.length; i++) {
-            if (i > 0) sb.append(',');
+            if (i > 0) sb.append(pretty ? ",\n" : ",");
+            if (pretty) indent(sb, depth + 1);
             writeString(sb, props[i].name);
-            sb.append(':');
+            sb.append(pretty ? ": " : ":");
             try {
-                write(sb, props[i].read(object));
+                write(sb, props[i].read(object), depth + 1, pretty);
             } catch (Error e) {
                 throw e;
             } catch (Throwable t) {
                 sb.append("null");
             }
         }
+        if (pretty && props.length > 0) { sb.append('\n'); indent(sb, depth); }
         sb.append('}');
     }
 
@@ -369,11 +389,28 @@ public final class Json {
     /** 直接将对象序列化为 UTF-8 字节，避免中间 String 拷贝。 */
     public static byte[] toUtf8Bytes(Object value) {
         StringBuilder sb = new StringBuilder();
-        write(sb, value);
+        write(sb, value, 0, false);
         java.nio.ByteBuffer bb = java.nio.charset.StandardCharsets.UTF_8.encode(java.nio.CharBuffer.wrap(sb));
         byte[] out = new byte[bb.remaining()];
         bb.get(out);
         return out;
+    }
+
+    /** 将字符串以 JSON 转义形式包裹双引号返回，例如 {@code quote("a\nb") -> "\"a\\nb\""}。 */
+    public static String quote(String value) {
+        StringBuilder sb = new StringBuilder(value.length() + 2);
+        sb.append('"');
+        escapeInto(sb, value);
+        sb.append('"');
+        return sb.toString();
+    }
+
+    /** 将字符串按 JSON 规则转义（不含外层引号）后返回；{@code null} 原样返回。 */
+    public static String escape(String value) {
+        if (value == null) return null;
+        StringBuilder sb = new StringBuilder(value.length());
+        escapeInto(sb, value);
+        return sb.toString();
     }
 
     /**
@@ -385,6 +422,12 @@ public final class Json {
      */
     private static void writeString(StringBuilder sb, String s) {
         sb.append('"');
+        escapeInto(sb, s);
+        sb.append('"');
+    }
+
+    /** 将字符串的每个字符按 JSON 转义规则追加到缓冲：引号、反斜杠、控制字符转义，非 ASCII 原样输出。 */
+    private static void escapeInto(StringBuilder sb, String s) {
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
             switch (c) {
@@ -404,7 +447,6 @@ public final class Json {
                 }
             }
         }
-        sb.append('"');
     }
 
     // ---- 解析 --------------------------------------------------------------

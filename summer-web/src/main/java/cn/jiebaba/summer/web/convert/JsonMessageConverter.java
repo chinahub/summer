@@ -1,7 +1,7 @@
 package cn.jiebaba.summer.web.convert;
 
 import cn.jiebaba.summer.web.http.MediaType;
-import cn.jiebaba.summer.web.json.Json;
+import cn.jiebaba.summer.core.json.Json;
 
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;

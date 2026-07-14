@@ -28,28 +28,33 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Logger;
 
 public class DefaultApplicationContext implements ApplicationContext {
 
     private static final Logger LOG = Logger.getLogger(DefaultApplicationContext.class.getName());
 
-    private final Map<String, BeanDefinition> beanDefinitions = new LinkedHashMap<>();
+    private final Map<String, BeanDefinition> beanDefinitions = new ConcurrentHashMap<>();
     private final Map<String, Object> singletonObjects = new ConcurrentHashMap<>();
     private final Map<String, Object> earlySingletonObjects = new ConcurrentHashMap<>();
     private final Set<String> inCreation = ConcurrentHashMap.newKeySet();
-    private final List<String> destructionOrder = Collections.synchronizedList(new ArrayList<>());
+    private final List<String> destructionOrder = new CopyOnWriteArrayList<>();
     private final AspectRegistry aspectRegistry = new AspectRegistry();
-    private final List<ProxyAdvisor> advisors = new ArrayList<>();
+    private final List<ProxyAdvisor> advisors = new CopyOnWriteArrayList<>();
     private final Map<String, Object> targetObjects = new ConcurrentHashMap<>();
+    /** 当前线程的 Bean 创建路径栈，用于循环依赖诊断与原型循环检测。 */
+    private final ThreadLocal<ArrayDeque<String>> creationPath = ThreadLocal.withInitial(ArrayDeque::new);
 
     private final Environment environment;
     private final ClassLoader classLoader;
@@ -162,7 +167,17 @@ public class DefaultApplicationContext implements ApplicationContext {
             if (early != null) return early;
             return createSingleton(name, def);
         }
-        return doCreateBean(name, def);
+        if (creationPath.get().contains(name)) {
+            throw new BeansException("Circular dependency detected for prototype bean '" + name
+                    + "' (prototype cycles cannot be resolved): " + formatCyclePath(name));
+        }
+        creationPath.get().push(name);
+        try {
+            return doCreateBean(name, def);
+        } finally {
+            creationPath.get().pop();
+            if (creationPath.get().isEmpty()) creationPath.remove();
+        }
     }
 
     private Object createSingleton(String name, BeanDefinition def) {
@@ -170,8 +185,9 @@ public class DefaultApplicationContext implements ApplicationContext {
             Object early = earlySingletonObjects.get(name);
             if (early != null) return early;
             throw new BeansException("Circular dependency detected for bean '" + name
-                    + "' that cannot be resolved (constructor injection cycle).");
+                    + "' that cannot be resolved (constructor injection cycle): " + formatCyclePath(name));
         }
+        creationPath.get().push(name);
         try {
             Object bean = doCreateBean(name, def);
             singletonObjects.put(name, bean);
@@ -179,8 +195,22 @@ public class DefaultApplicationContext implements ApplicationContext {
             destructionOrder.add(name);
             return bean;
         } finally {
+            creationPath.get().pop();
+            if (creationPath.get().isEmpty()) creationPath.remove();
             inCreation.remove(name);
         }
+    }
+
+    /** 格式化当前线程的创建路径并附加重复出现的 Bean 名，形如 {@code A -> B -> A}，便于定位循环依赖。 */
+    private String formatCyclePath(String repeated) {
+        ArrayDeque<String> path = creationPath.get();
+        StringBuilder sb = new StringBuilder();
+        Iterator<String> it = path.descendingIterator();
+        while (it.hasNext()) {
+            sb.append(it.next()).append(" -> ");
+        }
+        sb.append(repeated);
+        return sb.toString();
     }
 
     private Object doCreateBean(String name, BeanDefinition def) {
@@ -358,19 +388,17 @@ public class DefaultApplicationContext implements ApplicationContext {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <T> T getBean(String name, Class<T> requiredType) {
         Object bean = getBean(name);
         return adapt(bean, requiredType);
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <T> T getBean(Class<T> requiredType) {
         String[] names = getBeanNamesForType(requiredType);
         if (names.length == 0) {
-            if (requiredType == ApplicationContext.class) return (T) this;
-            if (requiredType == Environment.class) return (T) environment;
+            if (requiredType == ApplicationContext.class) return adapt(this, requiredType);
+            if (requiredType == Environment.class) return adapt(environment, requiredType);
             throw new NoSuchBeanDefinitionException(requiredType);
         }
         if (names.length == 1) return adapt(getBean(names[0]), requiredType);
@@ -383,7 +411,6 @@ public class DefaultApplicationContext implements ApplicationContext {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <T> T getBean(Class<T> requiredType, String qualifier) {
         if (qualifier != null && containsBean(qualifier)) {
             return adapt(getBean(qualifier), requiredType);
@@ -418,7 +445,6 @@ public class DefaultApplicationContext implements ApplicationContext {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <T> Map<String, T> getBeansOfType(Class<T> type) {
         Map<String, T> result = new LinkedHashMap<>();
         for (String name : getBeanNamesForType(type)) {
@@ -427,7 +453,7 @@ public class DefaultApplicationContext implements ApplicationContext {
                 // 查找时不预先创建原型 Bean
                 continue;
             }
-            result.put(name, (T) getBean(name));
+            result.put(name, adapt(getBean(name), type));
         }
         return result;
     }
@@ -500,7 +526,6 @@ public class DefaultApplicationContext implements ApplicationContext {
 
     // ---- 依赖解析 -------------------------------------------------
 
-    @SuppressWarnings("unchecked")
     /**
      * 解析目标类型的依赖：按类型/名称/限定符查找候选 Bean，缺失时按 required 决定是否抛出异常。
      */
