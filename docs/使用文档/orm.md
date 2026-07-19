@@ -191,6 +191,44 @@ public class Widget {
 
 > 边界：`WHERE` 条件值（`AbstractWrapper.params`）暂不套 handler，JSON 列条件查询需后续增强；多数据源按数据源各自解析方言（per-DS dialect）为第二阶段，当前为「单 dialect + 自动识别」。
 
+## 向量类型与自定义查询（pgvector）
+
+向量检索（RAG 语义搜索）的结果集常含**计算列**（如相似度 `score`），无法直接映射到实体；summer-data 为此提供两个互补扩展点，配合 `JdbcValue` + `TypeHandler` 即可零第三方依赖对接 pgvector：
+
+- **`RowMapper<T>`**（`support/RowMapper.java`）：`@FunctionalInterface`，将 `ResultSet` 每行映射为任意对象（借鉴 Spring 同名接口）。适用于含计算列、聚合列、跨表投影或数据库特有算子的自定义查询。
+- **`SqlExecutor.query(SqlBuilder.Sql sql, RowMapper<T> rowMapper)`**：在实体映射重载 `query(Sql, TableInfo)` 之外新增的重载，执行任意 SQL 并按 `RowMapper` 映射；连接/事务/参数绑定/日志统一由 `SqlExecutor` 管理，与 `BaseMapper` 同源、不绕过数据层。
+
+### 自定义查询（含计算列）
+
+```java
+SqlExecutor sqlExecutor = ...;  // 由 summer-data 自动装配
+SqlBuilder.Sql sql = new SqlBuilder.Sql(
+        "SELECT id, name, price * 1.1 AS new_price FROM product WHERE price > ? ORDER BY new_price",
+        List.of(100));
+List<Record> rows = sqlExecutor.query(sql, (rs, n) -> new Record(
+        rs.getLong("id"),
+        rs.getString("name"),
+        rs.getDouble("new_price")));   // new_price 为计算列，经 RowMapper 取值
+```
+
+### 向量绑定与相似度检索
+
+pgvector 的 `vector` 列需用文本字面量 `[v1,v2,...]` 绑定（SQL 中 `?::vector` 显式转型）。summer-boot 的 `VectorTypeHandler`（`boot/ai/vectorstore/VectorTypeHandler.java`）正是 `TypeHandler` 扩展点的一个实现：把 `float[]` 序列化为 8 位定点字面量（避免科学计数法），读取时反向解析。通过 `JdbcValue(vec, VectorTypeHandler.INSTANCE)` 包裹即可让 `SqlExecutor.bind()` 走 handler 路径：
+
+```java
+float[] queryVec = embeddingModel.embed("查询文本").embeddings().get(0).vector();
+Object vecParam = new JdbcValue(queryVec, VectorTypeHandler.INSTANCE);
+SqlBuilder.Sql sql = new SqlBuilder.Sql(
+        "SELECT id, content, metadata, 1 - (embedding <=> ?::vector) AS score "
+        + "FROM summer_ai_vectors ORDER BY score DESC LIMIT ?",
+        List.of(vecParam, 5));
+List<RetrievalResult> hits = sqlExecutor.query(sql, (rs, n) -> new RetrievalResult(
+        new Document(rs.getString("id"), rs.getString("content"), parseMeta(rs.getString("metadata"))),
+        rs.getDouble("score")));   // score 为 pgvector 余弦距离算出的计算列
+```
+
+`VectorTypeHandler` 零第三方依赖（不依赖 pgvector JDBC 类型），可作为自定义 `TypeHandler` 的参考实现；完整封装见 summer-boot 的 `JdbcVectorStore`（`summer.ai.vectorstore.type=pgvector` 时由 `AiAutoConfiguration` 自动装配，详见 [ai.md](ai.md)）。
+
 ## 数据源配置
 
 `application.yml`（推荐）或 `application.properties`：

@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -60,8 +61,12 @@ public class InMemoryVectorStore implements VectorStore {
     @Override
     public synchronized List<RetrievalResult> similaritySearch(SearchRequest request) {
         float[] query = embeddingModel.embed(request.query()).embeddings().get(0).vector();
+        Map<String, Object> filter = request.filter();
         List<RetrievalResult> all = new ArrayList<>(store.size());
         for (Entry e : store.values()) {
+            if (!matchesFilter(e.document, filter)) {
+                continue;
+            }
             double score = SimilarityUtil.cosine(query, e.vector);
             if (score >= request.similarityThreshold()) {
                 all.add(new RetrievalResult(e.document, score));
@@ -70,6 +75,20 @@ public class InMemoryVectorStore implements VectorStore {
         all.sort(Comparator.comparingDouble(RetrievalResult::score).reversed());
         int limit = Math.max(0, request.topK());
         return all.size() <= limit ? all : new ArrayList<>(all.subList(0, limit));
+    }
+
+    /** 元数据等值过滤：filter 为空则全部通过；否则要求文档 metadata 包含全部 filter 键值对。 */
+    private static boolean matchesFilter(Document document, Map<String, Object> filter) {
+        if (filter == null || filter.isEmpty()) {
+            return true;
+        }
+        Map<String, Object> meta = document.metadata();
+        for (Map.Entry<String, Object> e : filter.entrySet()) {
+            if (!Objects.equals(meta.get(e.getKey()), e.getValue())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** 当前文档数量。 */

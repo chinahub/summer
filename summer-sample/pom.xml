@@ -10,11 +10,22 @@
     </parent>
     <artifactId>summer-sample</artifactId>
     <name>summer-sample</name>
-    <description>summer sample application exercising IoC, web and boot end to end.</description>
+    <description>summer sample application exercising IoC, web, boot and ai end to end.</description>
     <dependencies>
         <dependency>
             <groupId>cn.jiebaba.summer</groupId>
             <artifactId>summer-boot</artifactId>
+            <version>${summer.version}</version>
+        </dependency>
+        <!-- summer-boot 以 optional 引入 summer-ai/summer-office（不传递），AI 示例需显式声明 -->
+        <dependency>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-ai</artifactId>
+            <version>${summer.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-office</artifactId>
             <version>${summer.version}</version>
         </dependency>
 
@@ -42,4 +53,3 @@
         </plugins>
     </build>
 </project>
-

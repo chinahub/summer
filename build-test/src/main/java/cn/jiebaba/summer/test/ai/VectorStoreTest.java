@@ -65,4 +65,33 @@ public class VectorStoreTest {
         store.delete(ids);
         Assert.assertEquals(0, store.size());
     }
+
+    @Test
+    public void metadataFilterRestrictsResults() {
+        InMemoryVectorStore store = new InMemoryVectorStore(new StubEmbeddingModel());
+        store.add(List.of(
+                Document.builder().content("apple banana").metadata("source", "web").build(),
+                Document.builder().content("apple cat").metadata("source", "db").build(),
+                Document.builder().content("apple dog").metadata("source", "web").build()));
+        List<RetrievalResult> results = store.similaritySearch(SearchRequest.builder()
+                .query("apple").topK(10).filter("source", "web").build());
+        Assert.assertEquals(2, results.size(), "应仅命中 source=web 的 2 条文档");
+        Assert.assertTrue(results.stream().allMatch(r -> "web".equals(r.document().metadata().get("source"))),
+                "过滤后结果应全部 source=web");
+    }
+
+    @Test
+    public void metadataFilterMultipleKeys() {
+        InMemoryVectorStore store = new InMemoryVectorStore(new StubEmbeddingModel());
+        store.add(List.of(
+                Document.builder().content("apple banana").metadata("source", "web").metadata("lang", "en").build(),
+                Document.builder().content("apple cat").metadata("source", "web").metadata("lang", "zh").build(),
+                Document.builder().content("apple dog").metadata("source", "db").metadata("lang", "en").build()));
+        List<RetrievalResult> results = store.similaritySearch(SearchRequest.builder()
+                .query("apple").topK(10)
+                .filter("source", "web").filter("lang", "en")
+                .build());
+        Assert.assertEquals(1, results.size(), "应仅命中 source=web 且 lang=en 的 1 条");
+        Assert.assertEquals("apple banana", results.get(0).document().content());
+    }
 }

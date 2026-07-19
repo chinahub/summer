@@ -138,6 +138,11 @@ public class OpenAiCompatibleChatModel implements ChatModel {
         body.put("model", resolveModel(prompt));
         body.put("messages", serializeMessages(prompt.getMessages()));
         body.put("stream", stream);
+        if (stream) {
+            Map<String, Object> streamOptions = new LinkedHashMap<>();
+            streamOptions.put("include_usage", true);
+            body.put("stream_options", streamOptions);
+        }
         ChatOptions options = prompt.getOptions();
         Double temp = options != null && options.getTemperature() != null ? options.getTemperature() : temperature;
         if (temp != null) {
@@ -149,6 +154,7 @@ public class OpenAiCompatibleChatModel implements ChatModel {
         }
         if (options != null) {
             putTools(body, options);
+            putResponseFormat(body, options);
         }
         return JsonUtil.toJsonStr(body);
     }
@@ -276,6 +282,17 @@ public class OpenAiCompatibleChatModel implements ChatModel {
         }
     }
 
+    /** 当 options 指定响应格式时注入 response_format 字段（如 json_object 启用 JSON 模式）。 */
+    private void putResponseFormat(Map<String, Object> body, ChatOptions options) {
+        String format = options.getResponseFormat();
+        if (format == null || format.isBlank()) {
+            return;
+        }
+        Map<String, Object> responseFormat = new LinkedHashMap<>();
+        responseFormat.put("type", format);
+        body.put("response_format", responseFormat);
+    }
+
     /** 将响应输入流完整读取为 UTF-8 字符串；流为空返回空串。 */
     private String readAll(InputStream is) throws Exception {
         if (is == null) {
@@ -312,9 +329,11 @@ public class OpenAiCompatibleChatModel implements ChatModel {
     private ChatResponse parseChunk(String json) {
         try {
             JSONObject root = JsonUtil.parseObj(json);
+            ChatResponseMetadata metadata = parseUsage(root.getStr("model"), root.getJSONObject("usage"));
             JSONArray choices = root.getJSONArray("choices");
             if (choices == null || choices.isEmpty()) {
-                return null;
+                // stream_options.include_usage=true 时末帧 choices 为空、仅含 usage，外抛以补全 token 观测
+                return metadata == null ? null : new ChatResponse(null, null, null, List.of(), metadata);
             }
             JSONObject choice = choices.getJSONObject(0);
             JSONObject delta = choice.getJSONObject("delta");
@@ -323,13 +342,13 @@ public class OpenAiCompatibleChatModel implements ChatModel {
             String finishReason = choice.getStr("finish_reason");
             JSONArray rawCalls = delta != null ? delta.getJSONArray("tool_calls") : null;
             List<ToolCall> toolCalls = parseToolCalls(rawCalls);
-            return new ChatResponse(content, reasoning, finishReason, toolCalls, null);
+            return new ChatResponse(content, reasoning, finishReason, toolCalls, metadata);
         } catch (Exception e) {
             return null;
         }
     }
 
-    /** 解析 message/delta 中的 tool_calls 数组为 ToolCall 列表；缺失返回空列表。 */
+    /** 解析 message/delta 中的 tool_calls 数组为 ToolCall 列表；流式增量携带 index 供上游累积，非流式无 index 记为 -1。 */
     private List<ToolCall> parseToolCalls(JSONArray arr) {
         if (arr == null || arr.isEmpty()) {
             return List.of();
@@ -343,7 +362,8 @@ public class OpenAiCompatibleChatModel implements ChatModel {
             JSONObject fn = tc.getJSONObject("function");
             String name = fn != null ? fn.getStr("name") : null;
             String args = fn != null ? fn.getStr("arguments") : null;
-            list.add(new ToolCall(id, name, args));
+            Integer idx = tc.getInt("index");
+            list.add(new ToolCall(id, name, args, idx != null ? idx : -1));
         }
         return list;
     }

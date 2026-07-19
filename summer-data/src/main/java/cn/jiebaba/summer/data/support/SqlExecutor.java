@@ -132,6 +132,25 @@ public final class SqlExecutor {
         }
     }
 
+    /** 执行查询并按 {@link RowMapper} 映射每一行；适用于含计算列或非实体投影的自定义查询。 */
+    public <T> List<T> query(SqlBuilder.Sql sql, RowMapper<T> rowMapper) {
+        try (Handle h = open();
+             PreparedStatement ps = h.connection.prepareStatement(sql.sql())) {
+            long start = logBefore(sql);
+            bind(ps, sql.params());
+            try (ResultSet rs = ps.executeQuery()) {
+                List<T> rows = new ArrayList<>();
+                int rowNum = 0;
+                while (rs.next()) {
+                    rows.add(rowMapper.mapRow(rs, rowNum++));
+                }
+                logQueryResult(rows.size(), start);
+                return rows;
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Failed to execute query: " + sql.sql(), e);
+        }
+    }
     public long count(SqlBuilder.Sql sql) {
         try (Handle h = open();
              PreparedStatement ps = h.connection.prepareStatement(sql.sql())) {

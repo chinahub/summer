@@ -45,3 +45,34 @@ summer:
     idle-timeout: 600000
     max-lifetime: 1800000
     keepalive-query: "SELECT 1"
+  # summer-ai 已在 classpath：取消下列注释并填入 api-key 后启用 AI 示例（/ai/** 端点）。
+  # 未配置 summer.ai.provider 与 summer.ai.api-key 时，启动会快速失败（属预期行为）。
+  # ai:
+  #   provider: deepseek              # deepseek | glm | minimax
+  #   api-key: sk-your-api-key-here
+  #   # model: deepseek-chat          # 可选，省略用厂商默认
+  #   # base-url: https://api.deepseek.com
+  #   # timeout-seconds: 60
+  #   # temperature: 0.7
+  #   # max-tokens: 2048
+  #   # 向量化：DeepSeek 无 embedding 服务，需指向 GLM 等支持 embedding 的厂商
+  #   # embedding:
+  #   #   enabled: true
+  #   #   model: embedding-3
+  #   #   base-url: https://open.bigmodel.cn/api/paas/v4
+  #   #   api-key: sk-your-glm-api-key
+  #   # vectorstore:
+  #   #   type: memory                # 内存向量库（重启丢失，适合演示）
+  #   #   # 或用 pgvector 持久化到 PostgreSQL（需已安装 pgvector 扩展）：
+  #   #   # type: pgvector
+  #   #   # table: summer_ai_vectors   # 存储表名
+  #   #   # dimensions: 1024           # 向量维度，省略则惰性探测（建议显式指定）
+  #   #   # create-extension: true     # 尝试 CREATE EXTENSION vector（无权限时自动忽略）
+  #   #   # create-index: true         # 创建 HNSW 余弦相似度索引
+  #   # memory:
+  #   #   enabled: true               # 启用对话记忆（/ai/remember）
+  #   #   max-messages: 20
+  #   # rag:
+  #   #   enabled: true               # 启用 RAG 门面（/ai/rag），需 vectorstore 与 embedding 同时启用
+  #   #   top-k: 4
+  #   #   similarity-threshold: 0.0

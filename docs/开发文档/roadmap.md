@@ -111,6 +111,19 @@
 - [x] 多模态（图片/语音）消息支持（ContentPart：TextPart/ImageUrlPart/InputAudioPart）
 - [x] 对话记忆与会话管理（ChatMemory/MessageWindowChatMemory/MemoryChatClient）
 - [x] 重试、限流与超时熔断策略（ResilientChatModel + RetryPolicy/RateLimiter/CircuitBreaker）
+- [x] pgvector 持久化向量库（summer-boot `JdbcVectorStore` + `VectorTypeHandler`，复用 summer-data `SqlExecutor`/`RowMapper`，HNSW 余弦索引）
+- [x] 流式工具调用循环（`ToolCallingChatModel.stream` 按 `index` 跨 SSE 帧累积 `tool_calls` 增量、执行工具、续接流式；同步与流式语义一致）
+- [x] 工具调用自动装配（`summer.ai.tools.enabled=true` 收集 `ToolCallback` bean，自动将 `ChatModel` 包装为 `ToolCallingChatModel`）
+- [x] 文档读取器（`TextReader` + summer-boot `OfficeDocumentReader`，XLSX/DOCX/PDF 接入 RAG）
+- [x] summer-data 向量用法扩展（`RowMapper` + `SqlExecutor.query(Sql, RowMapper)` 重载，供含计算列的自定义查询与向量绑定复用）
+- [x] 结构化输出 / JSON 模式（`ChatOptions` 增 `responseFormat`，请求体带 `response_format={"type":"json_object"}`）
+- [x] 流式 token 用量（`stream_options.include_usage=true`，末帧 `usage` 解析填入 `ChatResponse.metadata`，工具循环 `emit` 透传）
+- [x] 向量库元数据过滤（`SearchRequest` 增 `filter` 键值对等值匹配；pgvector 走 `metadata::jsonb @> ?::jsonb`，内存走谓词）
+- [x] AI 调用日志 / 观测性（`LoggingChatModel` 装饰器记录每次 LLM 调用的模型/token/耗时/成败/提问摘要；`summer.ai.logging.enabled` 开关 + `ai_call_log` 表，`JdbcAiCallLogger` 复用 `SqlExecutor` 惰性建表）
+
+### 待开发（summer-ai）
+- [ ] DB 驱动厂商凭据（生产级）：`AiAutoConfiguration` 支持从 `ai_provider_info` 表实时读取 provider/baseurl/api-key（当前仅冒烟测试实现，未接入自动配置）
+- [ ] 示例 AI 端点：summer-sample 增加 `/ai/**` 控制器（对话/流式/RAG/工具调用示例），目前 `summer.ai.*` 段为注释状态
 
 
 ## 第九阶段：文档处理（Office）✅
