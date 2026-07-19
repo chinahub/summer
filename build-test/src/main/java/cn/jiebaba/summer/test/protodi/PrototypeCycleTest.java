@@ -2,8 +2,9 @@ package cn.jiebaba.summer.test.protodi;
 
 import cn.jiebaba.summer.core.context.BeansException;
 import cn.jiebaba.summer.core.context.DefaultApplicationContext;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
@@ -15,10 +16,10 @@ public class PrototypeCycleTest {
         DefaultApplicationContext ctx = new DefaultApplicationContext(
                 null, null, Set.of("cn.jiebaba.summer.test.protodi"));
         ctx.refresh();
-        BeansException ex = Assert.assertThrows(BeansException.class, () -> ctx.getBean(ProtoA.class));
+        BeansException ex = Assertions.assertThrows(BeansException.class, () -> ctx.getBean(ProtoA.class));
         String msg = ex.getMessage();
-        Assert.assertTrue(msg.contains("prototype"), "message: " + msg);
-        Assert.assertTrue(msg.contains("protoA"), "message: " + msg);
-        Assert.assertTrue(msg.contains("->"), "message: " + msg);
+        Assertions.assertTrue(msg.contains("prototype"), "message: " + msg);
+        Assertions.assertTrue(msg.contains("protoA"), "message: " + msg);
+        Assertions.assertTrue(msg.contains("->"), "message: " + msg);
     }
 }

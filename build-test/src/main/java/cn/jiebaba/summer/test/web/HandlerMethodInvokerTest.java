@@ -1,8 +1,6 @@
 package cn.jiebaba.summer.test.web;
 
 import cn.jiebaba.summer.core.context.DefaultApplicationContext;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
 import cn.jiebaba.summer.web.bind.HandlerException;
 import cn.jiebaba.summer.web.bind.HandlerMethodInvoker;
 import cn.jiebaba.summer.web.convert.JsonMessageConverter;
@@ -13,6 +11,9 @@ import cn.jiebaba.summer.web.http.WebResponse;
 import cn.jiebaba.summer.web.routing.RouteMapping;
 import cn.jiebaba.summer.web.routing.RouteMatch;
 import cn.jiebaba.summer.web.routing.RoutePattern;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -65,7 +66,7 @@ public class HandlerMethodInvokerTest {
         try {
             RouteMatch rm = match("get", Long.class);
             rm.pathVariables().put("id", "42");
-            Assert.assertEquals("id=42", invoker.invoke(rm, request("GET /x HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
+            Assertions.assertEquals("id=42", invoker.invoke(rm, request("GET /x HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
             assertSpreaderBuilt("get", Long.class);
         } finally {
             teardown();
@@ -77,7 +78,7 @@ public class HandlerMethodInvokerTest {
         setup();
         try {
             RouteMatch rm = match("create", User.class);
-            Assert.assertEquals("name=alice,age=30", invoker.invoke(rm, post("{\"name\":\"alice\",\"age\":30}"), response()));
+            Assertions.assertEquals("name=alice,age=30", invoker.invoke(rm, post("{\"name\":\"alice\",\"age\":30}"), response()));
         } finally {
             teardown();
         }
@@ -89,7 +90,7 @@ public class HandlerMethodInvokerTest {
         try {
             RouteMatch rm = match("update", Long.class, User.class);
             rm.pathVariables().put("id", "9");
-            Assert.assertEquals("id=9:bob", invoker.invoke(rm, post("{\"name\":\"bob\",\"age\":1}"), response()));
+            Assertions.assertEquals("id=9:bob", invoker.invoke(rm, post("{\"name\":\"bob\",\"age\":1}"), response()));
         } finally {
             teardown();
         }
@@ -100,8 +101,8 @@ public class HandlerMethodInvokerTest {
         setup();
         try {
             RouteMatch rm = match("search", String.class, int.class);
-            Assert.assertEquals("alice:5", invoker.invoke(rm, request("GET /x?name=alice&limit=5 HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
-            Assert.assertEquals("alice:10", invoker.invoke(rm, request("GET /x?name=alice HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
+            Assertions.assertEquals("alice:5", invoker.invoke(rm, request("GET /x?name=alice&limit=5 HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
+            Assertions.assertEquals("alice:10", invoker.invoke(rm, request("GET /x?name=alice HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
         } finally {
             teardown();
         }
@@ -112,7 +113,7 @@ public class HandlerMethodInvokerTest {
         setup();
         try {
             RouteMatch rm = match("header", String.class);
-            Assert.assertEquals("trace=abc", invoker.invoke(rm, request("GET /x HTTP/1.1\r\nHost: x\r\nX-Trace: abc\r\n\r\n"), response()));
+            Assertions.assertEquals("trace=abc", invoker.invoke(rm, request("GET /x HTTP/1.1\r\nHost: x\r\nX-Trace: abc\r\n\r\n"), response()));
         } finally {
             teardown();
         }
@@ -122,8 +123,8 @@ public class HandlerMethodInvokerTest {
     void noArgsAndVoid() throws Exception {
         setup();
         try {
-            Assert.assertEquals("ok", invoker.invoke(match("noargs"), request("GET /x HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
-            Assert.assertNull(invoker.invoke(match("fire"), request("GET /x HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
+            Assertions.assertEquals("ok", invoker.invoke(match("noargs"), request("GET /x HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
+            Assertions.assertNull(invoker.invoke(match("fire"), request("GET /x HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
         } finally {
             teardown();
         }
@@ -133,8 +134,8 @@ public class HandlerMethodInvokerTest {
     void primitiveReturnAndParam() throws Exception {
         setup();
         try {
-            Assert.assertEquals(Integer.valueOf(7), invoker.invoke(match("count"), request("GET /x HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
-            Assert.assertEquals("n=5", invoker.invoke(match("echo", int.class), request("GET /x?n=5 HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
+            Assertions.assertEquals(Integer.valueOf(7), invoker.invoke(match("count"), request("GET /x HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
+            Assertions.assertEquals("n=5", invoker.invoke(match("echo", int.class), request("GET /x?n=5 HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
         } finally {
             teardown();
         }
@@ -144,7 +145,7 @@ public class HandlerMethodInvokerTest {
     void recordReturn() throws Exception {
         setup();
         try {
-            Assert.assertEquals(new User(7L, "x", 9), invoker.invoke(match("recordReturn"), request("GET /x HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
+            Assertions.assertEquals(new User(7L, "x", 9), invoker.invoke(match("recordReturn"), request("GET /x HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
         } finally {
             teardown();
         }
@@ -155,9 +156,9 @@ public class HandlerMethodInvokerTest {
         setup();
         try {
             RouteMatch rm = match("boom");
-            HandlerException he = Assert.assertThrows(HandlerException.class,
+            HandlerException he = Assertions.assertThrows(HandlerException.class,
                     () -> invoker.invoke(rm, request("GET /x HTTP/1.1\r\nHost: x\r\n\r\n"), response()));
-            Assert.assertTrue(he.getCause() != null && he.getCause().getMessage().contains("boom"),
+            Assertions.assertTrue(he.getCause() != null && he.getCause().getMessage().contains("boom"),
                     "cause should carry original message");
         } finally {
             teardown();
@@ -171,9 +172,9 @@ public class HandlerMethodInvokerTest {
         cf.setAccessible(true);
         Object cache = cf.get(invoker);
         Object cached = cache.getClass().getMethod("get", Object.class).invoke(cache, m);
-        Assert.assertNotNull(cached, "CachedMethod should exist for " + name);
+        Assertions.assertNotNull(cached, "CachedMethod should exist for " + name);
         java.lang.reflect.Field sf = cached.getClass().getDeclaredField("spreader");
         sf.setAccessible(true);
-        Assert.assertNotNull(sf.get(cached), "MethodHandle spreader should be built (not fallback) for " + name);
+        Assertions.assertNotNull(sf.get(cached), "MethodHandle spreader should be built (not fallback) for " + name);
     }
 }

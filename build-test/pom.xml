@@ -10,10 +10,12 @@
     </parent>
     <artifactId>build-test</artifactId>
     <name>build-test</name>
-    <description>summer 自研测试微框架与集中式测试用例（@Test 单测 + main() 冒烟测试）。</description>
+    <description>summer JUnit 5 集成与集中式测试用例（@Test 单测 + main() 冒烟测试）。</description>
 
     <properties>
         <maven.deploy.skip>true</maven.deploy.skip>
+        <!-- surefire 测试执行开关；-DskipTests=true 由 CLI 覆盖即跳过测试执行 -->
+        <skipTests>false</skipTests>
     </properties>
 
     <dependencies>
@@ -61,41 +63,32 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
+        <!-- JUnit 5：@Test 单测跑在真实 Jupiter 引擎上（surefire 执行）。
+             测试类位于 src/main，junit-jupiter 需 compile  scope 参与主源编译（本模块不发布，无传递影响） -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <!-- summer 自带测试 runner，跳过 surefire -->
+            <!-- 测试类位于 src/main（非常规目录）：surefire 直接扫描主输出目录执行 JUnit 5 用例 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <skip>true</skip>
+                    <testClassesDirectory>${project.build.outputDirectory}</testClassesDirectory>
+                    <!-- 临时目录(C:)与仓库(D:)跨盘符，manifest jar 类路径会失效，改用普通 -cp -->
+                    <useManifestOnlyJar>false</useManifestOnlyJar>
+                    <!-- Git Bash 管道与 fork VM 退出握手不兼容（ForkedBooter 挂起），进程内执行 -->
+                    <forkCount>0</forkCount>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.5.0</version>
-                <executions>
-                    <execution>
-                        <id>run-tests</id>
-                        <phase>test</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <executable>${java.home}/bin/java</executable>
-                            <classpathScope>test</classpathScope>
-                            <arguments>
-                                <argument>-classpath</argument>
-                                <classpath/>
-                                <argument>cn.jiebaba.summer.core.test.TestRunner</argument>
-                                <argument>cn.jiebaba.summer</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>

@@ -9,11 +9,12 @@ import cn.jiebaba.summer.ai.tools.Tool;
 import cn.jiebaba.summer.ai.tools.ToolCallingChatModel;
 import cn.jiebaba.summer.ai.tools.ToolParameter;
 import cn.jiebaba.summer.core.env.Environment;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Assumptions;
-import cn.jiebaba.summer.core.test.Test;
 import cn.jiebaba.summer.data.support.SqlBuilder;
 import cn.jiebaba.summer.data.support.SqlExecutor;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 import org.postgresql.ds.PGSimpleDataSource;
 
@@ -95,10 +96,10 @@ public class StreamingToolLoopLlmTest {
         System.out.println();
         System.out.println("[stream] done, tool executed=" + executed.get() + ", content=" + text);
 
-        Assert.assertTrue(executed.get() >= 1,
+        Assertions.assertTrue(executed.get() >= 1,
                 "流式工具循环应触发 add 工具执行（需支持 Function Calling 的模型）");
-        Assert.assertFalse(text.toString().isBlank(), "流式应输出非空内容");
-        Assert.assertTrue(text.toString().contains("579"),
+        Assertions.assertFalse(text.toString().isBlank(), "流式应输出非空内容");
+        Assertions.assertTrue(text.toString().contains("579"),
                 "最终回复应包含工具计算结果 579，实际: " + text);
     }
 

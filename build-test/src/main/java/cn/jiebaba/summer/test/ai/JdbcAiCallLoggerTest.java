@@ -3,10 +3,10 @@ package cn.jiebaba.summer.test.ai;
 import cn.jiebaba.summer.ai.logging.AiCallLog;
 import cn.jiebaba.summer.boot.ai.logging.JdbcAiCallLogger;
 import cn.jiebaba.summer.core.env.Environment;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Assumptions;
-import cn.jiebaba.summer.core.test.Test;
 import cn.jiebaba.summer.data.support.SqlExecutor;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 import javax.sql.DataSource;
 import java.io.PrintWriter;
@@ -39,14 +39,14 @@ public class JdbcAiCallLoggerTest {
              Statement s = c.createStatement();
              ResultSet rs = s.executeQuery(
                      "SELECT model, prompt_tokens, completion_tokens, total_tokens, success, query_summary FROM " + TABLE)) {
-            Assert.assertTrue(rs.next(), "应写入一条记录");
-            Assert.assertEquals("deepseek-chat", rs.getString("model"));
-            Assert.assertEquals(10, rs.getInt("prompt_tokens"));
-            Assert.assertEquals(20, rs.getInt("completion_tokens"));
-            Assert.assertEquals(30, rs.getInt("total_tokens"));
-            Assert.assertTrue(rs.getBoolean("success"), "success 应为 true");
-            Assert.assertEquals("hello", rs.getString("query_summary"));
-            Assert.assertFalse(rs.next(), "应仅一条记录");
+            Assertions.assertTrue(rs.next(), "应写入一条记录");
+            Assertions.assertEquals("deepseek-chat", rs.getString("model"));
+            Assertions.assertEquals(10, rs.getInt("prompt_tokens"));
+            Assertions.assertEquals(20, rs.getInt("completion_tokens"));
+            Assertions.assertEquals(30, rs.getInt("total_tokens"));
+            Assertions.assertTrue(rs.getBoolean("success"), "success 应为 true");
+            Assertions.assertEquals("hello", rs.getString("query_summary"));
+            Assertions.assertFalse(rs.next(), "应仅一条记录");
         }
         dropTable(ds);
     }
@@ -65,12 +65,12 @@ public class JdbcAiCallLoggerTest {
              Statement s = c.createStatement();
              ResultSet rs = s.executeQuery(
                      "SELECT model, total_tokens, success, error_message FROM " + TABLE)) {
-            Assert.assertTrue(rs.next(), "应写入一条失败记录");
-            Assert.assertNull(rs.getString("model"), "无模型时 model 应为 null");
-            Assert.assertEquals(0, rs.getInt("total_tokens"));
-            Assert.assertTrue(rs.wasNull(), "total_tokens 应为 SQL NULL");
-            Assert.assertFalse(rs.getBoolean("success"), "success 应为 false");
-            Assert.assertEquals("连接超时", rs.getString("error_message"));
+            Assertions.assertTrue(rs.next(), "应写入一条失败记录");
+            Assertions.assertNull(rs.getString("model"), "无模型时 model 应为 null");
+            Assertions.assertEquals(0, rs.getInt("total_tokens"));
+            Assertions.assertTrue(rs.wasNull(), "total_tokens 应为 SQL NULL");
+            Assertions.assertFalse(rs.getBoolean("success"), "success 应为 false");
+            Assertions.assertEquals("连接超时", rs.getString("error_message"));
         }
         dropTable(ds);
     }

@@ -1,10 +1,11 @@
 package cn.jiebaba.summer.test.ioc;
 
 import cn.jiebaba.summer.core.context.DefaultApplicationContext;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.BeforeEach;
-import cn.jiebaba.summer.core.test.DisplayName;
-import cn.jiebaba.summer.core.test.Test;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
@@ -24,45 +25,45 @@ public class IocContainerTest {
     void singletonRetrieval() {
         SingletonBean byType = context.getBean(SingletonBean.class);
         SingletonBean byName = context.getBean("singletonBean", SingletonBean.class);
-        Assert.assertNotNull(byType);
-        Assert.assertSame(byType, byName);
-        Assert.assertEquals("singleton", byType.id());
+        Assertions.assertNotNull(byType);
+        Assertions.assertSame(byType, byName);
+        Assertions.assertEquals("singleton", byType.id());
     }
 
     @Test
     void fieldInjection() {
         FieldInjectBean bean = context.getBean(FieldInjectBean.class);
-        Assert.assertNotNull(bean.dep());
-        Assert.assertEquals("singleton", bean.dep().id());
+        Assertions.assertNotNull(bean.dep());
+        Assertions.assertEquals("singleton", bean.dep().id());
     }
 
     @Test
     void constructorInjection() {
         ConstructorInjectBean bean = context.getBean(ConstructorInjectBean.class);
-        Assert.assertNotNull(bean.dep());
+        Assertions.assertNotNull(bean.dep());
     }
 
     @Test
     void valueInjectionWithDefault() {
         ValueBean bean = context.getBean(ValueBean.class);
-        Assert.assertEquals("fallback", bean.name());
+        Assertions.assertEquals("fallback", bean.name());
     }
 
     @Test
     void primarySelectedWhenMultipleCandidates() {
         Greeter greeter = context.getBean(Greeter.class);
-        Assert.assertEquals("primary", greeter.greet());
+        Assertions.assertEquals("primary", greeter.greet());
     }
 
     @Test
     void beanFactoryMethod() {
         Gadget gadget = context.getBean(Gadget.class);
-        Assert.assertEquals("factory", gadget.tag);
+        Assertions.assertEquals("factory", gadget.tag);
     }
 
     @Test
     void containsBean() {
-        Assert.assertTrue(context.containsBean("singletonBean"));
-        Assert.assertFalse(context.containsBean("noSuchBean"));
+        Assertions.assertTrue(context.containsBean("singletonBean"));
+        Assertions.assertFalse(context.containsBean("noSuchBean"));
     }
 }

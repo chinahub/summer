@@ -6,10 +6,10 @@ import cn.jiebaba.summer.ai.rag.RagClient;
 import cn.jiebaba.summer.ai.vectorstore.VectorStore;
 import cn.jiebaba.summer.core.context.DefaultApplicationContext;
 import cn.jiebaba.summer.core.env.Environment;
-import cn.jiebaba.summer.core.test.AfterEach;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.BeforeEach;
-import cn.jiebaba.summer.core.test.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
@@ -51,10 +51,10 @@ public class AiExtendedAutoConfigTest {
             VectorStore store = ctx.getBean(VectorStore.class);
             ChatMemory memory = ctx.getBean(ChatMemory.class);
             RagClient rag = ctx.getBean(RagClient.class);
-            Assert.assertNotNull(embedding, "EmbeddingModel 未装配");
-            Assert.assertNotNull(store, "VectorStore 未装配");
-            Assert.assertNotNull(memory, "ChatMemory 未装配");
-            Assert.assertNotNull(rag, "RagClient 未装配");
+            Assertions.assertNotNull(embedding, "EmbeddingModel 未装配");
+            Assertions.assertNotNull(store, "VectorStore 未装配");
+            Assertions.assertNotNull(memory, "ChatMemory 未装配");
+            Assertions.assertNotNull(rag, "RagClient 未装配");
         } finally {
             ctx.close();
         }
@@ -69,7 +69,7 @@ public class AiExtendedAutoConfigTest {
         DefaultApplicationContext ctx = new DefaultApplicationContext(null, env, Set.of("cn.jiebaba.summer.boot.ai"));
         try {
             ctx.refresh();
-            Assert.assertThrows(RuntimeException.class,
+            Assertions.assertThrows(RuntimeException.class,
                     () -> ctx.getBean(EmbeddingModel.class),
                     "未启用 embedding 时 getBean 应抛异常");
         } finally {
@@ -88,7 +88,7 @@ public class AiExtendedAutoConfigTest {
             ctx.refresh();
             // 未启用 memory/rag/vectorstore 时，refresh 仍成功（@Lazy 不实例化），
             // 注入 ChatClient 等基础能力不受影响。
-            Assert.assertThrows(RuntimeException.class,
+            Assertions.assertThrows(RuntimeException.class,
                     () -> ctx.getBean(ChatMemory.class),
                     "未启用 memory 时 getBean(ChatMemory) 应抛异常");
         } finally {

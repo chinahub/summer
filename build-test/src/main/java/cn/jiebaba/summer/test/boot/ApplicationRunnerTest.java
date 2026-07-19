@@ -6,9 +6,9 @@ import cn.jiebaba.summer.boot.DefaultApplicationArguments;
 import cn.jiebaba.summer.boot.SummerApplication;
 import cn.jiebaba.summer.core.annotation.Order;
 import cn.jiebaba.summer.core.context.DefaultApplicationContext;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.BeforeEach;
-import cn.jiebaba.summer.core.test.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -65,13 +65,13 @@ public class ApplicationRunnerTest {
         context.registerBean("unordered", new UnorderedRunner());
         SummerApplication.invokeRunners(context, new String[0]);
         // 有序的先执行（升序），无序的随后（保持注册顺序）
-        Assert.assertEquals(List.of("first", "third", "unordered"), executed);
+        Assertions.assertEquals(List.of("first", "third", "unordered"), executed);
     }
 
     @Test
     public void noRunnersIsNoop() {
         SummerApplication.invokeRunners(context, new String[0]);
-        Assert.assertTrue(executed.isEmpty());
+        Assertions.assertTrue(executed.isEmpty());
     }
 
     @Test
@@ -79,17 +79,17 @@ public class ApplicationRunnerTest {
         context.registerBean("args", new ArgsRunner());
         SummerApplication.invokeRunners(context,
                 new String[]{"--name=summer", "--debug", "positional"});
-        Assert.assertNotNull(capturedArgs);
-        Assert.assertTrue(capturedArgs.containsOption("name"));
-        Assert.assertTrue(capturedArgs.containsOption("debug"));
-        Assert.assertEquals("summer", capturedArgs.getOptionValues("name").get(0));
-        Assert.assertEquals(List.of("positional"), capturedArgs.getNonOptionArgs());
+        Assertions.assertNotNull(capturedArgs);
+        Assertions.assertTrue(capturedArgs.containsOption("name"));
+        Assertions.assertTrue(capturedArgs.containsOption("debug"));
+        Assertions.assertEquals("summer", capturedArgs.getOptionValues("name").get(0));
+        Assertions.assertEquals(List.of("positional"), capturedArgs.getNonOptionArgs());
     }
 
     @Test
     public void failingRunnerThrowsIllegalState() {
         context.registerBean("fail", new FailingRunner());
-        Assert.assertThrows(IllegalStateException.class,
+        Assertions.assertThrows(IllegalStateException.class,
                 () -> SummerApplication.invokeRunners(context, new String[0]));
     }
 
@@ -97,10 +97,10 @@ public class ApplicationRunnerTest {
     public void defaultArgsParsesFlagsAndRepeats() {
         DefaultApplicationArguments args =
                 new DefaultApplicationArguments("--flag", "--k=1", "--k=2", "leftover");
-        Assert.assertTrue(args.containsOption("flag"));
-        Assert.assertTrue(args.getOptionValues("flag").isEmpty());
-        Assert.assertEquals(List.of("1", "2"), args.getOptionValues("k"));
-        Assert.assertEquals(List.of("leftover"), args.getNonOptionArgs());
-        Assert.assertEquals(4, args.getSourceArgs().length);
+        Assertions.assertTrue(args.containsOption("flag"));
+        Assertions.assertTrue(args.getOptionValues("flag").isEmpty());
+        Assertions.assertEquals(List.of("1", "2"), args.getOptionValues("k"));
+        Assertions.assertEquals(List.of("leftover"), args.getNonOptionArgs());
+        Assertions.assertEquals(4, args.getSourceArgs().length);
     }
 }

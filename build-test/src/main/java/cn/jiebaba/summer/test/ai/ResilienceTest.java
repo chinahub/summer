@@ -8,8 +8,8 @@ import cn.jiebaba.summer.ai.retry.CircuitBreakerOpenException;
 import cn.jiebaba.summer.ai.retry.RateLimiter;
 import cn.jiebaba.summer.ai.retry.ResilientChatModel;
 import cn.jiebaba.summer.ai.retry.RetryPolicy;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.List;
@@ -32,8 +32,8 @@ public class ResilienceTest {
                 .build();
         ResilientChatModel model = new ResilientChatModel(stub, null, retry, null);
         ChatResponse resp = model.call(prompt());
-        Assert.assertEquals("ok", resp.content());
-        Assert.assertEquals(3, stub.callCount());
+        Assertions.assertEquals("ok", resp.content());
+        Assertions.assertEquals(3, stub.callCount());
     }
 
     @Test
@@ -46,8 +46,8 @@ public class ResilienceTest {
                 .maxBackoff(Duration.ofMillis(2))
                 .build();
         ResilientChatModel model = new ResilientChatModel(stub, null, retry, null);
-        Assert.assertThrows(AiException.class, () -> model.call(prompt()));
-        Assert.assertEquals(2, stub.callCount());
+        Assertions.assertThrows(AiException.class, () -> model.call(prompt()));
+        Assertions.assertEquals(2, stub.callCount());
     }
 
     @Test
@@ -55,10 +55,10 @@ public class ResilienceTest {
         StubChatModel stub = new StubChatModel().failFirstN(99);
         CircuitBreaker cb = new CircuitBreaker(2, Duration.ofSeconds(60));
         ResilientChatModel model = new ResilientChatModel(stub, null, null, cb);
-        Assert.assertThrows(AiException.class, () -> model.call(prompt()));
-        Assert.assertThrows(AiException.class, () -> model.call(prompt()));
-        Assert.assertEquals(CircuitBreaker.State.OPEN, cb.getState());
-        Assert.assertThrows(CircuitBreakerOpenException.class, () -> model.call(prompt()));
+        Assertions.assertThrows(AiException.class, () -> model.call(prompt()));
+        Assertions.assertThrows(AiException.class, () -> model.call(prompt()));
+        Assertions.assertEquals(CircuitBreaker.State.OPEN, cb.getState());
+        Assertions.assertThrows(CircuitBreakerOpenException.class, () -> model.call(prompt()));
     }
 
     @Test
@@ -66,13 +66,13 @@ public class ResilienceTest {
         StubChatModel stub = new StubChatModel(new ChatResponse("ok", null, "stop", null)).failFirstN(2);
         CircuitBreaker cb = new CircuitBreaker(2, Duration.ofMillis(50));
         ResilientChatModel model = new ResilientChatModel(stub, null, null, cb);
-        Assert.assertThrows(AiException.class, () -> model.call(prompt()));
-        Assert.assertThrows(AiException.class, () -> model.call(prompt()));
-        Assert.assertEquals(CircuitBreaker.State.OPEN, cb.getState());
+        Assertions.assertThrows(AiException.class, () -> model.call(prompt()));
+        Assertions.assertThrows(AiException.class, () -> model.call(prompt()));
+        Assertions.assertEquals(CircuitBreaker.State.OPEN, cb.getState());
         Thread.sleep(80);
         ChatResponse resp = model.call(prompt());
-        Assert.assertEquals("ok", resp.content());
-        Assert.assertEquals(CircuitBreaker.State.CLOSED, cb.getState());
+        Assertions.assertEquals("ok", resp.content());
+        Assertions.assertEquals(CircuitBreaker.State.CLOSED, cb.getState());
     }
 
     @Test
@@ -82,7 +82,7 @@ public class ResilienceTest {
         limiter.acquire();
         limiter.acquire();
         long elapsedMs = (System.nanoTime() - start) / 1_000_000;
-        Assert.assertTrue(elapsedMs < 100, "高速率限流不应长时间阻塞，实际: " + elapsedMs + "ms");
+        Assertions.assertTrue(elapsedMs < 100, "高速率限流不应长时间阻塞，实际: " + elapsedMs + "ms");
     }
 
     @Test
@@ -93,8 +93,8 @@ public class ResilienceTest {
                 .multiplier(2.0)
                 .maxBackoff(Duration.ofMillis(500))
                 .build();
-        Assert.assertTrue(p.backoff(1).toMillis() <= 500);
-        Assert.assertEquals(500, p.backoff(10).toMillis());
-        Assert.assertFalse(p.shouldRetry(new AiException("x"), 5));
+        Assertions.assertTrue(p.backoff(1).toMillis() <= 500);
+        Assertions.assertEquals(500, p.backoff(10).toMillis());
+        Assertions.assertFalse(p.shouldRetry(new AiException("x"), 5));
     }
 }

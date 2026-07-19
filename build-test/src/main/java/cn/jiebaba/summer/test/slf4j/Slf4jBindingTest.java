@@ -1,9 +1,9 @@
 package cn.jiebaba.summer.test.slf4j;
 
-import cn.jiebaba.summer.core.test.AfterEach;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.BeforeEach;
-import cn.jiebaba.summer.core.test.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,11 +44,11 @@ public class Slf4jBindingTest {
     void slf4jRoutesToJulWithPlaceholder() {
         Logger log = LoggerFactory.getLogger(LOGGER_NAME);
         log.info("hello {}", "summer");
-        Assert.assertEquals(1, handler.records.size());
+        Assertions.assertEquals(1, handler.records.size());
         LogRecord r = handler.records.get(0);
-        Assert.assertEquals(Level.INFO, r.getLevel());
-        Assert.assertEquals("hello summer", r.getMessage());
-        Assert.assertEquals(LOGGER_NAME, r.getLoggerName());
+        Assertions.assertEquals(Level.INFO, r.getLevel());
+        Assertions.assertEquals("hello summer", r.getMessage());
+        Assertions.assertEquals(LOGGER_NAME, r.getLoggerName());
     }
 
     @Test
@@ -56,11 +56,11 @@ public class Slf4jBindingTest {
         Logger log = LoggerFactory.getLogger(LOGGER_NAME);
         RuntimeException ex = new RuntimeException("boom");
         log.error("failed at step {}", 3, ex);
-        Assert.assertEquals(1, handler.records.size());
+        Assertions.assertEquals(1, handler.records.size());
         LogRecord r = handler.records.get(0);
-        Assert.assertEquals(Level.SEVERE, r.getLevel());
-        Assert.assertEquals("failed at step 3", r.getMessage());
-        Assert.assertTrue(r.getThrown() == ex, "expected attached throwable");
+        Assertions.assertEquals(Level.SEVERE, r.getLevel());
+        Assertions.assertEquals("failed at step 3", r.getMessage());
+        Assertions.assertTrue(r.getThrown() == ex, "expected attached throwable");
     }
 
     @Test
@@ -71,23 +71,23 @@ public class Slf4jBindingTest {
         log.info("i");
         log.warn("w");
         log.error("e");
-        Assert.assertEquals(5, handler.records.size());
-        Assert.assertEquals(Level.FINER, handler.records.get(0).getLevel());
-        Assert.assertEquals(Level.FINE, handler.records.get(1).getLevel());
-        Assert.assertEquals(Level.INFO, handler.records.get(2).getLevel());
-        Assert.assertEquals(Level.WARNING, handler.records.get(3).getLevel());
-        Assert.assertEquals(Level.SEVERE, handler.records.get(4).getLevel());
+        Assertions.assertEquals(5, handler.records.size());
+        Assertions.assertEquals(Level.FINER, handler.records.get(0).getLevel());
+        Assertions.assertEquals(Level.FINE, handler.records.get(1).getLevel());
+        Assertions.assertEquals(Level.INFO, handler.records.get(2).getLevel());
+        Assertions.assertEquals(Level.WARNING, handler.records.get(3).getLevel());
+        Assertions.assertEquals(Level.SEVERE, handler.records.get(4).getLevel());
     }
 
     @Test
     void isEnabledReflectsJulLevel() {
         Logger log = LoggerFactory.getLogger(LOGGER_NAME);
         jul.setLevel(Level.WARNING);
-        Assert.assertFalse(log.isTraceEnabled());
-        Assert.assertFalse(log.isDebugEnabled());
-        Assert.assertFalse(log.isInfoEnabled());
-        Assert.assertTrue(log.isWarnEnabled());
-        Assert.assertTrue(log.isErrorEnabled());
+        Assertions.assertFalse(log.isTraceEnabled());
+        Assertions.assertFalse(log.isDebugEnabled());
+        Assertions.assertFalse(log.isInfoEnabled());
+        Assertions.assertTrue(log.isWarnEnabled());
+        Assertions.assertTrue(log.isErrorEnabled());
     }
 
     static final class CapturingHandler extends Handler {

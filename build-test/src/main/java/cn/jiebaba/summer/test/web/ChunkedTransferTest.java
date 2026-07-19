@@ -1,9 +1,10 @@
 package cn.jiebaba.summer.test.web;
 
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
 import cn.jiebaba.summer.web.http.RawHttpRequest;
 import cn.jiebaba.summer.web.server.MaxUploadSizeExceededException;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
@@ -37,9 +38,9 @@ public class ChunkedTransferTest {
     void chunkedBodyDecodedFromStream() throws Throwable {
         byte[] raw = chunkedRequest("Hello, ", "summer!");
         RawHttpRequest req = RawHttpRequest.parse(new ByteArrayInputStream(raw), 8192, 8388608);
-        Assert.assertEquals("Hello, summer!", new String(req.body(), StandardCharsets.UTF_8));
-        Assert.assertEquals("POST", req.method());
-        Assert.assertEquals("/echo", req.target());
+        Assertions.assertEquals("Hello, summer!", new String(req.body(), StandardCharsets.UTF_8));
+        Assertions.assertEquals("POST", req.method());
+        Assertions.assertEquals("/echo", req.target());
     }
 
     @Test
@@ -60,7 +61,7 @@ public class ChunkedTransferTest {
         ByteBuffer buf = ByteBuffer.allocate(8192);
         buf.limit(0); // 初始为空，首次读取时从通道填充
         RawHttpRequest req = RawHttpRequest.parse(pipe.source(), buf, 8192, 8388608);
-        Assert.assertEquals("Hello, summer!", new String(req.body(), StandardCharsets.UTF_8));
+        Assertions.assertEquals("Hello, summer!", new String(req.body(), StandardCharsets.UTF_8));
         writer.join();
     }
 
@@ -68,15 +69,15 @@ public class ChunkedTransferTest {
     void emptyChunkedBody() throws Throwable {
         byte[] raw = (HEAD + "0\r\n\r\n").getBytes(StandardCharsets.UTF_8);
         RawHttpRequest req = RawHttpRequest.parse(new ByteArrayInputStream(raw), 8192, 8388608);
-        Assert.assertEquals(0, req.body().length);
+        Assertions.assertEquals(0, req.body().length);
     }
 
     @Test
     void chunkedExceedsMaxSize() {
         byte[] raw = chunkedRequest("0123456789", "0123456789"); // 20 字节
-        MaxUploadSizeExceededException e = Assert.assertThrows(MaxUploadSizeExceededException.class,
+        MaxUploadSizeExceededException e = Assertions.assertThrows(MaxUploadSizeExceededException.class,
                 () -> RawHttpRequest.parse(new ByteArrayInputStream(raw), 8192, 8));
-        Assert.assertTrue(e.actualSize() == 10 && e.maxSize() == 8,
+        Assertions.assertTrue(e.actualSize() == 10 && e.maxSize() == 8,
                 "应报告首个 chunk 的大小 10 超过上限 8");
     }
 }

@@ -7,9 +7,9 @@ import cn.jiebaba.summer.ai.chat.ToolCall;
 import cn.jiebaba.summer.ai.tools.Tool;
 import cn.jiebaba.summer.ai.tools.ToolCallingChatModel;
 import cn.jiebaba.summer.ai.tools.ToolParameter;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
 import cn.jiebaba.summer.core.util.JsonUtil;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
@@ -36,9 +36,9 @@ public class ToolCallingTest {
         ChatModel model = new ToolCallingChatModel(stub, List.of(weatherTool));
         ChatResponse resp = ChatClient.create(model).prompt().user("北京天气如何").call();
 
-        Assert.assertEquals("北京今天晴", resp.content());
-        Assert.assertEquals(1, executed.get(), "工具应被执行一次");
-        Assert.assertEquals(2, stub.callCount(), "底层模型应被调用两次");
+        Assertions.assertEquals("北京今天晴", resp.content());
+        Assertions.assertEquals(1, executed.get(), "工具应被执行一次");
+        Assertions.assertEquals(2, stub.callCount(), "底层模型应被调用两次");
     }
 
     @Test
@@ -53,8 +53,8 @@ public class ToolCallingTest {
                     return Map.of("sum", a + b);
                 });
         String result = tool.call(JsonUtil.toJsonStr(Map.of("a", 3, "b", 4)));
-        Assert.assertEquals(1, seen.get());
-        Assert.assertTrue(result.contains("\"sum\":7"), "结果应包含 sum=7，实际: " + result);
+        Assertions.assertEquals(1, seen.get());
+        Assertions.assertTrue(result.contains("\"sum\":7"), "结果应包含 sum=7，实际: " + result);
     }
 
     @Test
@@ -65,8 +65,8 @@ public class ToolCallingTest {
         StubChatModel stub = new StubChatModel(toolCallResp, finalResp);
         ChatModel model = new ToolCallingChatModel(stub, List.of());
         ChatResponse resp = ChatClient.create(model).prompt().user("x").call();
-        Assert.assertEquals("完成", resp.content());
-        Assert.assertEquals(2, stub.callCount());
+        Assertions.assertEquals("完成", resp.content());
+        Assertions.assertEquals(2, stub.callCount());
     }
 
     @Test
@@ -77,7 +77,7 @@ public class ToolCallingTest {
         Tool ping = new Tool("ping", "无操作工具", List.of(),
                 args -> "ok");
         ChatModel model = new ToolCallingChatModel(stub, List.of(ping), 2);
-        Assert.assertThrows(cn.jiebaba.summer.ai.AiException.class,
+        Assertions.assertThrows(cn.jiebaba.summer.ai.AiException.class,
                 () -> ChatClient.create(model).prompt().user("loop").call());
     }
 
@@ -118,11 +118,11 @@ public class ToolCallingTest {
                 text.append(c.content());
             }
         }
-        Assert.assertEquals("北京今天晴", text.toString());
-        Assert.assertEquals("北京", capturedCity.get(), "工具应收到 city=北京");
-        Assert.assertEquals(1, executed.get(), "工具应执行一次");
-        Assert.assertEquals(2, stub.streamCallCount(), "底层应流式调用两轮");
-        Assert.assertEquals("stop", chunks.get(chunks.size() - 1).finishReason(), "末帧应为 stop 收尾");
+        Assertions.assertEquals("北京今天晴", text.toString());
+        Assertions.assertEquals("北京", capturedCity.get(), "工具应收到 city=北京");
+        Assertions.assertEquals(1, executed.get(), "工具应执行一次");
+        Assertions.assertEquals(2, stub.streamCallCount(), "底层应流式调用两轮");
+        Assertions.assertEquals("stop", chunks.get(chunks.size() - 1).finishReason(), "末帧应为 stop 收尾");
     }
 
     @Test
@@ -164,11 +164,11 @@ public class ToolCallingTest {
         ChatModel model = new ToolCallingChatModel(stub, List.of(setA, setB));
         List<ChatResponse> chunks = ChatClient.create(model).prompt().user("go").stream().toList();
 
-        Assert.assertEquals(1, aExec.get(), "setA 应执行一次");
-        Assert.assertEquals(1, bExec.get(), "setB 应执行一次");
-        Assert.assertEquals("A", aVal.get(), "setA 应收到 v=A（index 路由正确）");
-        Assert.assertEquals("B", bVal.get(), "setB 应收到 v=B（index 路由正确）");
-        Assert.assertEquals("done", chunks.get(chunks.size() - 1).content());
+        Assertions.assertEquals(1, aExec.get(), "setA 应执行一次");
+        Assertions.assertEquals(1, bExec.get(), "setB 应执行一次");
+        Assertions.assertEquals("A", aVal.get(), "setA 应收到 v=A（index 路由正确）");
+        Assertions.assertEquals("B", bVal.get(), "setB 应收到 v=B（index 路由正确）");
+        Assertions.assertEquals("done", chunks.get(chunks.size() - 1).content());
     }
 
     @Test
@@ -181,7 +181,7 @@ public class ToolCallingTest {
         StubChatModel stub = new StubChatModel();
         stub.streamRounds(List.of(loop));
         ChatModel model = new ToolCallingChatModel(stub, List.of(ping), 2);
-        Assert.assertThrows(cn.jiebaba.summer.ai.AiException.class,
+        Assertions.assertThrows(cn.jiebaba.summer.ai.AiException.class,
                 () -> ChatClient.create(model).prompt().user("loop").stream().toList());
     }
 
@@ -197,7 +197,7 @@ public class ToolCallingTest {
         stub.streamRounds(List.of(round1, round2));
         ChatModel model = new ToolCallingChatModel(stub, List.of());
         List<ChatResponse> chunks = ChatClient.create(model).prompt().user("x").stream().toList();
-        Assert.assertEquals("完成", chunks.get(chunks.size() - 1).content());
-        Assert.assertEquals(2, stub.streamCallCount(), "底层应流式调用两轮");
+        Assertions.assertEquals("完成", chunks.get(chunks.size() - 1).content());
+        Assertions.assertEquals(2, stub.streamCallCount(), "底层应流式调用两轮");
     }
 }

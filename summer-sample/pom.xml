@@ -34,6 +34,18 @@
             <artifactId>postgresql</artifactId>
             <version>42.7.11</version>
         </dependency>
+
+        <!-- JUnit 5：src/test 用例跑在真实 Jupiter 引擎上（IDEA 绿色三角 + surefire） -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -49,6 +61,16 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- 临时目录(C:)与仓库(D:)跨盘符，manifest jar 类路径会失效，改用普通 -cp -->
+                    <useManifestOnlyJar>false</useManifestOnlyJar>
+                    <!-- Git Bash 管道与 fork VM 退出握手不兼容（ForkedBooter 挂起），进程内执行 -->
+                    <forkCount>0</forkCount>
+                </configuration>
             </plugin>
         </plugins>
     </build>

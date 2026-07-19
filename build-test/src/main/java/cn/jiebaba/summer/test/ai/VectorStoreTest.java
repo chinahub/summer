@@ -5,8 +5,8 @@ import cn.jiebaba.summer.ai.vectorstore.InMemoryVectorStore;
 import cn.jiebaba.summer.ai.vectorstore.RetrievalResult;
 import cn.jiebaba.summer.ai.vectorstore.SearchRequest;
 import cn.jiebaba.summer.ai.vectorstore.SimilarityUtil;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -16,10 +16,10 @@ public class VectorStoreTest {
     @Test
     public void cosineSimilarityBasics() {
         float[] a = {1f, 0f, 0f};
-        Assert.assertTrue(Math.abs(SimilarityUtil.cosine(a, a) - 1.0) < 1e-6);
+        Assertions.assertTrue(Math.abs(SimilarityUtil.cosine(a, a) - 1.0) < 1e-6);
         float[] b = {0f, 1f, 0f};
-        Assert.assertTrue(Math.abs(SimilarityUtil.cosine(a, b)) < 1e-6);
-        Assert.assertEquals(0f, SimilarityUtil.cosine(a, new float[0]));
+        Assertions.assertTrue(Math.abs(SimilarityUtil.cosine(a, b)) < 1e-6);
+        Assertions.assertEquals(0f, SimilarityUtil.cosine(a, new float[0]));
     }
 
     @Test
@@ -30,9 +30,9 @@ public class VectorStoreTest {
                 Document.of("cat dog"),
                 Document.of("apple cat")));
         List<RetrievalResult> results = store.similaritySearch(SearchRequest.builder().query("apple").topK(3).build());
-        Assert.assertFalse(results.isEmpty());
-        Assert.assertTrue(results.get(0).document().content().contains("apple"));
-        Assert.assertEquals(3, store.size());
+        Assertions.assertFalse(results.isEmpty());
+        Assertions.assertTrue(results.get(0).document().content().contains("apple"));
+        Assertions.assertEquals(3, store.size());
     }
 
     @Test
@@ -43,7 +43,7 @@ public class VectorStoreTest {
                 Document.of("cat dog"),
                 Document.of("apple cat")));
         List<RetrievalResult> results = store.similaritySearch(SearchRequest.builder().query("apple").topK(1).build());
-        Assert.assertEquals(1, results.size());
+        Assertions.assertEquals(1, results.size());
     }
 
     @Test
@@ -54,16 +54,16 @@ public class VectorStoreTest {
                 Document.of("cat dog")));
         List<RetrievalResult> results = store.similaritySearch(SearchRequest.builder()
                 .query("apple").topK(5).similarityThreshold(0.99).build());
-        Assert.assertTrue(results.isEmpty(), "高阈值应过滤掉所有结果");
+        Assertions.assertTrue(results.isEmpty(), "高阈值应过滤掉所有结果");
     }
 
     @Test
     public void deleteRemovesDocument() {
         InMemoryVectorStore store = new InMemoryVectorStore(new StubEmbeddingModel());
         java.util.List<String> ids = store.add(List.of(Document.of("apple banana")));
-        Assert.assertEquals(1, store.size());
+        Assertions.assertEquals(1, store.size());
         store.delete(ids);
-        Assert.assertEquals(0, store.size());
+        Assertions.assertEquals(0, store.size());
     }
 
     @Test
@@ -75,8 +75,8 @@ public class VectorStoreTest {
                 Document.builder().content("apple dog").metadata("source", "web").build()));
         List<RetrievalResult> results = store.similaritySearch(SearchRequest.builder()
                 .query("apple").topK(10).filter("source", "web").build());
-        Assert.assertEquals(2, results.size(), "应仅命中 source=web 的 2 条文档");
-        Assert.assertTrue(results.stream().allMatch(r -> "web".equals(r.document().metadata().get("source"))),
+        Assertions.assertEquals(2, results.size(), "应仅命中 source=web 的 2 条文档");
+        Assertions.assertTrue(results.stream().allMatch(r -> "web".equals(r.document().metadata().get("source"))),
                 "过滤后结果应全部 source=web");
     }
 
@@ -91,7 +91,7 @@ public class VectorStoreTest {
                 .query("apple").topK(10)
                 .filter("source", "web").filter("lang", "en")
                 .build());
-        Assert.assertEquals(1, results.size(), "应仅命中 source=web 且 lang=en 的 1 条");
-        Assert.assertEquals("apple banana", results.get(0).document().content());
+        Assertions.assertEquals(1, results.size(), "应仅命中 source=web 且 lang=en 的 1 条");
+        Assertions.assertEquals("apple banana", results.get(0).document().content());
     }
 }

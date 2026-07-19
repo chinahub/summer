@@ -2,10 +2,11 @@ package cn.jiebaba.summer.test.util;
 
 import cn.jiebaba.summer.core.context.DefaultApplicationContext;
 import cn.jiebaba.summer.core.context.DisposableBean;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.BeforeEach;
-import cn.jiebaba.summer.core.test.Test;
 import cn.jiebaba.summer.core.util.SummerUtil;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
@@ -32,18 +33,18 @@ public class SummerUtilTest {
     public void registerAndGetByName() {
         HelloBean bean = new HelloBean();
         SummerUtil.registerBean("hello", bean);
-        Assert.assertTrue(SummerUtil.containsBean("hello"));
-        Assert.assertTrue(SummerUtil.getBean("hello") == bean);
-        Assert.assertEquals("hi", SummerUtil.getBean("hello", HelloBean.class).greet());
+        Assertions.assertTrue(SummerUtil.containsBean("hello"));
+        Assertions.assertTrue(SummerUtil.getBean("hello") == bean);
+        Assertions.assertEquals("hi", SummerUtil.getBean("hello", HelloBean.class).greet());
     }
 
     @Test
     public void registerByObjectUsesClassName() {
         HelloBean bean = new HelloBean();
         SummerUtil.registerBean(bean);
-        Assert.assertTrue(SummerUtil.containsBean("helloBean"));
-        Assert.assertTrue(SummerUtil.getBean(HelloBean.class) == bean);
-        Assert.assertEquals(HelloBean.class, SummerUtil.getType("helloBean"));
+        Assertions.assertTrue(SummerUtil.containsBean("helloBean"));
+        Assertions.assertTrue(SummerUtil.getBean(HelloBean.class) == bean);
+        Assertions.assertEquals(HelloBean.class, SummerUtil.getType("helloBean"));
     }
 
     @Test
@@ -51,7 +52,7 @@ public class SummerUtilTest {
         SummerUtil.registerBean("dup", new HelloBean());
         try {
             SummerUtil.registerBean("dup", new HelloBean());
-            Assert.fail("expected duplicate registration to throw");
+            Assertions.fail("expected duplicate registration to throw");
         } catch (Exception expected) {
             // ok
         }
@@ -61,9 +62,9 @@ public class SummerUtilTest {
     public void unregisterByName() {
         HelloBean bean = new HelloBean();
         SummerUtil.registerBean("bye", bean);
-        Assert.assertTrue(SummerUtil.unregisterBean("bye"));
-        Assert.assertFalse(SummerUtil.containsBean("bye"));
-        Assert.assertFalse(SummerUtil.unregisterBean("bye"));
+        Assertions.assertTrue(SummerUtil.unregisterBean("bye"));
+        Assertions.assertFalse(SummerUtil.containsBean("bye"));
+        Assertions.assertFalse(SummerUtil.unregisterBean("bye"));
     }
 
     @Test
@@ -71,26 +72,26 @@ public class SummerUtilTest {
         SummerUtil.registerBean("a", new HelloBean());
         SummerUtil.registerBean("b", new HelloBean());
         int removed = SummerUtil.unregisterBean(HelloBean.class);
-        Assert.assertEquals(2, removed);
-        Assert.assertFalse(SummerUtil.containsBean("a"));
-        Assert.assertFalse(SummerUtil.containsBean("b"));
+        Assertions.assertEquals(2, removed);
+        Assertions.assertFalse(SummerUtil.containsBean("a"));
+        Assertions.assertFalse(SummerUtil.containsBean("b"));
     }
 
     @Test
     public void unregisterInvokesDestroy() {
         LifecycleBean bean = new LifecycleBean();
         SummerUtil.registerBean("life", bean);
-        Assert.assertFalse(bean.destroyed);
+        Assertions.assertFalse(bean.destroyed);
         SummerUtil.unregisterBean("life");
-        Assert.assertTrue(bean.destroyed);
+        Assertions.assertTrue(bean.destroyed);
     }
 
     @Test
     public void getBeanNamesForType() {
         SummerUtil.registerBean("one", new HelloBean());
         String[] names = SummerUtil.getBeanNamesForType(HelloBean.class);
-        Assert.assertTrue(names.length == 1, "expected 1 name, got " + java.util.Arrays.toString(names));
-        Assert.assertEquals("one", names[0]);
+        Assertions.assertTrue(names.length == 1, "expected 1 name, got " + java.util.Arrays.toString(names));
+        Assertions.assertEquals("one", names[0]);
     }
 
     @Test
@@ -98,7 +99,7 @@ public class SummerUtilTest {
         SummerUtil.clearContext();
         try {
             SummerUtil.getBean("anything");
-            Assert.fail("expected IllegalStateException");
+            Assertions.fail("expected IllegalStateException");
         } catch (IllegalStateException expected) {
             // ok
         }

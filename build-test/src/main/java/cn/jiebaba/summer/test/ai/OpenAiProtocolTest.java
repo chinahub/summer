@@ -5,10 +5,10 @@ import cn.jiebaba.summer.ai.chat.ChatResponse;
 import cn.jiebaba.summer.ai.chat.Prompt;
 import cn.jiebaba.summer.ai.chat.UserMessage;
 import cn.jiebaba.summer.ai.model.openai.OpenAiCompatibleChatModel;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
 import cn.jiebaba.summer.core.util.JsonUtil;
 import cn.jiebaba.summer.core.util.JsonUtil.JSONObject;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
 import java.time.Duration;
@@ -50,8 +50,8 @@ public class OpenAiProtocolTest {
         String body = buildRequestBody(prompt(opts), false);
         JSONObject root = JsonUtil.parseObj(body);
         JSONObject rf = root.getJSONObject("response_format");
-        Assert.assertNotNull(rf, "请求体应含 response_format");
-        Assert.assertEquals("json_object", rf.getStr("type"));
+        Assertions.assertNotNull(rf, "请求体应含 response_format");
+        Assertions.assertEquals("json_object", rf.getStr("type"));
     }
 
     /** 默认未设置 responseFormat 时，请求体不应含 response_format 字段。 */
@@ -59,21 +59,21 @@ public class OpenAiProtocolTest {
     public void noResponseFormatByDefault() throws Exception {
         String body = buildRequestBody(prompt(null), false);
         JSONObject root = JsonUtil.parseObj(body);
-        Assert.assertNull(root.getJSONObject("response_format"), "默认不应含 response_format");
+        Assertions.assertNull(root.getJSONObject("response_format"), "默认不应含 response_format");
     }
 
     /** 流式请求体应带 stream_options.include_usage=true，非流式不应带 stream_options。 */
     @Test
     public void streamOptionsIncludeUsage() throws Exception {
         JSONObject streamRoot = JsonUtil.parseObj(buildRequestBody(prompt(null), true));
-        Assert.assertTrue(streamRoot.getBool("stream"), "流式 stream 应为 true");
+        Assertions.assertTrue(streamRoot.getBool("stream"), "流式 stream 应为 true");
         JSONObject so = streamRoot.getJSONObject("stream_options");
-        Assert.assertNotNull(so, "流式请求体应含 stream_options");
-        Assert.assertTrue(Boolean.TRUE.equals(so.getBool("include_usage")), "include_usage 应为 true");
+        Assertions.assertNotNull(so, "流式请求体应含 stream_options");
+        Assertions.assertTrue(Boolean.TRUE.equals(so.getBool("include_usage")), "include_usage 应为 true");
 
         JSONObject nonStreamRoot = JsonUtil.parseObj(buildRequestBody(prompt(null), false));
-        Assert.assertFalse(nonStreamRoot.getBool("stream"), "非流式 stream 应为 false");
-        Assert.assertNull(nonStreamRoot.getJSONObject("stream_options"), "非流式不应含 stream_options");
+        Assertions.assertFalse(nonStreamRoot.getBool("stream"), "非流式 stream 应为 false");
+        Assertions.assertNull(nonStreamRoot.getJSONObject("stream_options"), "非流式不应含 stream_options");
     }
 
     /** 流式末帧 choices 为空、仅含 usage 时，parseChunk 应返回携带 metadata 的响应（不再被丢弃）。 */
@@ -83,12 +83,12 @@ public class OpenAiProtocolTest {
                 + "\"usage\":{\"prompt_tokens\":3,\"completion_tokens\":2,\"total_tokens\":5,"
                 + "\"prompt_cache_hit_tokens\":1}}";
         ChatResponse resp = parseChunk(frame);
-        Assert.assertNotNull(resp, "末帧 usage 不应被丢弃");
-        Assert.assertNotNull(resp.metadata(), "末帧应含 usage 元数据");
-        Assert.assertEquals(5L, resp.metadata().totalTokens(), "total_tokens 应为 5");
-        Assert.assertEquals(3L, resp.metadata().promptTokens(), "prompt_tokens 应为 3");
-        Assert.assertEquals(1L, resp.metadata().promptCacheHitTokens(), "缓存命中应为 1");
-        Assert.assertNull(resp.content(), "末帧无内容");
+        Assertions.assertNotNull(resp, "末帧 usage 不应被丢弃");
+        Assertions.assertNotNull(resp.metadata(), "末帧应含 usage 元数据");
+        Assertions.assertEquals(5L, resp.metadata().totalTokens(), "total_tokens 应为 5");
+        Assertions.assertEquals(3L, resp.metadata().promptTokens(), "prompt_tokens 应为 3");
+        Assertions.assertEquals(1L, resp.metadata().promptCacheHitTokens(), "缓存命中应为 1");
+        Assertions.assertNull(resp.content(), "末帧无内容");
     }
 
     /** 内容帧不含 usage 时 metadata 为 null；含 usage 时应一并解析填入 metadata。 */
@@ -96,14 +96,14 @@ public class OpenAiProtocolTest {
     public void parseChunkContentFrameMetadata() throws Exception {
         String noUsage = "{\"model\":\"test-model\",\"choices\":[{\"delta\":{\"content\":\"Hello\"},\"finish_reason\":null}]}";
         ChatResponse r1 = parseChunk(noUsage);
-        Assert.assertEquals("Hello", r1.content());
-        Assert.assertNull(r1.metadata(), "无 usage 帧的 metadata 应为 null");
+        Assertions.assertEquals("Hello", r1.content());
+        Assertions.assertNull(r1.metadata(), "无 usage 帧的 metadata 应为 null");
 
         String withUsage = "{\"model\":\"test-model\",\"choices\":[{\"delta\":{\"content\":\"Hi\"},\"finish_reason\":\"stop\"}],"
                 + "\"usage\":{\"prompt_tokens\":1,\"completion_tokens\":1,\"total_tokens\":2}}";
         ChatResponse r2 = parseChunk(withUsage);
-        Assert.assertEquals("Hi", r2.content());
-        Assert.assertNotNull(r2.metadata(), "含 usage 帧应解析出 metadata");
-        Assert.assertEquals(2L, r2.metadata().totalTokens(), "total_tokens 应为 2");
+        Assertions.assertEquals("Hi", r2.content());
+        Assertions.assertNotNull(r2.metadata(), "含 usage 帧应解析出 metadata");
+        Assertions.assertEquals(2L, r2.metadata().totalTokens(), "total_tokens 应为 2");
     }
 }

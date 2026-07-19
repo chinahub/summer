@@ -2,6 +2,9 @@ package cn.jiebaba.summer.core.scanner;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,10 +18,12 @@ import java.util.jar.JarFile;
 
 /**
  * 扫描 class-path 中位于给定基础包下的 class 文件，直接读取目录与 jar 条目（来源为
- * {@code java.class.path}）。
+ * {@code java.class.path} 及类加载器的 URL）。
  *
- * <p><b>注意：</b>仅扫描应用 class path（{@code java.class.path}）。在 JDK 9+ 上，
+ * <p><b>注意：</b>默认仅扫描应用 class path（{@code java.class.path}）。在 JDK 9+ 上，
  * 平台/JDK 类位于 module path，不会被此处枚举，因此不会遍历 JDK 内部类。
+ * 当类加载器为 {@link URLClassLoader}（如 surefire forkCount=0 的隔离类加载器，
+ * 此时 {@code java.class.path} 只含宿主进程路径）时，一并扫描其 URL 中的目录与 jar。
  *
  * <p>jar 扫描做了 O(1) 探测优化：若某个 jar 不含所请求包目录对应的条目，则跳过它而
  * 不遍历其条目，从而不会扫描无关依赖（驱动、库等）。
@@ -31,7 +36,7 @@ public final class ClassPathScanner {
         if (basePackages == null || basePackages.isEmpty()) return classes;
         if (classLoader == null) classLoader = Thread.currentThread().getContextClassLoader();
 
-        for (Path root : collectRoots()) {
+        for (Path root : collectRoots(classLoader)) {
             for (String pkg : basePackages) {
                 String path = pkg.replace('.', '/');
                 if (Files.isDirectory(root)) {
@@ -44,9 +49,23 @@ public final class ClassPathScanner {
         return classes;
     }
 
-    private static List<Path> collectRoots() {
+    /** 收集扫描根：java.class.path 全部条目；若类加载器为 URLClassLoader，再并入其 file URL。 */
+    private static List<Path> collectRoots(ClassLoader classLoader) {
         List<Path> roots = new ArrayList<>();
         addClassPathRoots(roots, System.getProperty("java.class.path"));
+        // 隔离类加载器环境（如 surefire 进程内执行）：java.class.path 只含宿主进程路径，
+        // 真实测试类路径挂在 URLClassLoader 的 URLs 上，需一并扫描
+        if (classLoader instanceof URLClassLoader ucl) {
+            for (URL url : ucl.getURLs()) {
+                if (!"file".equals(url.getProtocol())) continue;
+                try {
+                    Path p = Path.of(url.toURI());
+                    if (Files.exists(p) && !roots.contains(p)) roots.add(p);
+                } catch (URISyntaxException | IllegalArgumentException e) {
+                    // 跳过无法转换为路径的 URL
+                }
+            }
+        }
         return roots;
     }
 

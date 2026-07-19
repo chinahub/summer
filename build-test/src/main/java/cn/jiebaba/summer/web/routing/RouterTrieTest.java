@@ -1,8 +1,9 @@
 package cn.jiebaba.summer.web.routing;
 
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
 import cn.jiebaba.summer.web.http.HttpMethod;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Objects;
@@ -19,15 +20,15 @@ public class RouterTrieTest {
         Optional<RouteMatch> trie = router.match(method, path);
         Optional<RouteMatch> linear = router.matchLinear(method, path);
         if (trie.isPresent() != linear.isPresent()) {
-            Assert.fail("presence mismatch " + method + " " + path + ": trie=" + trie + " linear=" + linear);
+            Assertions.fail("presence mismatch " + method + " " + path + ": trie=" + trie + " linear=" + linear);
         }
         if (trie.isEmpty()) return;
         if (trie.get().mapping() != linear.get().mapping()) {
-            Assert.fail("route mismatch " + method + " " + path + ": trie=" + trie.get().mapping()
+            Assertions.fail("route mismatch " + method + " " + path + ": trie=" + trie.get().mapping()
                     + " linear=" + linear.get().mapping());
         }
         if (!Objects.equals(trie.get().pathVariables(), linear.get().pathVariables())) {
-            Assert.fail("vars mismatch " + method + " " + path + ": trie=" + trie.get().pathVariables()
+            Assertions.fail("vars mismatch " + method + " " + path + ": trie=" + trie.get().pathVariables()
                     + " linear=" + linear.get().pathVariables());
         }
     }
@@ -76,7 +77,7 @@ public class RouterTrieTest {
     void emptyRouterMatchesNothing() {
         Router router = new Router();
         router.sortBySpecificity();
-        Assert.assertTrue(router.match(HttpMethod.GET, "/x").isEmpty(), "empty router should not match");
+        Assertions.assertTrue(router.match(HttpMethod.GET, "/x").isEmpty(), "empty router should not match");
     }
 
     @Test
@@ -85,9 +86,9 @@ public class RouterTrieTest {
         RouteMapping post = route(HttpMethod.POST, "/x");
         router.register(post);
         router.sortBySpecificity();
-        Assert.assertTrue(router.match(HttpMethod.GET, "/x").isEmpty(), "GET should not match POST route");
+        Assertions.assertTrue(router.match(HttpMethod.GET, "/x").isEmpty(), "GET should not match POST route");
         Optional<RouteMatch> m = router.match(HttpMethod.POST, "/x");
-        Assert.assertTrue(m.isPresent(), "POST should match");
-        Assert.assertTrue(m.get().mapping() == post, "should return the POST route");
+        Assertions.assertTrue(m.isPresent(), "POST should match");
+        Assertions.assertTrue(m.get().mapping() == post, "should return the POST route");
     }
 }

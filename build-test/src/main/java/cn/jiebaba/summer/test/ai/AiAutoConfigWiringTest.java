@@ -9,10 +9,10 @@ import cn.jiebaba.summer.ai.tools.ToolCallingChatModel;
 import cn.jiebaba.summer.ai.tools.ToolParameter;
 import cn.jiebaba.summer.core.context.DefaultApplicationContext;
 import cn.jiebaba.summer.core.env.Environment;
-import cn.jiebaba.summer.core.test.AfterEach;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.BeforeEach;
-import cn.jiebaba.summer.core.test.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
@@ -40,8 +40,8 @@ public class AiAutoConfigWiringTest {
         try {
             ctx.refresh();
             ChatModel model = ctx.getBean(ChatModel.class);
-            Assert.assertNotNull(model);
-            Assert.assertTrue(model instanceof OpenAiCompatibleChatModel,
+            Assertions.assertNotNull(model);
+            Assertions.assertTrue(model instanceof OpenAiCompatibleChatModel,
                     "未配置弹性策略时应为原始实现，实际: " + model.getClass().getSimpleName());
         } finally {
             ctx.close();
@@ -58,8 +58,8 @@ public class AiAutoConfigWiringTest {
         try {
             ctx.refresh();
             ChatModel model = ctx.getBean(ChatModel.class);
-            Assert.assertNotNull(model);
-            Assert.assertTrue(model instanceof ResilientChatModel,
+            Assertions.assertNotNull(model);
+            Assertions.assertTrue(model instanceof ResilientChatModel,
                     "配置重试时应包装为 ResilientChatModel，实际: " + model.getClass().getSimpleName());
         } finally {
             ctx.close();
@@ -81,10 +81,10 @@ public class AiAutoConfigWiringTest {
             ctx.registerBean("echoTool", echo);
             ctx.refresh();
             ChatModel model = ctx.getBean(ChatModel.class);
-            Assert.assertTrue(model instanceof ToolCallingChatModel,
+            Assertions.assertTrue(model instanceof ToolCallingChatModel,
                     "tools.enabled=true 且存在 ToolCallback bean 时应包装为 ToolCallingChatModel，实际: "
                             + model.getClass().getSimpleName());
-            Assert.assertFalse(ctx.getBeansOfType(ToolCallback.class).isEmpty(),
+            Assertions.assertFalse(ctx.getBeansOfType(ToolCallback.class).isEmpty(),
                     "应收集到 ToolCallback bean");
         } finally {
             ctx.close();
@@ -102,7 +102,7 @@ public class AiAutoConfigWiringTest {
         try {
             ctx.refresh();
             ChatModel model = ctx.getBean(ChatModel.class);
-            Assert.assertFalse(model instanceof ToolCallingChatModel,
+            Assertions.assertFalse(model instanceof ToolCallingChatModel,
                     "无 ToolCallback bean 时不应包装为 ToolCallingChatModel，实际: " + model.getClass().getSimpleName());
         } finally {
             ctx.close();

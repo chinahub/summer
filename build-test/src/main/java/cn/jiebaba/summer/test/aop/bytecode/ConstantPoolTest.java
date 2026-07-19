@@ -2,16 +2,16 @@ package cn.jiebaba.summer.test.aop.bytecode;
 
 import cn.jiebaba.summer.core.aop.bytecode.Bytecode;
 import cn.jiebaba.summer.core.aop.bytecode.ConstantPool;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ConstantPoolTest {
 
     @Test
     void emptyPoolHasCountOne() {
         ConstantPool cp = new ConstantPool();
-        Assert.assertEquals(1, cp.count());
-        Assert.assertEquals(0, cp.toByteArray().length);
+        Assertions.assertEquals(1, cp.count());
+        Assertions.assertEquals(0, cp.toByteArray().length);
     }
 
     @Test
@@ -19,15 +19,15 @@ public class ConstantPoolTest {
         ConstantPool cp = new ConstantPool();
         int first = cp.utf8("Code");
         int second = cp.utf8("Code");
-        Assert.assertEquals(first, second);
-        Assert.assertEquals(2, cp.count());
+        Assertions.assertEquals(first, second);
+        Assertions.assertEquals(2, cp.count());
         // tag=1，u2 长度=4，"Code"
         byte[] bytes = cp.toByteArray();
-        Assert.assertEquals(7, bytes.length);
-        Assert.assertEquals(1, bytes[0]);
-        Assert.assertEquals(0, bytes[1]);
-        Assert.assertEquals(4, bytes[2]);
-        Assert.assertEquals((byte) 'C', bytes[3]);
+        Assertions.assertEquals(7, bytes.length);
+        Assertions.assertEquals(1, bytes[0]);
+        Assertions.assertEquals(0, bytes[1]);
+        Assertions.assertEquals(4, bytes[2]);
+        Assertions.assertEquals((byte) 'C', bytes[3]);
     }
 
     @Test
@@ -35,8 +35,8 @@ public class ConstantPoolTest {
         ConstantPool cp = new ConstantPool();
         int a = cp.utf8("foo");
         int b = cp.utf8("bar");
-        Assert.assertTrue(a != b, "distinct strings need distinct indices");
-        Assert.assertEquals(3, cp.count());
+        Assertions.assertTrue(a != b, "distinct strings need distinct indices");
+        Assertions.assertEquals(3, cp.count());
     }
 
     @Test
@@ -44,20 +44,20 @@ public class ConstantPoolTest {
         ConstantPool cp = new ConstantPool();
         int utf = cp.utf8("java/lang/Object");
         int cls = cp.classRef("java/lang/Object");
-        Assert.assertTrue(cls != utf, "class entry must be a distinct slot from its name utf8");
-        Assert.assertEquals(3, cp.count());
+        Assertions.assertTrue(cls != utf, "class entry must be a distinct slot from its name utf8");
+        Assertions.assertEquals(3, cp.count());
         // utf8 "java/lang/Object"（16 字符）= 3 + 16 = 19 字节，class 项 = 3 字节
-        Assert.assertEquals(22, cp.toByteArray().length);
+        Assertions.assertEquals(22, cp.toByteArray().length);
     }
 
     @Test
     void methodRefChainsEntries() {
         ConstantPool cp = new ConstantPool();
         int ref = cp.methodRef("java/lang/Object", "toString", "()Ljava/lang/String;");
-        Assert.assertTrue(ref > 0);
+        Assertions.assertTrue(ref > 0);
         // Object utf8(19) + NameAndType("toString","()Ljava/lang/String;") 使用 2 个 utf8 + 5 = ...
         // 仅确保其可解析且重复添加时去重
         int again = cp.methodRef("java/lang/Object", "toString", "()Ljava/lang/String;");
-        Assert.assertEquals(ref, again);
+        Assertions.assertEquals(ref, again);
     }
 }

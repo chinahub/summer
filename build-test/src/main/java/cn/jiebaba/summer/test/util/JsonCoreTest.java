@@ -2,8 +2,8 @@ package cn.jiebaba.summer.test.util;
 
 import cn.jiebaba.summer.core.json.Json;
 import cn.jiebaba.summer.core.json.TypeReference;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
@@ -15,37 +15,37 @@ public class JsonCoreTest {
 
     @Test
     void stringifyCompact() {
-        Assert.assertEquals("null", Json.stringify(null));
-        Assert.assertEquals("42", Json.stringify(42));
-        Assert.assertEquals("\"hi\"", Json.stringify("hi"));
-        Assert.assertEquals("[1,2,3]", Json.stringify(new int[]{1, 2, 3}));
+        Assertions.assertEquals("null", Json.stringify(null));
+        Assertions.assertEquals("42", Json.stringify(42));
+        Assertions.assertEquals("\"hi\"", Json.stringify("hi"));
+        Assertions.assertEquals("[1,2,3]", Json.stringify(new int[]{1, 2, 3}));
     }
 
     @Test
     void prettyHasIndentation() {
         String pretty = Json.toPretty(Map.of("a", 1));
-        Assert.assertTrue(pretty.contains("\n"), pretty);
-        Assert.assertTrue(pretty.contains(": "), pretty);
+        Assertions.assertTrue(pretty.contains("\n"), pretty);
+        Assertions.assertTrue(pretty.contains(": "), pretty);
     }
 
     @Test
     void quoteAndEscape() {
-        Assert.assertEquals("\"a\\nb\"", Json.quote("a\nb"));
-        Assert.assertEquals("a\\nb", Json.escape("a\nb"));
+        Assertions.assertEquals("\"a\\nb\"", Json.quote("a\nb"));
+        Assertions.assertEquals("a\\nb", Json.escape("a\nb"));
     }
 
     @Test
     void parseWithTypeReference() {
         List<Point> pts = Json.parse("[{\"x\":1,\"y\":2},{\"x\":3,\"y\":4}]", new TypeReference<List<Point>>() {});
-        Assert.assertEquals(2, pts.size());
-        Assert.assertEquals(3, pts.get(1).x());
+        Assertions.assertEquals(2, pts.size());
+        Assertions.assertEquals(3, pts.get(1).x());
     }
 
     @Test
     void roundTripRecord() {
         Point p = new Point(1, 2);
         Point back = Json.parse(Json.stringify(p), Point.class);
-        Assert.assertEquals(1, back.x());
-        Assert.assertEquals(2, back.y());
+        Assertions.assertEquals(1, back.x());
+        Assertions.assertEquals(2, back.y());
     }
 }

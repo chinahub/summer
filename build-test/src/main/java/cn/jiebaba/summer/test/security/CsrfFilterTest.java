@@ -1,8 +1,6 @@
 package cn.jiebaba.summer.test.security;
 
 import cn.jiebaba.summer.core.env.Environment;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
 import cn.jiebaba.summer.security.web.csrf.CookieCsrfTokenRepository;
 import cn.jiebaba.summer.security.web.csrf.CsrfFilter;
 import cn.jiebaba.summer.security.web.csrf.CsrfProperties;
@@ -11,6 +9,9 @@ import cn.jiebaba.summer.web.filter.FilterChain;
 import cn.jiebaba.summer.web.http.RawHttpRequest;
 import cn.jiebaba.summer.web.http.WebRequest;
 import cn.jiebaba.summer.web.http.WebResponse;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -54,7 +55,7 @@ public class CsrfFilterTest {
     /** 从 Set-Cookie 头中解析指定名称的 Cookie 值。 */
     private static String cookieValue(WebResponse res, String name) {
         String setCookie = res.header("Set-Cookie");
-        Assert.assertNotNull(setCookie, "应下发 Set-Cookie 头");
+        Assertions.assertNotNull(setCookie, "应下发 Set-Cookie 头");
         int start = setCookie.indexOf(name + "=") + name.length() + 1;
         int end = setCookie.indexOf(';', start);
         return end < 0 ? setCookie.substring(start) : setCookie.substring(start, end);
@@ -73,11 +74,11 @@ public class CsrfFilterTest {
         WebRequest req = request("GET", "/a");
         WebResponse res = response();
         filter.doFilter(req, res, chain(called));
-        Assert.assertTrue(called.get(), "安全方法应放行至后续链路");
-        Assert.assertNotNull(res.header("Set-Cookie"), "无 Cookie 时应下发新令牌");
+        Assertions.assertTrue(called.get(), "安全方法应放行至后续链路");
+        Assertions.assertNotNull(res.header("Set-Cookie"), "无 Cookie 时应下发新令牌");
         CsrfToken token = (CsrfToken) req.getAttribute("_csrf");
-        Assert.assertNotNull(token, "令牌应作为请求属性暴露");
-        Assert.assertEquals(token.token(), cookieValue(res, "XSRF-TOKEN"), "Cookie 值应与令牌一致");
+        Assertions.assertNotNull(token, "令牌应作为请求属性暴露");
+        Assertions.assertEquals(token.token(), cookieValue(res, "XSRF-TOKEN"), "Cookie 值应与令牌一致");
     }
 
     @Test
@@ -86,10 +87,10 @@ public class CsrfFilterTest {
         WebRequest req = request("GET", "/a", "Cookie", "XSRF-TOKEN=existing-token");
         WebResponse res = response();
         filter.doFilter(req, res, chain(called));
-        Assert.assertTrue(called.get(), "安全方法应放行");
-        Assert.assertNull(res.header("Set-Cookie"), "已有 Cookie 时不应重复下发");
+        Assertions.assertTrue(called.get(), "安全方法应放行");
+        Assertions.assertNull(res.header("Set-Cookie"), "已有 Cookie 时不应重复下发");
         CsrfToken token = (CsrfToken) req.getAttribute("_csrf");
-        Assert.assertEquals("existing-token", token.token(), "应复用已有令牌");
+        Assertions.assertEquals("existing-token", token.token(), "应复用已有令牌");
     }
 
     @Test
@@ -97,8 +98,8 @@ public class CsrfFilterTest {
         AtomicBoolean called = new AtomicBoolean();
         WebResponse res = response();
         filter.doFilter(request("POST", "/a"), res, chain(called));
-        Assert.assertFalse(called.get(), "无令牌的非安全方法应被拦截");
-        Assert.assertEquals(403, res.status());
+        Assertions.assertFalse(called.get(), "无令牌的非安全方法应被拦截");
+        Assertions.assertEquals(403, res.status());
     }
 
     @Test
@@ -108,8 +109,8 @@ public class CsrfFilterTest {
         filter.doFilter(request("POST", "/a",
                 "Cookie", "XSRF-TOKEN=real-token",
                 "X-XSRF-TOKEN", "wrong-token"), res, chain(called));
-        Assert.assertFalse(called.get(), "令牌不匹配应被拦截");
-        Assert.assertEquals(403, res.status());
+        Assertions.assertFalse(called.get(), "令牌不匹配应被拦截");
+        Assertions.assertEquals(403, res.status());
     }
 
     @Test
@@ -120,8 +121,8 @@ public class CsrfFilterTest {
         filter.doFilter(request("POST", "/data",
                 "Cookie", "XSRF-TOKEN=" + token,
                 "X-XSRF-TOKEN", token), res, chain(called));
-        Assert.assertTrue(called.get(), "令牌一致应放行");
-        Assert.assertTrue(res.status() != 403, "不应返回 403");
+        Assertions.assertTrue(called.get(), "令牌一致应放行");
+        Assertions.assertTrue(res.status() != 403, "不应返回 403");
     }
 
     @Test
@@ -132,7 +133,7 @@ public class CsrfFilterTest {
         // 令牌也可经查询参数 _csrf 回传（请求头缺失时的回退）
         filter.doFilter(request("POST", "/q?_csrf=" + token,
                 "Cookie", "XSRF-TOKEN=" + token), res, chain(called));
-        Assert.assertTrue(called.get(), "查询参数回传令牌一致应放行");
+        Assertions.assertTrue(called.get(), "查询参数回传令牌一致应放行");
     }
 
     @Test
@@ -142,10 +143,10 @@ public class CsrfFilterTest {
         WebResponse res = response();
         repo.saveToken(new CsrfToken("X-XSRF-TOKEN", "_csrf", "abc"), request("GET", "/"), res);
         String setCookie = res.header("Set-Cookie");
-        Assert.assertTrue(setCookie.contains("Max-Age=600"), "应写入 Max-Age");
-        Assert.assertTrue(setCookie.contains("HttpOnly"), "应写入 HttpOnly");
-        Assert.assertTrue(setCookie.contains("Secure"), "应写入 Secure");
-        Assert.assertTrue(setCookie.contains("SameSite=Strict"), "应写入 SameSite");
+        Assertions.assertTrue(setCookie.contains("Max-Age=600"), "应写入 Max-Age");
+        Assertions.assertTrue(setCookie.contains("HttpOnly"), "应写入 HttpOnly");
+        Assertions.assertTrue(setCookie.contains("Secure"), "应写入 Secure");
+        Assertions.assertTrue(setCookie.contains("SameSite=Strict"), "应写入 SameSite");
     }
 
     @Test
@@ -154,7 +155,7 @@ public class CsrfFilterTest {
         WebResponse res = response();
         repo.saveToken(null, request("GET", "/"), res);
         String setCookie = res.header("Set-Cookie");
-        Assert.assertTrue(setCookie.contains("Max-Age=0"), "清除令牌应设置 Max-Age=0");
+        Assertions.assertTrue(setCookie.contains("Max-Age=0"), "清除令牌应设置 Max-Age=0");
     }
 
     @Test
@@ -166,11 +167,11 @@ public class CsrfFilterTest {
         System.setProperty("summer.security.csrf.header-name", "X-CSRF-TOKEN");
         try {
             CsrfProperties p = CsrfProperties.from(new Environment());
-            Assert.assertTrue(p.enabled());
-            Assert.assertEquals("CSRF-TOKEN", p.cookieName());
-            Assert.assertTrue(p.cookieHttpOnly());
-            Assert.assertEquals("Strict", p.cookieSameSite());
-            Assert.assertEquals("X-CSRF-TOKEN", p.headerName());
+            Assertions.assertTrue(p.enabled());
+            Assertions.assertEquals("CSRF-TOKEN", p.cookieName());
+            Assertions.assertTrue(p.cookieHttpOnly());
+            Assertions.assertEquals("Strict", p.cookieSameSite());
+            Assertions.assertEquals("X-CSRF-TOKEN", p.headerName());
         } finally {
             System.clearProperty("summer.security.csrf.enabled");
             System.clearProperty("summer.security.csrf.cookie.name");

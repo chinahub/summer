@@ -1,7 +1,5 @@
 package cn.jiebaba.summer.test.typehandler;
 
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
 import cn.jiebaba.summer.data.annotation.TableField;
 import cn.jiebaba.summer.data.dialect.Dialect;
 import cn.jiebaba.summer.data.dialect.MySqlDialect;
@@ -15,6 +13,8 @@ import cn.jiebaba.summer.data.support.JdbcValue;
 import cn.jiebaba.summer.data.support.JsonTypeHandler;
 import cn.jiebaba.summer.data.support.SqlBuilder;
 import cn.jiebaba.summer.data.support.TypeHandler;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
 import java.sql.PreparedStatement;
@@ -43,11 +43,11 @@ public class JsonTypeHandlerTest {
     void metadataAttachesJsonHandler() {
         TableInfo table = MetadataParser.parse(JsonDemo.class);
         TableFieldInfo configField = table.field("config");
-        Assert.assertNotNull(configField, "config field missing");
-        Assert.assertNotNull(configField.typeHandler(), "typeHandler should be attached");
-        Assert.assertTrue(configField.typeHandler() instanceof JsonTypeHandler,
+        Assertions.assertNotNull(configField, "config field missing");
+        Assertions.assertNotNull(configField.typeHandler(), "typeHandler should be attached");
+        Assertions.assertTrue(configField.typeHandler() instanceof JsonTypeHandler,
                 "expected JsonTypeHandler, got " + configField.typeHandler());
-        Assert.assertNull(table.field("id").typeHandler(), "id should have no handler");
+        Assertions.assertNull(table.field("id").typeHandler(), "id should have no handler");
     }
 
     @Test
@@ -67,8 +67,8 @@ public class JsonTypeHandlerTest {
                 found = true;
             }
         }
-        Assert.assertTrue(found, "config param should be wrapped in JdbcValue; params=" + sql.params());
-        Assert.assertTrue(sql.sql().contains("config"), "insert should reference config column: " + sql.sql());
+        Assertions.assertTrue(found, "config param should be wrapped in JdbcValue; params=" + sql.params());
+        Assertions.assertTrue(sql.sql().contains("config"), "insert should reference config column: " + sql.sql());
     }
 
     @Test
@@ -79,10 +79,10 @@ public class JsonTypeHandlerTest {
         Recorder ps = new Recorder();
         new JsonTypeHandler().setParameter(ps.ps, 1, cfg, new PostgreSqlDialect());
 
-        Assert.assertNotNull(ps.lastObject, "expected setObject call on pg");
-        Assert.assertEquals("jsonb", ps.lastObject.getClass().getMethod("getType").invoke(ps.lastObject));
+        Assertions.assertNotNull(ps.lastObject, "expected setObject call on pg");
+        Assertions.assertEquals("jsonb", ps.lastObject.getClass().getMethod("getType").invoke(ps.lastObject));
         String value = (String) ps.lastObject.getClass().getMethod("getValue").invoke(ps.lastObject);
-        Assert.assertTrue(value.contains("\"alice\""), "json should contain alice: " + value);
+        Assertions.assertTrue(value.contains("\"alice\""), "json should contain alice: " + value);
     }
 
     @Test
@@ -92,57 +92,57 @@ public class JsonTypeHandlerTest {
         Recorder ps = new Recorder();
         new JsonTypeHandler().setParameter(ps.ps, 1, cfg, new MySqlDialect());
 
-        Assert.assertNotNull(ps.lastString, "expected setString call on mysql");
-        Assert.assertTrue(ps.lastString.contains("\"k\""), "json should contain k: " + ps.lastString);
-        Assert.assertNull(ps.lastObject, "mysql should not call setObject");
+        Assertions.assertNotNull(ps.lastString, "expected setString call on mysql");
+        Assertions.assertTrue(ps.lastString.contains("\"k\""), "json should contain k: " + ps.lastString);
+        Assertions.assertNull(ps.lastObject, "mysql should not call setObject");
     }
 
     @Test
     void oracleDialectColumnTypeIsClob() {
-        Assert.assertEquals("CLOB", new OracleDialect().jsonColumnType());
+        Assertions.assertEquals("CLOB", new OracleDialect().jsonColumnType());
     }
 
     @Test
     void getResultDeserializesJson() throws Exception {
         RsRecorder rs = new RsRecorder("{\"a\":1,\"b\":\"x\"}");
         Object out = new JsonTypeHandler().getResult(rs.rs, 1, Map.class, new PostgreSqlDialect());
-        Assert.assertTrue(out instanceof Map, "expected Map, got " + out);
+        Assertions.assertTrue(out instanceof Map, "expected Map, got " + out);
         Map<?, ?> map = (Map<?, ?>) out;
-        Assert.assertEquals("x", map.get("b"), "b should be x");
-        Assert.assertEquals(2, map.size(), "map size");
+        Assertions.assertEquals("x", map.get("b"), "b should be x");
+        Assertions.assertEquals(2, map.size(), "map size");
     }
 
     @Test
     void inferDialectFromUrl() {
-        Assert.assertTrue(Dialect.fromUrl("jdbc:postgresql://localhost/db") instanceof PostgreSqlDialect);
-        Assert.assertTrue(Dialect.fromUrl("jdbc:mysql://localhost/db") instanceof MySqlDialect);
-        Assert.assertTrue(Dialect.fromUrl("jdbc:mariadb://localhost/db") instanceof MySqlDialect);
-        Assert.assertTrue(Dialect.fromUrl("jdbc:oracle:thin:@//host:1521/db") instanceof OracleDialect);
-        Assert.assertTrue(Dialect.fromUrl("jdbc:sqlserver://host:1433;databaseName=db") instanceof SqlServerDialect);
+        Assertions.assertTrue(Dialect.fromUrl("jdbc:postgresql://localhost/db") instanceof PostgreSqlDialect);
+        Assertions.assertTrue(Dialect.fromUrl("jdbc:mysql://localhost/db") instanceof MySqlDialect);
+        Assertions.assertTrue(Dialect.fromUrl("jdbc:mariadb://localhost/db") instanceof MySqlDialect);
+        Assertions.assertTrue(Dialect.fromUrl("jdbc:oracle:thin:@//host:1521/db") instanceof OracleDialect);
+        Assertions.assertTrue(Dialect.fromUrl("jdbc:sqlserver://host:1433;databaseName=db") instanceof SqlServerDialect);
     }
 
     @Test
     void fromDriverMapsKnownDrivers() {
-        Assert.assertTrue(Dialect.fromDriver("org.postgresql.Driver") instanceof PostgreSqlDialect);
-        Assert.assertTrue(Dialect.fromDriver("com.mysql.cj.jdbc.Driver") instanceof MySqlDialect);
-        Assert.assertTrue(Dialect.fromDriver("com.mysql.jdbc.Driver") instanceof MySqlDialect);
-        Assert.assertTrue(Dialect.fromDriver("org.mariadb.jdbc.Driver") instanceof MySqlDialect);
-        Assert.assertTrue(Dialect.fromDriver("oracle.jdbc.OracleDriver") instanceof OracleDialect);
-        Assert.assertTrue(Dialect.fromDriver("com.microsoft.sqlserver.jdbc.SQLServerDriver") instanceof SqlServerDialect);
-        Assert.assertNull(Dialect.fromDriver(""), "empty driver should map to null");
-        Assert.assertNull(Dialect.fromDriver(null), "null driver should map to null");
+        Assertions.assertTrue(Dialect.fromDriver("org.postgresql.Driver") instanceof PostgreSqlDialect);
+        Assertions.assertTrue(Dialect.fromDriver("com.mysql.cj.jdbc.Driver") instanceof MySqlDialect);
+        Assertions.assertTrue(Dialect.fromDriver("com.mysql.jdbc.Driver") instanceof MySqlDialect);
+        Assertions.assertTrue(Dialect.fromDriver("org.mariadb.jdbc.Driver") instanceof MySqlDialect);
+        Assertions.assertTrue(Dialect.fromDriver("oracle.jdbc.OracleDriver") instanceof OracleDialect);
+        Assertions.assertTrue(Dialect.fromDriver("com.microsoft.sqlserver.jdbc.SQLServerDriver") instanceof SqlServerDialect);
+        Assertions.assertNull(Dialect.fromDriver(""), "empty driver should map to null");
+        Assertions.assertNull(Dialect.fromDriver(null), "null driver should map to null");
     }
 
     @Test
     void detectPrefersDriverOverUrl() {
-        Assert.assertTrue(Dialect.detect("org.postgresql.Driver", "jdbc:mysql://localhost/db") instanceof PostgreSqlDialect);
-        Assert.assertTrue(Dialect.detect("com.mysql.cj.jdbc.Driver", "jdbc:postgresql://localhost/db") instanceof MySqlDialect);
+        Assertions.assertTrue(Dialect.detect("org.postgresql.Driver", "jdbc:mysql://localhost/db") instanceof PostgreSqlDialect);
+        Assertions.assertTrue(Dialect.detect("com.mysql.cj.jdbc.Driver", "jdbc:postgresql://localhost/db") instanceof MySqlDialect);
     }
 
     @Test
     void detectFallsBackToUrlWhenDriverAbsent() {
-        Assert.assertTrue(Dialect.detect("", "jdbc:postgresql://localhost/db") instanceof PostgreSqlDialect);
-        Assert.assertTrue(Dialect.detect(null, "jdbc:mysql://localhost/db") instanceof MySqlDialect);
+        Assertions.assertTrue(Dialect.detect("", "jdbc:postgresql://localhost/db") instanceof PostgreSqlDialect);
+        Assertions.assertTrue(Dialect.detect(null, "jdbc:mysql://localhost/db") instanceof MySqlDialect);
     }
 
     static final class Recorder {

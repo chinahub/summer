@@ -5,8 +5,8 @@ import cn.jiebaba.summer.ai.chat.content.ContentPart;
 import cn.jiebaba.summer.ai.chat.content.ImageUrlPart;
 import cn.jiebaba.summer.ai.chat.content.InputAudioPart;
 import cn.jiebaba.summer.ai.chat.content.TextPart;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -16,10 +16,10 @@ public class AiMessageModelTest {
     @Test
     public void textOnlyUserMessage() {
         UserMessage msg = new UserMessage("你好");
-        Assert.assertEquals("user", msg.role());
-        Assert.assertEquals("你好", msg.content());
-        Assert.assertEquals(1, msg.parts().size());
-        Assert.assertTrue(msg.parts().get(0) instanceof TextPart);
+        Assertions.assertEquals("user", msg.role());
+        Assertions.assertEquals("你好", msg.content());
+        Assertions.assertEquals(1, msg.parts().size());
+        Assertions.assertTrue(msg.parts().get(0) instanceof TextPart);
     }
 
     @Test
@@ -28,22 +28,22 @@ public class AiMessageModelTest {
                 new TextPart("这是什么图？"),
                 new ImageUrlPart("https://example.com/a.png", "high"),
                 new InputAudioPart("base64data", "wav"));
-        Assert.assertEquals(3, msg.parts().size());
-        Assert.assertEquals("这是什么图？", msg.content());
-        Assert.assertEquals("user", msg.role());
+        Assertions.assertEquals(3, msg.parts().size());
+        Assertions.assertEquals("这是什么图？", msg.content());
+        Assertions.assertEquals("user", msg.role());
     }
 
     @Test
     public void imageUrlDefaultDetail() {
         ImageUrlPart part = new ImageUrlPart("data:image/png;base64,AAA");
-        Assert.assertNull(part.detail());
-        Assert.assertEquals("image_url", part.type());
+        Assertions.assertNull(part.detail());
+        Assertions.assertEquals("image_url", part.type());
         ImageUrlPart withDetail = new ImageUrlPart("https://x", "low");
-        Assert.assertEquals("low", withDetail.detail());
+        Assertions.assertEquals("low", withDetail.detail());
     }
 
     @Test
     public void emptyUserMessageRejected() {
-        Assert.assertThrows(IllegalArgumentException.class, () -> new UserMessage(List.<ContentPart>of()));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> new UserMessage(List.<ContentPart>of()));
     }
 }

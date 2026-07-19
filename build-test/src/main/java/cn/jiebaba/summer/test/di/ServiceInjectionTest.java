@@ -4,11 +4,11 @@ import cn.jiebaba.summer.boot.data.MapperRegistrar;
 import cn.jiebaba.summer.core.context.BeanDefinition;
 import cn.jiebaba.summer.core.context.DefaultApplicationContext;
 import cn.jiebaba.summer.core.env.Environment;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
 import cn.jiebaba.summer.data.dialect.Dialect;
 import cn.jiebaba.summer.data.support.DataSourceFactory;
 import cn.jiebaba.summer.data.support.SqlExecutor;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
@@ -40,8 +40,8 @@ public class ServiceInjectionTest {
         context.refresh();
 
         WidgetService service = context.getBean(WidgetService.class);
-        Assert.assertNotNull(service.baseMapper(), "baseMapper should be auto-injected");
-        Assert.assertTrue(service.baseMapper() instanceof WidgetMapper,
+        Assertions.assertNotNull(service.baseMapper(), "baseMapper should be auto-injected");
+        Assertions.assertTrue(service.baseMapper() instanceof WidgetMapper,
                 "baseMapper should be a WidgetMapper proxy, got " + service.baseMapper());
     }
 }

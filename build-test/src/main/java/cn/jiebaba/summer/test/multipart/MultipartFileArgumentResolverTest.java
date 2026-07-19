@@ -1,14 +1,15 @@
 package cn.jiebaba.summer.test.multipart;
 
 import cn.jiebaba.summer.core.env.Environment;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
 import cn.jiebaba.summer.web.annotation.RequestPart;
 import cn.jiebaba.summer.web.bind.HandlerException;
 import cn.jiebaba.summer.web.http.RawHttpRequest;
 import cn.jiebaba.summer.web.http.WebRequest;
 import cn.jiebaba.summer.web.multipart.MultipartFile;
 import cn.jiebaba.summer.web.multipart.MultipartFileArgumentResolver;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.Method;
@@ -69,15 +70,15 @@ public class MultipartFileArgumentResolverTest {
 
         MultipartFile file = (MultipartFile) resolver.resolveArgument(
                 params[0], generics[0], null, request, null);
-        Assert.assertNotNull(file);
-        Assert.assertEquals("hello.txt", file.getOriginalFilename());
-        Assert.assertEquals("text/plain", file.getContentType());
-        Assert.assertEquals("hello summer upload",
+        Assertions.assertNotNull(file);
+        Assertions.assertEquals("hello.txt", file.getOriginalFilename());
+        Assertions.assertEquals("text/plain", file.getContentType());
+        Assertions.assertEquals("hello summer upload",
                 new String(file.getBytes(), StandardCharsets.UTF_8));
 
         String description = (String) resolver.resolveArgument(
                 params[1], generics[1], null, request, null);
-        Assert.assertEquals("a text file", description);
+        Assertions.assertEquals("a text file", description);
     }
 
     @Test
@@ -86,7 +87,7 @@ public class MultipartFileArgumentResolverTest {
         MultipartFileArgumentResolver resolver = new MultipartFileArgumentResolver(new Environment());
         Method method = Handler.class.getMethod("handle", MultipartFile.class, String.class);
         Parameter fileParam = method.getParameters()[0];
-        Assert.assertThrows(HandlerException.class,
+        Assertions.assertThrows(HandlerException.class,
                 () -> resolver.resolveArgument(fileParam, fileParam.getParameterizedType(), null, request, null));
     }
 
@@ -98,6 +99,6 @@ public class MultipartFileArgumentResolverTest {
         Method method = Handler.class.getMethod("handle", MultipartFile.class, String.class);
         Parameter descParam = method.getParameters()[1];
         String value = (String) resolver.resolveArgument(descParam, descParam.getParameterizedType(), null, request, null);
-        Assert.assertEquals("present", value);
+        Assertions.assertEquals("present", value);
     }
 }

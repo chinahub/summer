@@ -5,10 +5,10 @@ import cn.jiebaba.summer.core.context.BeanDefinition;
 import cn.jiebaba.summer.core.context.BeansException;
 import cn.jiebaba.summer.core.context.DefaultApplicationContext;
 import cn.jiebaba.summer.core.env.Environment;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
 import cn.jiebaba.summer.data.transaction.TransactionInterceptor;
 import cn.jiebaba.summer.data.transaction.TransactionManager;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.sql.DataSource;
 import java.lang.reflect.InvocationHandler;
@@ -99,11 +99,11 @@ public class CglibTransactionalProxyTest {
         DefaultApplicationContext ctx = fresh();
         try {
             OrderService svc = ctx.getBean(OrderService.class);
-            Assert.assertTrue(svc instanceof SummerProxy,
+            Assertions.assertTrue(svc instanceof SummerProxy,
                     "无接口 @Transactional bean 必须是子类代理（SummerProxy）");
-            Assert.assertFalse(Proxy.isProxyClass(svc.getClass()),
+            Assertions.assertFalse(Proxy.isProxyClass(svc.getClass()),
                     "无接口 bean 不应走 JDK 动态代理");
-            Assert.assertEquals(OrderService.class, svc.getClass().getSuperclass(),
+            Assertions.assertEquals(OrderService.class, svc.getClass().getSuperclass(),
                     "代理类应继承自目标类（CGLIB 风格）");
         } finally {
             ctx.close();
@@ -115,11 +115,11 @@ public class CglibTransactionalProxyTest {
         DefaultApplicationContext ctx = fresh();
         try {
             OrderService svc = ctx.getBean(OrderService.class);
-            Assert.assertEquals("committed", svc.commitOk());
-            Assert.assertTrue(jdbcCalls.contains("commit"), "成功路径必须提交: " + jdbcCalls);
-            Assert.assertFalse(jdbcCalls.contains("rollback"), "成功路径不应回滚: " + jdbcCalls);
-            Assert.assertTrue(jdbcCalls.contains("setAutoCommit"), "必须开启事务: " + jdbcCalls);
-            Assert.assertTrue(jdbcCalls.contains("close"), "必须关闭连接: " + jdbcCalls);
+            Assertions.assertEquals("committed", svc.commitOk());
+            Assertions.assertTrue(jdbcCalls.contains("commit"), "成功路径必须提交: " + jdbcCalls);
+            Assertions.assertFalse(jdbcCalls.contains("rollback"), "成功路径不应回滚: " + jdbcCalls);
+            Assertions.assertTrue(jdbcCalls.contains("setAutoCommit"), "必须开启事务: " + jdbcCalls);
+            Assertions.assertTrue(jdbcCalls.contains("close"), "必须关闭连接: " + jdbcCalls);
         } finally {
             ctx.close();
         }
@@ -130,10 +130,10 @@ public class CglibTransactionalProxyTest {
         DefaultApplicationContext ctx = fresh();
         try {
             OrderService svc = ctx.getBean(OrderService.class);
-            RuntimeException ex = Assert.assertThrows(RuntimeException.class, svc::throwsAndRollback);
-            Assert.assertEquals("boom", ex.getMessage());
-            Assert.assertTrue(jdbcCalls.contains("rollback"), "RuntimeException 必须回滚: " + jdbcCalls);
-            Assert.assertFalse(jdbcCalls.contains("commit"), "异常路径不应提交: " + jdbcCalls);
+            RuntimeException ex = Assertions.assertThrows(RuntimeException.class, svc::throwsAndRollback);
+            Assertions.assertEquals("boom", ex.getMessage());
+            Assertions.assertTrue(jdbcCalls.contains("rollback"), "RuntimeException 必须回滚: " + jdbcCalls);
+            Assertions.assertFalse(jdbcCalls.contains("commit"), "异常路径不应提交: " + jdbcCalls);
         } finally {
             ctx.close();
         }
@@ -144,8 +144,8 @@ public class CglibTransactionalProxyTest {
         DefaultApplicationContext ctx = fresh();
         try {
             OrderService svc = ctx.getBean(OrderService.class);
-            Assert.assertThrows(Exception.class, svc::throwsCheckedAndRollback);
-            Assert.assertTrue(jdbcCalls.contains("rollback"),
+            Assertions.assertThrows(Exception.class, svc::throwsCheckedAndRollback);
+            Assertions.assertTrue(jdbcCalls.contains("rollback"),
                     "rollbackFor=Exception.class 时受检异常必须回滚: " + jdbcCalls);
         } finally {
             ctx.close();
@@ -157,10 +157,10 @@ public class CglibTransactionalProxyTest {
         DefaultApplicationContext ctx = fresh();
         try {
             OrderService svc = ctx.getBean(OrderService.class);
-            Assert.assertThrows(RuntimeException.class, svc::throwsButNoRollback);
-            Assert.assertFalse(jdbcCalls.contains("rollback"),
+            Assertions.assertThrows(RuntimeException.class, svc::throwsButNoRollback);
+            Assertions.assertFalse(jdbcCalls.contains("rollback"),
                     "noRollbackFor=RuntimeException.class 时不应回滚: " + jdbcCalls);
-            Assert.assertFalse(jdbcCalls.contains("commit"),
+            Assertions.assertFalse(jdbcCalls.contains("commit"),
                     "异常路径不应提交: " + jdbcCalls);
         } finally {
             ctx.close();
@@ -182,7 +182,7 @@ public class CglibTransactionalProxyTest {
         BeanDefinition finalDef = new BeanDefinition("finalOrderService", FinalOrderService.class);
         ctx.registerBeanDefinition("finalOrderService", finalDef);
 
-        Assert.assertThrows(BeansException.class, ctx::refresh,
+        Assertions.assertThrows(BeansException.class, ctx::refresh,
                 "final 类无法子类代理，refresh 必须抛 BeansException");
         ctx.close();
     }

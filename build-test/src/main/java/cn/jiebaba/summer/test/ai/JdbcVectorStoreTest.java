@@ -6,9 +6,9 @@ import cn.jiebaba.summer.data.support.SqlExecutor;
 import cn.jiebaba.summer.ai.vectorstore.RetrievalResult;
 import cn.jiebaba.summer.ai.vectorstore.SearchRequest;
 import cn.jiebaba.summer.core.env.Environment;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Assumptions;
-import cn.jiebaba.summer.core.test.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 import javax.sql.DataSource;
 import java.io.PrintWriter;
@@ -51,21 +51,21 @@ public class JdbcVectorStoreTest {
                 Document.of("java is a programming language"),
                 Document.of("python is a programming language"),
                 Document.of("the weather is nice today")));
-        Assert.assertEquals(3, ids.size(), "写入应返回 3 个 id");
+        Assertions.assertEquals(3, ids.size(), "写入应返回 3 个 id");
 
         List<RetrievalResult> results = store.similaritySearch(SearchRequest.builder()
                 .query("programming language").topK(2).build());
-        Assert.assertFalse(results.isEmpty(), "检索应命中");
-        Assert.assertTrue(results.size() <= 2, "topK=2 结果不应超过 2 条");
-        Assert.assertTrue(results.get(0).document().content().contains("programming"),
+        Assertions.assertFalse(results.isEmpty(), "检索应命中");
+        Assertions.assertTrue(results.size() <= 2, "topK=2 结果不应超过 2 条");
+        Assertions.assertTrue(results.get(0).document().content().contains("programming"),
                 "最相关结果应含 programming，实际: " + results.get(0).document().content());
-        Assert.assertTrue(results.get(0).score() >= results.get(results.size() - 1).score(),
+        Assertions.assertTrue(results.get(0).score() >= results.get(results.size() - 1).score(),
                 "结果应按相似度降序");
 
         store.delete(List.of(ids.get(0)));
         List<RetrievalResult> after = store.similaritySearch(SearchRequest.builder()
                 .query("java programming").topK(5).build());
-        Assert.assertTrue(after.stream().noneMatch(r -> r.document().content().startsWith("java is")),
+        Assertions.assertTrue(after.stream().noneMatch(r -> r.document().content().startsWith("java is")),
                 "删除后不应再命中已删除的 java 文档");
 
         dropTable(ds);
@@ -96,13 +96,13 @@ public class JdbcVectorStoreTest {
 
         List<RetrievalResult> filtered = store.similaritySearch(SearchRequest.builder()
                 .query("programming language").topK(10).filter("source", "api").build());
-        Assert.assertEquals(2, filtered.size(), "source=api 过滤应仅命中 2 条");
-        Assert.assertTrue(filtered.stream().allMatch(r -> "api".equals(r.document().metadata().get("source"))),
+        Assertions.assertEquals(2, filtered.size(), "source=api 过滤应仅命中 2 条");
+        Assertions.assertTrue(filtered.stream().allMatch(r -> "api".equals(r.document().metadata().get("source"))),
                 "过滤后应仅含 source=api 文档");
 
         List<RetrievalResult> all = store.similaritySearch(SearchRequest.builder()
                 .query("programming").topK(10).build());
-        Assert.assertEquals(3, all.size(), "无过滤应返回全部 3 条文档");
+        Assertions.assertEquals(3, all.size(), "无过滤应返回全部 3 条文档");
 
         dropTable(ds);
     }

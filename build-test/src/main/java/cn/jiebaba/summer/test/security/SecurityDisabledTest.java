@@ -1,10 +1,10 @@
 package cn.jiebaba.summer.test.security;
 
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
 import cn.jiebaba.summer.security.web.HttpSecurity;
 import cn.jiebaba.summer.security.web.MethodSecurityEnforcer;
 import cn.jiebaba.summer.security.web.SecurityFilterChain;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
 
@@ -17,7 +17,7 @@ public class SecurityDisabledTest {
         // 任意方法，上下文无认证信息 -> 不得抛异常（空操作）
         Method m = String.class.getMethod("length");
         enforcer.check(m);
-        Assert.assertTrue(!enforcer.isEnabled(), "disabled enforcer reports disabled");
+        Assertions.assertTrue(!enforcer.isEnabled(), "disabled enforcer reports disabled");
     }
 
     @Test
@@ -25,8 +25,8 @@ public class SecurityDisabledTest {
         SecurityFilterChain chain = HttpSecurity.security()
                 .authorize(HttpSecurity.anyRequest().permitAll())
                 .build();
-        Assert.assertTrue(!chain.isEnabled(), "chain without JWT config is disabled (empty)");
-        Assert.assertTrue(chain.filters().isEmpty(), "no filters when JWT not configured");
+        Assertions.assertTrue(!chain.isEnabled(), "chain without JWT config is disabled (empty)");
+        Assertions.assertTrue(chain.filters().isEmpty(), "no filters when JWT not configured");
     }
 
     @Test
@@ -44,7 +44,7 @@ public class SecurityDisabledTest {
         } catch (RuntimeException e) {
             threw = true; // 预期抛出 AuthenticationException（401），上下文无认证信息
         }
-        Assert.assertTrue(threw, "enabled enforcer on @PreAuthorize method with no auth must throw");
+        Assertions.assertTrue(threw, "enabled enforcer on @PreAuthorize method with no auth must throw");
     }
 
     @cn.jiebaba.summer.security.annotation.PreAuthorize(roles = {"ADMIN"})

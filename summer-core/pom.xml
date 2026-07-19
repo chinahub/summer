@@ -18,5 +18,11 @@
             <artifactId>slf4j-api</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- JUnit 5 整合层（@SummerTest/SummerExtension）：optional 不传递给使用者，保持运行时零第三方依赖 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 </project>

@@ -62,8 +62,8 @@ mvn -s E:\summer_workspace\settings.xml -o clean package
 mvn -s E:\summer_workspace\settings.xml -o clean package
 # 启动示例（可执行 jar）
 java -jar summer-sample\target\summer-sample-3.0.0-boot.jar
-# 运行集中式单元测试套件（build-test 的 exec 触发 TestRunner 执行 @Test 单测）
+# 运行集中式单元测试套件（surefire 在真实 JUnit 5 引擎上执行 @Test 单测）
 mvn -s E:\summer_workspace\settings.xml -o -pl build-test -am test
 ```
 
-实测：9 模块 BUILD SUCCESS；`mvn package` 自动产出 `summer-sample-3.0.0-boot.jar`；服务器 started on 0.0.0.0:8080（virtual threads）；`mvn -pl build-test -am test` 跑通全部 `@Test` 单测（DI/AOP/调度/安全/工具/SLF4J 绑定等）。`SmokeTest`/`OrmSmokeTest`/`DbSmokeTest` 为 `main()` 冒烟测试，需连接真实数据库，单独运行。
+实测：9 模块 BUILD SUCCESS；`mvn package` 自动产出 `summer-sample-3.0.0-boot.jar`；服务器 started on 0.0.0.0:8080（virtual threads）；`mvn -pl build-test -am test` 由 surefire 在真实 JUnit 5（Jupiter）引擎上跑通全部 `@Test` 单测（DI/AOP/调度/安全/工具/SLF4J 绑定等），IDEA 中可直接点击绿色三角执行；容器整合测试可用 `@SummerTest`（`cn.jiebaba.summer.core.test`）自动启动 IoC 容器并注入 bean。`SmokeTest`/`OrmSmokeTest`/`DbSmokeTest` 为 `main()` 冒烟测试，需连接真实数据库，单独运行。

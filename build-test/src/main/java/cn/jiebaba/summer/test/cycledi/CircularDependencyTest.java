@@ -2,8 +2,8 @@ package cn.jiebaba.summer.test.cycledi;
 
 import cn.jiebaba.summer.core.context.BeansException;
 import cn.jiebaba.summer.core.context.DefaultApplicationContext;
-import cn.jiebaba.summer.core.test.Assert;
-import cn.jiebaba.summer.core.test.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
@@ -14,10 +14,10 @@ public class CircularDependencyTest {
     void constructorCycleDetectedWithPath() {
         DefaultApplicationContext ctx = new DefaultApplicationContext(
                 null, null, Set.of("cn.jiebaba.summer.test.cycledi"));
-        BeansException ex = Assert.assertThrows(BeansException.class, ctx::refresh);
+        BeansException ex = Assertions.assertThrows(BeansException.class, ctx::refresh);
         String msg = ex.getMessage();
-        Assert.assertTrue(msg.contains("Circular dependency"), "message: " + msg);
-        Assert.assertTrue(msg.contains("cycleA"), "message: " + msg);
-        Assert.assertTrue(msg.contains("->"), "message: " + msg);
+        Assertions.assertTrue(msg.contains("Circular dependency"), "message: " + msg);
+        Assertions.assertTrue(msg.contains("cycleA"), "message: " + msg);
+        Assertions.assertTrue(msg.contains("->"), "message: " + msg);
     }
 }

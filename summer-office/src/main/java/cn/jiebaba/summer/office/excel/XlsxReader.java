@@ -30,8 +30,12 @@ import java.util.zip.ZipFile;
  *   <li>将输入流拷贝到临时文件（ZipFile 需随机访问条目）</li>
  *   <li>StAX 解析 {@code xl/workbook.xml} 与 {@code xl/_rels/workbook.xml.rels} 获取工作表映射</li>
  *   <li>StAX 解析 {@code xl/sharedStrings.xml} 构建共享字符串表（含富文本拼接）</li>
+ *   <li>StAX 解析 {@code xl/styles.xml} 构建 numFmt 与 cellXfs（用于日期识别）</li>
  *   <li>SAX 解析目标工作表 XML，逐行回调 RowHandler</li>
  * </ol>
+ * <p>单元格值解析（借鉴 POI DataFormatter）：共享字符串按索引查表；布尔转 TRUE/FALSE；
+ * 错误码原样返回；公式单元格返回缓存值（日期样式则格式化），无缓存值时返回公式文本；
+ * 数值若为日期样式则序列号转日期字符串，避免出现 45658 这类原始序列号。
  *
  * <pre>{@code
  * try (XlsxReader reader = new XlsxReader(inputStream)) {
@@ -48,6 +52,7 @@ public class XlsxReader implements Closeable {
     private final List<String> sharedStrings;
     private final List<String[]> sheetMeta;
     private final Map<String, String> rels;
+    private final XlsxStyles styles;
 
     /** 从输入流构造读取器；输入流会被拷贝到临时文件，构造后即可关闭输入流。 */
     public XlsxReader(InputStream in) throws IOException {
@@ -60,6 +65,7 @@ public class XlsxReader implements Closeable {
             sheetMeta = parseWorkbook();
             rels = parseRels();
             sharedStrings = parseSharedStrings();
+            styles = parseStyles();
         } catch (XMLStreamException e) {
             throw new OfficeException("XLSX 解析失败", e);
         }
@@ -87,7 +93,7 @@ public class XlsxReader implements Closeable {
         }
         try (InputStream sheetIn = zip.getInputStream(zipEntry)) {
             SAXParser parser = createSaxParser();
-            parser.parse(sheetIn, new WorksheetHandler(sharedStrings, handler));
+            parser.parse(sheetIn, new WorksheetHandler(sharedStrings, styles, handler));
         } catch (SAXException e) {
             throw new OfficeException("工作表 SAX 解析失败", e);
         }
@@ -103,7 +109,7 @@ public class XlsxReader implements Closeable {
         }
     }
 
-    // ==================== StAX 解析：工作簿与共享字符串 ====================
+    // ==================== StAX 解析：工作簿、共享字符串、样式 ====================
 
     /** StAX 解析 xl/workbook.xml，提取工作表名与关系 ID 列表。 */
     private List<String[]> parseWorkbook() throws IOException, XMLStreamException {
@@ -119,27 +125,26 @@ public class XlsxReader implements Closeable {
                 String name = null;
                 String rId = null;
                 for (int i = 0; i < reader.getAttributeCount(); i++) {
-                    String local = reader.getAttributeLocalName(i);
-                    if ("name".equals(local)) {
+                    String ln = reader.getAttributeLocalName(i);
+                    if ("name".equals(ln)) {
                         name = reader.getAttributeValue(i);
-                    } else if ("id".equals(local)) {
+                    } else if ("id".equals(ln)) {
                         rId = reader.getAttributeValue(i);
                     }
                 }
                 sheets.add(new String[]{name, rId});
             }
         }
-        reader.close();
         return sheets;
     }
 
-    /** StAX 解析 xl/_rels/workbook.xml.rels，构建 rId -> target 映射。 */
+    /** StAX 解析 xl/_rels/workbook.xml.rels，构建关系 ID -> 工作表目标路径映射。 */
     private Map<String, String> parseRels() throws IOException, XMLStreamException {
         ZipEntry entry = zip.getEntry("xl/_rels/workbook.xml.rels");
-        if (entry == null) {
-            return Map.of();
-        }
         Map<String, String> map = new HashMap<>();
+        if (entry == null) {
+            return map;
+        }
         XMLStreamReader reader = createStaxReader(zip.getInputStream(entry));
         while (reader.hasNext()) {
             int event = reader.next();
@@ -147,10 +152,9 @@ public class XlsxReader implements Closeable {
                 String id = null;
                 String target = null;
                 for (int i = 0; i < reader.getAttributeCount(); i++) {
-                    String local = reader.getAttributeLocalName(i);
-                    if ("Id".equals(local)) {
+                    if ("Id".equals(reader.getAttributeLocalName(i))) {
                         id = reader.getAttributeValue(i);
-                    } else if ("Target".equals(local)) {
+                    } else if ("Target".equals(reader.getAttributeLocalName(i))) {
                         target = reader.getAttributeValue(i);
                     }
                 }
@@ -159,48 +163,66 @@ public class XlsxReader implements Closeable {
                 }
             }
         }
-        reader.close();
         return map;
     }
 
-    /** StAX 解析 xl/sharedStrings.xml，构建共享字符串列表；富文本（r/t）拼接为纯文本。 */
+    /** StAX 解析 xl/sharedStrings.xml，构建共享字符串表；富文本 <r><t> 段落自动拼接。 */
     private List<String> parseSharedStrings() throws IOException, XMLStreamException {
         ZipEntry entry = zip.getEntry("xl/sharedStrings.xml");
+        List<String> list = new ArrayList<>();
         if (entry == null) {
-            return List.of();
+            return list;
         }
-        List<String> strings = new ArrayList<>();
         XMLStreamReader reader = createStaxReader(zip.getInputStream(entry));
         StringBuilder current = new StringBuilder();
+        boolean inSi = false;
         boolean inT = false;
         while (reader.hasNext()) {
             int event = reader.next();
-            if (event == XMLStreamConstants.START_ELEMENT && "t".equals(reader.getLocalName())) {
-                inT = true;
-            } else if (event == XMLStreamConstants.CHARACTERS && inT) {
-                current.append(reader.getText());
-            } else if (event == XMLStreamConstants.END_ELEMENT) {
+            if (event == XMLStreamConstants.START_ELEMENT) {
                 String name = reader.getLocalName();
-                if ("t".equals(name)) {
-                    inT = false;
-                } else if ("si".equals(name)) {
-                    strings.add(current.toString());
-                    current.setLength(0);
+                switch (name) {
+                    case "si" -> {
+                        inSi = true;
+                        current.setLength(0);
+                    }
+                    case "t" -> {
+                        inT = true;
+                        current.append(reader.getElementText());
+                        inT = false;
+                    }
+                    default -> { }
+                }
+            } else if (event == XMLStreamConstants.END_ELEMENT && "si".equals(reader.getLocalName())) {
+                if (inSi) {
+                    list.add(current.toString());
+                    inSi = false;
                 }
             }
         }
-        reader.close();
-        return strings;
+        return list;
     }
 
-    private static XMLStreamReader createStaxReader(InputStream in) throws XMLStreamException {
+    /** StAX 解析 xl/styles.xml 构建 {@link XlsxStyles}；样式缺失时返回空样式（所有单元格按数值处理）。 */
+    private XlsxStyles parseStyles() throws IOException, XMLStreamException {
+        XlsxStyles table = new XlsxStyles();
+        ZipEntry entry = zip.getEntry("xl/styles.xml");
+        if (entry != null) {
+            try (InputStream in = zip.getInputStream(entry)) {
+                table.parse(in);
+            }
+        }
+        return table;
+    }
+
+    private XMLStreamReader createStaxReader(InputStream in) throws XMLStreamException {
         XMLInputFactory factory = XMLInputFactory.newFactory();
         factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
         factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
         return factory.createXMLStreamReader(in);
     }
 
-    private static SAXParser createSaxParser() throws OfficeException {
+    private SAXParser createSaxParser() {
         try {
             SAXParserFactory factory = SAXParserFactory.newInstance();
             factory.setNamespaceAware(false);
@@ -215,26 +237,31 @@ public class XlsxReader implements Closeable {
 
     // ==================== SAX 工作表处理器 ====================
 
-    /** SAX 事件处理器：逐行解析工作表 XML，每行结束后回调 RowHandler。 */
+    /** SAX 事件处理器：逐行解析工作表 XML，按单元格类型与样式解析值，每行结束后回调 RowHandler。 */
     private static class WorksheetHandler extends DefaultHandler {
 
         private final List<String> sharedStrings;
+        private final XlsxStyles styles;
         private final RowHandler rowHandler;
 
         private List<String> currentRow;
         private int rowNum;
         private int colIndex;
         private String cellType;
+        private int styleIndex;
         private StringBuilder textBuilder;
         private boolean inValue;
         private boolean inInlineString;
+        private boolean inFormula;
+        private StringBuilder formulaBuilder;
 
-        WorksheetHandler(List<String> sharedStrings, RowHandler rowHandler) {
+        WorksheetHandler(List<String> sharedStrings, XlsxStyles styles, RowHandler rowHandler) {
             this.sharedStrings = sharedStrings;
+            this.styles = styles;
             this.rowHandler = rowHandler;
         }
 
-        /** SAX 元素开始事件：按标签名处理 row/c/v/is/t，记录行号、列索引、单元格类型与值文本捕获状态。 */
+        /** SAX 元素开始事件：按标签名处理 row/c/v/is/t/f，记录行号、列索引、单元格类型、样式与值捕获状态。 */
         @Override
         public void startElement(String uri, String localName, String qName, Attributes attributes) {
             switch (qName) {
@@ -247,13 +274,21 @@ public class XlsxReader implements Closeable {
                     String ref = attributes.getValue("r");
                     colIndex = ref != null ? refToCol(ref) : currentRow.size();
                     cellType = attributes.getValue("t");
+                    String s = attributes.getValue("s");
+                    styleIndex = s != null ? Integer.parseInt(s) : 0;
                     while (currentRow.size() < colIndex) {
                         currentRow.add("");
                     }
+                    textBuilder = null;
+                    formulaBuilder = null;
                 }
                 case "v" -> {
                     textBuilder = new StringBuilder();
                     inValue = true;
+                }
+                case "f" -> {
+                    inFormula = true;
+                    formulaBuilder = new StringBuilder();
                 }
                 case "is" -> inInlineString = true;
                 case "t" -> {
@@ -270,14 +305,17 @@ public class XlsxReader implements Closeable {
         public void characters(char[] ch, int start, int length) {
             if (inValue && textBuilder != null) {
                 textBuilder.append(ch, start, length);
+            } else if (inFormula && formulaBuilder != null) {
+                formulaBuilder.append(ch, start, length);
             }
         }
 
-        /** SAX 元素结束事件：按标签名处理 c/row，解析单元格值（共享字符串查表）并回调行处理器。 */
+        /** SAX 元素结束事件：按标签名处理 c/row，依据类型与样式解析单元格值并回调行处理器。 */
         @Override
         public void endElement(String uri, String localName, String qName) {
             switch (qName) {
                 case "v" -> inValue = false;
+                case "f" -> inFormula = false;
                 case "t" -> {
                     if (inInlineString) {
                         inValue = false;
@@ -291,7 +329,9 @@ public class XlsxReader implements Closeable {
                     }
                     currentRow.set(colIndex, value);
                     textBuilder = null;
+                    formulaBuilder = null;
                     cellType = null;
+                    styleIndex = 0;
                 }
                 case "row" -> {
                     if (rowNum < 0) {
@@ -303,13 +343,14 @@ public class XlsxReader implements Closeable {
             }
         }
 
-        /** 解析单元格值：共享字符串按索引查表，内联字符串直接取值，数值/布尔取原文。 */
+        /** 解析单元格值：共享字符串查表；布尔转 TRUE/FALSE；错误/字符串结果原样；数值按日期样式格式化；公式无缓存值时返回公式文本。 */
         private String resolveCellValue() {
-            if (textBuilder == null || textBuilder.isEmpty()) {
-                return "";
-            }
-            String raw = textBuilder.toString();
+            String raw = textBuilder == null ? null : textBuilder.toString();
+            boolean hasValue = raw != null && !raw.isEmpty();
             if ("s".equals(cellType)) {
+                if (!hasValue) {
+                    return "";
+                }
                 try {
                     int idx = Integer.parseInt(raw);
                     return idx >= 0 && idx < sharedStrings.size() ? sharedStrings.get(idx) : "";
@@ -317,7 +358,32 @@ public class XlsxReader implements Closeable {
                     return "";
                 }
             }
-            return raw;
+            if ("b".equals(cellType)) {
+                return "1".equals(raw) ? "TRUE" : "FALSE";
+            }
+            if ("e".equals(cellType) || "str".equals(cellType)) {
+                return hasValue ? raw : "";
+            }
+            if (hasValue) {
+                if ("inlineStr".equals(cellType)) {
+                    return raw;
+                }
+                if (styles.isDateFormat(styleIndex)) {
+                    try {
+                        String formatted = styles.formatValue(styleIndex, Double.parseDouble(raw));
+                        if (formatted != null) {
+                            return formatted;
+                        }
+                    } catch (NumberFormatException e) {
+                        return raw;
+                    }
+                }
+                return raw;
+            }
+            if (formulaBuilder != null && !formulaBuilder.isEmpty()) {
+                return formulaBuilder.toString();
+            }
+            return "";
         }
     }
 
