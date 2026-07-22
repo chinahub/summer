@@ -1,0 +1,30 @@
+# summer-core 模块约定
+
+> **按需加载**：仅当 AI agent 读取 `summer-core/` 目录下的文件时才会加载本文件。
+
+## 模块职责
+
+IoC/DI 核心 + 日志 + AOP + 定时任务 + 工具集。所有其他模块的基础依赖。
+
+## 关键包
+
+| 包路径 | 职责 |
+| --- | --- |
+| `cn.jiebaba.summe.core.context` | ApplicationContext 容器实现 |
+| `cn.jiebaba.summe.core.scanner` | 类路径扫描与注解工具 |
+| `cn.jiebaba.summe.core.aop` | AOP 框架：切面注册、代理工厂、字节码生成 |
+| `cn.jiebaba.summe.core.aop.bytecode` | 自研字节码引擎（ConstantPool/ClassBuilder/MethodBuilder/Descriptor）——无 CGLIB 依赖 |
+| `cn.jiebaba.summe.core.logging` | JUL 日志（DailyRollingFileHandler/SingleLineFormatter）+ SLF4J 绑定 |
+| `cn.jiebaba.summe.core.scheduling` | 定时任务：CronExpression + @Scheduled 注册 |
+| `cn.jiebaba.summe.core.env` | 环境/配置（YAML 解析） |
+| `cn.jiebaba.summe.core.json` | 自研 JSON 解析（JsonReader/Json/TypeReference） |
+| `cn.jiebaba.summe.core.util` | 工具集：StringUtil/DateUtil/JsonUtil/SecurityUtil/ReflectionUtils/SummerUtil |
+| `cn.jiebaba.summe.core.annotation` | 框架注解：@Order/@Controller 等 |
+| `cn.jiebaba.summe.core.test` | 测试微框架：@SummerTest/SummerExtension |
+
+## 模块约定
+
+- **零第三方依赖**：本模块禁止引入任何第三方库（SLF4J API 除外）
+- **AOP 代理**：使用自研字节码引擎（`summer-core/aop/bytecode/`），不依赖 CGLIB 或 ByteBuddy。接口用 JDK 动态代理，无接口类用于类代理
+- **日志**：底层使用 JUL（`java.util.logging`），提供自研 SLF4J→JUL 绑定和 MDC 适配器
+- **配置**：支持 YAML（`application.yml`）和 Properties 两种格式

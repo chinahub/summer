@@ -20,7 +20,7 @@
 | 大模型对话（AI） | 纯 JDK `HttpURLConnection` + 自研 `ChatModel`/`ChatClient` | OpenAI 兼容协议直连 DeepSeek/GLM/MiniMax；阻塞式无 selector，支持 SSE 流式与思维链；不依赖 summer-boot，复用 summer-core `JsonUtil`，零第三方依赖，详见 [AI 对话](../使用文档/ai.md) |
 | 文档处理（Office） | 纯 JDK（csv/md/xml）+ FastExcel/iText（optional） | 自研 `OfficeReader`/`OfficeWriter`/`TableReader`/`TableWriter` 抽象；csv/md/xml 零第三方依赖；xlsx/docx 用 FastExcel（Apache-2.0），pdf 用 iText 7（AGPL-3.0），均 optional 按 classpath 探测条件激活；`Excel` fluent API 支持 TableData 与 Bean 双模式，详见 [路线图](roadmap.md) 第九阶段 |
 | 构建 | Maven（pom modelVersion 4.0.0） | 多模块；离线模式 |
-| 测试 | 进程内冒烟测试（`SmokeTest`/`OrmSmokeTest`/`DbSmokeTest`） | 沙箱限制进程间 loopback，用同进程自验证全链路 |
+| 测试 | JUnit 5（Jupiter）+ 自研 `@SummerTest`/`SummerExtension` 整合层 | 参照 Spring Boot Test/Helidon/Quarkus 的 `@ExtendWith` 整合形态：用例写真实 `org.junit.jupiter.api.Test`，IDEA 绿色三角与 surefire 原生执行；`SmokeTest`/`OrmSmokeTest`/`DbSmokeTest` 等进程内冒烟测试保留（沙箱限制进程间 loopback，用同进程自验证全链路），详见下文「为什么不走 junit-like」 |
 
 ## 零第三方依赖原则
 
@@ -32,6 +32,24 @@
 - SLF4J 绑定为**可选**：`summer-core` 以 `optional` 引入 `slf4j-api`，仅当使用方显式引入时才由 SLF4J `ServiceLoader` 激活，框架自身运行期仍是零第三方依赖。
 - **summer-ai** 同样零第三方依赖：仅依赖 summer-core（用其 `JsonUtil`），不依赖 summer-boot；以 `optional` 被 summer-boot 引入，启动时按 classpath 探测条件激活（详见 [AI 对话](../使用文档/ai.md)）。
 - **summer-office** 核心零第三方依赖：csv/md/xml 纯 JDK 实现；xlsx/docx 以 `optional` 引入 FastExcel（Apache-2.0，传递引入 POI），pdf 以 `optional` 引入 iText 7（AGPL-3.0 开源），按 classpath 探测条件激活；商业的 Aspose.Words 不引入。
+- **测试侧 JUnit 5 不进运行期**：`summer-core` 仅以 `optional` 引入 `junit-jupiter-api`（供 `@SummerTest`/`SummerExtension` 整合层编译）；`junit-jupiter`、`junit-platform-launcher` 只在 summer-sample（test scope）与 build-test（不发布模块）中使用，均不进入框架运行期的传递依赖。
+
+## 为什么不走 junit-like（自研测试框架）
+
+曾经路线：`cn.jiebaba.summer.core.test` 自研 junit-like 微框架（`@Test`/`@BeforeEach`/`Assert`/`Assumptions` + `TestRunner` 反射扫描执行，build-test 用 exec-maven-plugin 在 test 阶段触发）。3.0.0 起废弃并删除，原因：
+
+- **IDE 不识别**：IDEA 的测试绿色三角/测试树由 JUnit/TestNG 插件按全限定名硬编码识别（`org.junit.jupiter.api.Test` 等），自研注解永远拿不到 IDE 集成，只能命令行执行；
+- **生态不可复用**：进不了 surefire/IDE/CI 的 JUnit Platform 体系（XML 报告、失败跳转、覆盖率统计、方法级执行）；
+- **缩水复刻、维护成本高**：参数化、显示名、假设跳过、超时、扩展模型等都要自己重写一遍，本质是把 JUnit 5 重新发明一遍但更差；
+- **冒名方案治标不治本**：曾评估把注解包名改成 `org.junit.jupiter.api.Test` 骗取 IDE 识别——按钮能显示，但点击执行时 IDE 走真实 JUnit Platform，classpath 没有 launcher/engine 类照样失败；且伪造类与真 JUnit 共存即类冲突，还会污染发布构件。
+
+**真正路线**（参照 Spring Boot Test 的 `@SpringBootTest`+`SpringExtension`、Quarkus 的 `@QuarkusTest`+`QuarkusTestExtension`、Helidon Testing 的 `@HelidonTest`）：
+
+- 测试用例写真实的 `org.junit.jupiter.api.Test`，跑在真实 Jupiter 引擎上，IDEA 绿色三角与 `mvn test`（surefire）开箱即用；
+- 框架侧只做**整合层**而非执行引擎：`@SummerTest`（元注解 `@ExtendWith(SummerExtension.class)`）+ `SummerExtension`（每测试类启动 `DefaultApplicationContext`，支持 `@Autowired` 字段注入与 bean 类型参数注入），位于 `cn.jiebaba.summer.core.test`；
+- 旧框架 12 个类（`Test`/`TestRunner`/`Assert` 等）全部删除——JUnit 5 同名能力全覆盖；build-test 46 个用例已机械迁移（`Assert.`→`Assertions.` 等），`@Test(expected=)` 改写为 `assertThrows`；
+- 执行方式：summer-sample 走标准 `src/test` + surefire；build-test 用例在 `src/main`（非常规），surefire 配 `testClassesDirectory=${project.build.outputDirectory}` 扫描执行，exec-maven-plugin 已移除；
+- 配套修复：`ClassPathScanner` 除 `java.class.path` 外并入 `URLClassLoader` 的 URL 作为扫描根，覆盖 surefire 进程内隔离类加载器环境。
 
 ## 为什么不用 Servlet
 

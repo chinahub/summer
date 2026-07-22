@@ -54,7 +54,7 @@ try (Ocr ocr = Ocr.create(config)) {
 
 > 模型下载：ModelScope `RapidAI/RapidOCR`（tag `v3.9.1`）下 `onnx/PP-OCRv6/det/PP-OCRv6_det_small.onnx`、`onnx/PP-OCRv6/rec/PP-OCRv6_rec_small.onnx`。
 
-> 运行需启用原生访问：`java --enable-native-access=ALL-UNNAMED ...`（summer-boot 启动脚本已内置）。
+> 运行需启用原生访问：`java --enable-native-access=ALL-UNNAMED ...`（summer-boot 启动脚本已内置，原因详见 [模型下载指南](model-assets.md)）。
 
 > 回退 PP-OCRv4（旧模型）：将 det/rec 换为 `ch_PP-OCRv4_det_infer.onnx` / `ch_PP-OCRv4_rec_infer.onnx` 即可，v4 识别模型同样内嵌字典；预处理参数与 v6 一致，无需调整。
 
@@ -138,7 +138,7 @@ RapidOcr-Java 自带 **PP-OCRv3 与 v4** 模型；PaddleOCR 后续发布了 **v5
 
 ## 实现说明
 
-- `OnnxEngine` -- FFM 绑定 onnxruntime C API（`OrtGetApiBase`→`GetApi`→`OrtApi` 函数指针表），字段序号对应 `ORT_API_VERSION=20`（1.16~1.20 兼容）；`Model.getCustomMetadata(key)` 经 `SessionGetModelMetadata`/`ModelMetadataLookupCustomMetadataMap` 读取 ONNX 自定义元数据，用于获取 PP-OCRv4/v6 识别模型内嵌的 `character` 字典。
+- `OnnxEngine` -- 位于 summer-core 的共享 ONNX 推理引擎（FFM 绑定 onnxruntime C API，`OrtGetApiBase`->`GetApi`->`OrtApi` 函数指针表），字段序号对应 `ORT_API_VERSION=20`（1.16~1.20 兼容）；支持 FLOAT/FLOAT16/INT64 张量与多输入推理，供 OCR 与本地 Embedding 共用。`Model.getCustomMetadata(key)` 读取 ONNX 自定义元数据，用于获取 PP-OCRv4/v6 识别模型内嵌的 `character` 字典。
 - `ImageUtil` -- 纯 JDK 图像解码（`ImageIO`）、双线性缩放、透视矫正（单应矩阵 + 反向采样）、旋转、归一化。
 - `Geometry` -- 凸包（单调链）、最小外接矩形（旋转卡壳）、多边形外扩（miter 偏移近似 Clipper unclip）。
 - `DbPostProcess` -- DB 后处理：阈值化、膨胀、8 连通域、最小外接矩形、框内概率均值评分、外扩、过滤排序。

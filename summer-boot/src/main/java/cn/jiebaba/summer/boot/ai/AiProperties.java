@@ -27,6 +27,12 @@ public class AiProperties {
     private final String embeddingModel;
     private final String embeddingBaseUrl;
     private final String embeddingApiKey;
+    private final String embeddingType;
+    private final String onnxLibPath;
+    private final String onnxModelPath;
+    private final String onnxTokenizerPath;
+    private final int onnxMaxSeqLen;
+    private final String onnxPooling;
     private final String vectorStoreType;
     private final String vectorStoreTable;
     private final int vectorStoreDimensions;
@@ -49,6 +55,7 @@ public class AiProperties {
                          long retryMaxBackoffMillis, double rateLimitPermitsPerSecond,
                          int circuitBreakerFailureThreshold, long circuitBreakerWaitMillis,
                          boolean embeddingEnabled, String embeddingModel, String embeddingBaseUrl, String embeddingApiKey,
+                         String embeddingType, String onnxLibPath, String onnxModelPath, String onnxTokenizerPath, int onnxMaxSeqLen, String onnxPooling,
                          String vectorStoreType, String vectorStoreTable, int vectorStoreDimensions,
                          boolean vectorStoreCreateExtension, boolean vectorStoreCreateIndex,
                          boolean memoryEnabled, int memoryMaxMessages,
@@ -73,6 +80,12 @@ public class AiProperties {
         this.embeddingModel = embeddingModel;
         this.embeddingBaseUrl = embeddingBaseUrl;
         this.embeddingApiKey = embeddingApiKey;
+        this.embeddingType = embeddingType;
+        this.onnxLibPath = onnxLibPath;
+        this.onnxModelPath = onnxModelPath;
+        this.onnxTokenizerPath = onnxTokenizerPath;
+        this.onnxMaxSeqLen = onnxMaxSeqLen;
+        this.onnxPooling = onnxPooling;
         this.vectorStoreType = vectorStoreType;
         this.vectorStoreTable = vectorStoreTable;
         this.vectorStoreDimensions = vectorStoreDimensions;
@@ -118,6 +131,12 @@ public class AiProperties {
         String embeddingModel = env.getProperty("summer.ai.embedding.model");
         String embeddingBaseUrl = env.getProperty("summer.ai.embedding.base-url");
         String embeddingApiKey = env.getProperty("summer.ai.embedding.api-key");
+        String embeddingType = env.getProperty("summer.ai.embedding.type", String.class, "openai");
+        String onnxLibPath = env.getProperty("summer.ai.embedding.onnx.lib-path");
+        String onnxModelPath = env.getProperty("summer.ai.embedding.onnx.model-path");
+        String onnxTokenizerPath = env.getProperty("summer.ai.embedding.onnx.tokenizer-path");
+        int onnxMaxSeqLen = env.getProperty("summer.ai.embedding.onnx.max-seq-len", Integer.class, 8192);
+        String onnxPooling = env.getProperty("summer.ai.embedding.onnx.pooling", String.class, "cls");
         String vectorStoreType = env.getProperty("summer.ai.vectorstore.type", String.class, "none");
         String vectorStoreTable = env.getProperty("summer.ai.vectorstore.table", String.class, "summer_ai_vectors");
         int vectorStoreDimensions = env.getProperty("summer.ai.vectorstore.dimensions", Integer.class, 0);
@@ -137,6 +156,7 @@ public class AiProperties {
                 retryMaxAttempts, retryInitialBackoffMillis, retryMultiplier, retryMaxBackoffMillis,
                 rateLimitPermitsPerSecond, circuitBreakerFailureThreshold, circuitBreakerWaitMillis,
                 embeddingEnabled, embeddingModel, embeddingBaseUrl, embeddingApiKey,
+                embeddingType, onnxLibPath, onnxModelPath, onnxTokenizerPath, onnxMaxSeqLen, onnxPooling,
                 vectorStoreType, vectorStoreTable, vectorStoreDimensions,
                 vectorStoreCreateExtension, vectorStoreCreateIndex,
                 memoryEnabled, memoryMaxMessages,
@@ -159,9 +179,21 @@ public class AiProperties {
 
     /** 向量化是否就绪：embedding.enabled=true 且指定了 embedding.model 并可解析到 api-key。 */
     public boolean isEmbeddingReady() {
-        return embeddingEnabled
-                && embeddingModel != null && !embeddingModel.isBlank()
+        if (!embeddingEnabled) {
+            return false;
+        }
+        if (isEmbeddingOnnx()) {
+            return onnxLibPath != null && !onnxLibPath.isBlank()
+                    && onnxModelPath != null && !onnxModelPath.isBlank()
+                    && onnxTokenizerPath != null && !onnxTokenizerPath.isBlank();
+        }
+        return embeddingModel != null && !embeddingModel.isBlank()
                 && resolveEmbeddingApiKey() != null && !resolveEmbeddingApiKey().isBlank();
+    }
+
+    /** 是否启用本地 ONNX 向量化：embedding.type=onnx。 */
+    public boolean isEmbeddingOnnx() {
+        return "onnx".equalsIgnoreCase(embeddingType);
     }
 
     /** 向量化实际 base-url：优先 embedding.base-url，未配置回退到主 base-url。 */
@@ -216,6 +248,12 @@ public class AiProperties {
     public String getEmbeddingModel() { return embeddingModel; }
     public String getEmbeddingBaseUrl() { return embeddingBaseUrl; }
     public String getEmbeddingApiKey() { return embeddingApiKey; }
+    public String getEmbeddingType() { return embeddingType; }
+    public String getOnnxLibPath() { return onnxLibPath; }
+    public String getOnnxModelPath() { return onnxModelPath; }
+    public String getOnnxTokenizerPath() { return onnxTokenizerPath; }
+    public int getOnnxMaxSeqLen() { return onnxMaxSeqLen; }
+    public String getOnnxPooling() { return onnxPooling; }
     public String getVectorStoreType() { return vectorStoreType; }
     public String getVectorStoreTable() { return vectorStoreTable; }
     public int getVectorStoreDimensions() { return vectorStoreDimensions; }

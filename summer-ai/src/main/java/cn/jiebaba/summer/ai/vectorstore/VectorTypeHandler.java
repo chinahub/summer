@@ -1,4 +1,4 @@
-package cn.jiebaba.summer.boot.ai.vectorstore;
+package cn.jiebaba.summer.ai.vectorstore;
 
 import cn.jiebaba.summer.data.dialect.Dialect;
 import cn.jiebaba.summer.data.support.TypeHandler;

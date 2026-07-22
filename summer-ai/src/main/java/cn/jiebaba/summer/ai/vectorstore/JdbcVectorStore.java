@@ -1,4 +1,4 @@
-package cn.jiebaba.summer.boot.ai.vectorstore;
+package cn.jiebaba.summer.ai.vectorstore;
 
 import cn.jiebaba.summer.ai.AiException;
 import cn.jiebaba.summer.ai.document.Document;

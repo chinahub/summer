@@ -3,6 +3,7 @@ package cn.jiebaba.summer.boot.ai;
 import cn.jiebaba.summer.ai.chat.ChatClient;
 import cn.jiebaba.summer.ai.chat.ChatModel;
 import cn.jiebaba.summer.ai.embedding.EmbeddingModel;
+import cn.jiebaba.summer.ai.embedding.onnx.OnnxEmbeddingModel;
 import cn.jiebaba.summer.ai.embedding.openai.OpenAiCompatibleEmbeddingModel;
 import cn.jiebaba.summer.ai.logging.AiCallLogger;
 import cn.jiebaba.summer.ai.logging.LoggingChatModel;
@@ -21,7 +22,7 @@ import cn.jiebaba.summer.ai.tools.ToolCallingChatModel;
 import cn.jiebaba.summer.ai.vectorstore.InMemoryVectorStore;
 import cn.jiebaba.summer.ai.vectorstore.VectorStore;
 import cn.jiebaba.summer.boot.ai.logging.JdbcAiCallLogger;
-import cn.jiebaba.summer.boot.ai.vectorstore.JdbcVectorStore;
+import cn.jiebaba.summer.ai.vectorstore.JdbcVectorStore;
 import cn.jiebaba.summer.core.annotation.Bean;
 import cn.jiebaba.summer.core.annotation.Configuration;
 import cn.jiebaba.summer.core.annotation.Lazy;
@@ -111,7 +112,16 @@ public class AiAutoConfiguration {
         if (!aiProperties.isEmbeddingReady()) {
             throw new IllegalStateException(
                     "summer-ai 向量化未启用或未配置：请设置 summer.ai.embedding.enabled=true"
-                            + " 与 summer.ai.embedding.model（必要时补充 base-url/api-key）。");
+                            + " 与 summer.ai.embedding.type(openai|onnx)；openai 需 model（必要时补充 base-url/api-key），"
+                            + "onnx 需 onnx.lib-path/model-path/tokenizer-path。");
+        }
+        if (aiProperties.isEmbeddingOnnx()) {
+            return new OnnxEmbeddingModel(
+                    aiProperties.getOnnxLibPath(),
+                    aiProperties.getOnnxModelPath(),
+                    aiProperties.getOnnxTokenizerPath(),
+                    aiProperties.getOnnxMaxSeqLen(),
+                    aiProperties.getOnnxPooling());
         }
         return new OpenAiCompatibleEmbeddingModel(
                 aiProperties.resolveEmbeddingBaseUrl(),

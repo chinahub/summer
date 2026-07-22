@@ -2,32 +2,89 @@
 
 > summer —— 基于 JDK 25 内置库、虚拟线程协程构建的类 Spring Boot 微服务框架，不使用 Servlet 规范，尽量不依赖第三方库。
 
-## 文档索引
+## 🚀 快速开始
 
 | 文档 | 内容 |
 | --- | --- |
-| [技术栈](开发文档/tech-stack.md) | 技术选型：JDK 25、虚拟线程、ServerSocketChannel(NIMA)、TLS、JUL、Maven、零第三方依赖 |
-| [架构设计](开发文档/architecture.md) | 模块划分、依赖关系、运行时模型、启动流程 |
-| [安装](使用文档/installation.md) | 环境准备、纯离线 Maven 配置、编码注意 |
-| [发布到 Maven Central](开发文档/publishing.md) | release profile、GPG 签名（Git Bash）、Central Portal 上传、build-test 排除发布 |
-| [使用](使用文档/usage.md) | 构建/运行、配置（YML/properties）、注解速查、工具集、示例、测试结果 |
-| [日志方案](使用文档/logging.md) | JUL 滚动实测 + summer 双通道日志（控制台+文件按天/按大小滚动） |
-| [SLF4J 绑定](使用文档/logging-slf4j.md) | 自研 SLF4J→JUL 绑定，支持 Lombok `@Slf4j`，无需桥接 jar |
-| [数据访问 ORM](使用文档/orm.md) | MyBatis-Plus 风格 ORM：BaseMapper/Wrapper/分页/IService/事务/多方言 |
-| [多数据源](使用文档/multi-datasource.md) | @DS/@Master/@Slave + @DSTransactional 跨源事务 |
-| [AOP](使用文档/aop.md) | `@Aspect` 切面、`execution()` 切点、环绕/前置/后置通知、JDK 动态代理 + 无接口子类代理 |
-| [安全](使用文档/security.md) | JWT 无状态认证、BCrypt、URL/方法级授权、HttpSecurity DSL |
-| [AI 对话](使用文档/ai.md) | 纯 JDK 国内大模型对话抽象（DeepSeek/GLM/MiniMax）、OpenAI 兼容、同步与 SSE 流式、ChatClient 门面 |
-| [定时任务](使用文档/scheduling.md) | `@Scheduled`：cron 表达式 + fixedRate/fixedDelay，虚拟线程执行 |
-| [ApplicationRunner](使用文档/application-runner.md) | 启动就绪回调：上下文启动 + 端口监听后执行初始化（缓存预热/字典加载），按 `@Order` 排序 |
-| [WebSocket](使用文档/websocket.md) | `@WebSocketEndpoint`，纯 JDK 握手+帧协议（RFC 6455） |
-| [参数校验](使用文档/validation.md) | `@Valid` + 约束注解，递归校验，400 违规列表 |
-| [文件上传](使用文档/multipart.md) | `multipart/form-data` 解析、`@RequestPart` + `MultipartFile`，纯 JDK |
-| [工具集](使用文档/utils.md) | StringUtil/DateUtil/JsonUtil/SecurityUtil/SummerUtil：纯 JDK 工具类，参考 commons-lang3 与 hutool |
-| [开发路线图](开发文档/roadmap.md) | 分阶段开发计划与后续扩展项 |
-| [高级特性研究](开发文档/research-advanced.md) | WebSocket / 异步控制器 / 连接池增强 / 自研子类代理（无 CGLIB 依赖） |
+| [安装指南](使用文档/installation.md) | 环境准备、Maven 配置、编码注意事项 |
+| [使用手册](使用文档/usage.md) | 构建/运行、配置（YML/properties）、注解速查、工具集 |
 
-## 模块一览
+## 🏗 开发文档
+
+项目设计、架构、技术选型与开发计划。
+
+| 文档 | 内容 |
+| --- | --- |
+| [技术栈](开发文档/tech-stack.md) | JDK 25、虚拟线程、ServerSocketChannel(NIMA)、TLS、JUL、Maven |
+| [架构设计](开发文档/architecture.md) | 模块划分、依赖关系、运行时模型、启动流程 |
+| [发布到 Maven Central](开发文档/publishing.md) | release profile、GPG 签名、Central Portal 上传 |
+| [高级特性研究](开发文档/research-advanced.md) | WebSocket/异步控制器/连接池增强/自研子类代理 |
+| [开发路线图](开发文档/roadmap.md) | 分阶段开发计划与后续扩展项 |
+
+## 📖 使用文档
+
+按功能领域组织的使用指南。
+
+### 核心能力
+
+| 文档 | 内容 |
+| --- | --- |
+| [AOP](使用文档/aop.md) | `@Aspect` 切面、`execution()` 切点、环绕/前置/后置通知、自研字节码代理 |
+| [定时任务](使用文档/scheduling.md) | `@Scheduled`：cron 表达式 + fixedRate/fixedDelay，虚拟线程执行 |
+| [参数校验](使用文档/validation.md) | `@Valid` + 约束注解，递归校验，400 违规列表 |
+| [ApplicationRunner](使用文档/application-runner.md) | 启动就绪回调：缓存预热/字典加载，按 `@Order` 排序 |
+| [工具集](使用文档/utils.md) | StringUtil/DateUtil/JsonUtil/SecurityUtil/SummerUtil |
+
+### 数据访问
+
+| 文档 | 内容 |
+| --- | --- |
+| [ORM](使用文档/orm.md) | MyBatis-Plus 风格：BaseMapper/Wrapper/分页/IService/事务/多方言 |
+| [多数据源](使用文档/multi-datasource.md) | @DS/@Master/@Slave + @DSTransactional 跨源事务 |
+
+### Web 服务
+
+| 文档 | 内容 |
+| --- | --- |
+| [WebSocket](使用文档/websocket.md) | `@WebSocketEndpoint`，纯 JDK 握手+帧协议（RFC 6455） |
+| [文件上传](使用文档/multipart.md) | `multipart/form-data` 解析、`@RequestPart` + `MultipartFile` |
+| [CORS](使用文档/cors.md) | 跨域配置 |
+
+### 安全与认证
+
+| 文档 | 内容 |
+| --- | --- |
+| [安全](使用文档/security.md) | JWT 无状态认证、BCrypt、URL/方法级授权、HttpSecurity DSL |
+
+### AI 与智能
+
+| 文档 | 内容 |
+| --- | --- |
+| [AI 对话](使用文档/ai.md) | ChatClient、OpenAI 兼容、SSE 流式、工具调用、RAG、本地 ONNX Embedding |
+| [OCR](使用文档/ocr.md) | ONNX 引擎 OCR：文本检测 + 识别 + 分类 |
+| [模型下载](使用文档/model-assets.md) | onnxruntime 原生库、PP-OCR、BGE-M3 模型下载指南 |
+
+### 日志与监控
+
+| 文档 | 内容 |
+| --- | --- |
+| [日志方案](使用文档/logging.md) | JUL 滚动实测 + 双通道日志（控制台+文件按天/按大小滚动） |
+| [SLF4J 绑定](使用文档/logging-slf4j.md) | 自研 SLF4J→JUL 绑定，支持 Lombok `@Slf4j` |
+
+## 🤖 AI Agent 使用
+
+本项目同时面向人类开发者和 AI 编程助手（Claude Code、Codex 等）优化。
+
+| 位置 | 用途 | 加载时机 |
+| --- | --- | --- |
+| [AGENTS.md](../AGENTS.md) | 项目宪法：构建命令、模块速览、编码规范 | 每次会话 |
+| [各模块 AGENTS.md](../summer-core/AGENTS.md) | 模块专属约定 | 仅当触碰该模块时 |
+| [.claude/skills/](../.claude/skills/) | 工作流：代码审查、发布、部署 | 调用时加载 |
+| [.claude/rules/](../.claude/rules/) | 路径限定规则：Java 编码、配置文件、模块依赖 | 仅当触碰匹配文件时 |
+
+> 设计理念参考 [Anthropic 官方：七种自定义方式决策框架](https://www.toutiao.com/article/7653321298067718671)
+
+## 📦 模块一览
 
 ```
 summer-parent (pom)
@@ -35,13 +92,13 @@ summer-parent (pom)
 ├── summer-web             嵌入式 HTTP 服务器(ServerSocketChannel+虚拟线程,NIMA;TLS/chunked)/路由/JSON/绑定/异常/校验/WebSocket
 ├── summer-data            ORM：BaseMapper/Wrapper/分页/IService/事务/多方言/多数据源，纯 JDBC，零第三方依赖
 ├── summer-security        安全模块：JWT 无状态认证、BCrypt、URL/方法级授权，纯 JDK，零第三方依赖
-├── summer-ai              大模型对话抽象：ChatModel/ChatClient，OpenAI 兼容（DeepSeek/GLM/MiniMax），同步与 SSE 流式，纯 JDK
+├── summer-ai              大模型对话抽象：ChatModel/ChatClient，OpenAI 兼容，同步与 SSE 流式，纯 JDK
 ├── summer-office          文档处理：解析与生成 xlsx/docx/pdf/xml/csv/md，纯 JDK 实现 csv/md/xml，xlsx/docx/pdf 按 classpath 探测激活（POI/PDFBox）
 ├── summer-boot            SummerApplication.run() 启动器/自动配置/数据源/Mapper装配/关闭钩子
 ├── summer-boot-loader     可执行 jar 启动器 JarLauncher（java -jar 入口），由插件内置打包
 ├── summer-pack-maven-plugin  mvn package 自动产出 BOOT-INF 可执行 jar
 ├── summer-sample          示例应用（Application + controller/service/repository/aspect）
-└── build-test              集中式测试：AOP 单测/集成测试 + sample 冒烟测试（测试微框架在 summer-core 的 core.test 包）
+└── build-test              集中式测试：AOP 单测/集成测试 + sample 冒烟测试
 ```
 
 ## 一句话定位

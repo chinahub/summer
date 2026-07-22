@@ -17,5 +17,10 @@
             <artifactId>summer-core</artifactId>
             <version>${summer.version}</version>
         </dependency>
+        <dependency>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-data</artifactId>
+            <version>${summer.version}</version>
+        </dependency>
     </dependencies>
 </project>

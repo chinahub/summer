@@ -1,7 +1,7 @@
-package cn.jiebaba.summer.office.ocr;
+package cn.jiebaba.summer.core.onnx;
 
-import java.lang.foreign.Arena;
 import java.lang.foreign.AddressLayout;
+import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.SymbolLookup;
@@ -9,12 +9,11 @@ import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * ONNX Runtime 推理引擎：基于 JDK 25 的 Foreign Function & Memory API（{@code java.lang.foreign}）
  * 直接调用 onnxruntime 原生共享库，无需 JNI 胶水代码，也无需引入第三方 Java 绑定包。
+ * <p>作为 summer-core 共享基础设施，供 summer-ai（文本向量化）与 summer-office（OCR）复用。
  * <p>实现思路：
  * <ol>
  *   <li>通过 {@link SymbolLookup#libraryLookup} 加载 onnxruntime 动态库；</li>
@@ -24,7 +23,8 @@ import java.util.List;
  *   <li>基于 {@link Arena} 管理原生内存：环境/会话长驻共享域，单次推理使用临时受限域。</li>
  * </ol>
  * <p>字段序号与枚举值对应 onnxruntime 1.20.x（{@code ORT_API_VERSION = 20}），底层结构体只追加不重排，
- * 因此对 1.16~1.20 均兼容。
+ * 因此对 1.16~1.20 均兼容。支持 FLOAT/FLOAT16/INT64 三种张量元素类型，覆盖 OCR 图像输入与
+ * Embedding 模型的 int64 token 输入、FP16 输出场景。
  */
 public final class OnnxEngine implements AutoCloseable {
 
@@ -69,18 +69,55 @@ public final class OnnxEngine implements AutoCloseable {
     private static final int ORT_DEVICE_ALLOCATOR = 0;
     private static final int ORT_MEM_DEFAULT = 0;
     private static final int ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT = 1;
+    private static final int ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64 = 7;
+    private static final int ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16 = 10;
 
     private static final AddressLayout ADDRESS = ValueLayout.ADDRESS;
     private static final ValueLayout.OfInt INT = ValueLayout.JAVA_INT;
     private static final ValueLayout.OfLong LONG = ValueLayout.JAVA_LONG;
     private static final ValueLayout.OfFloat FLOAT = ValueLayout.JAVA_FLOAT;
+    private static final ValueLayout.OfShort SHORT = ValueLayout.JAVA_SHORT;
+
+    /** 张量元素类型：ONNX 类型码与字节宽度，用于创建输入张量与读取输出。 */
+    public enum Type {
+        /** 32 位浮点。 */
+        FLOAT(ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT, 4),
+        /** 16 位浮点（半精度），读取时转为 float。 */
+        FLOAT16(ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16, 2),
+        /** 64 位整数，用于 token ids 等离散输入。 */
+        INT64(ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64, 8);
+
+        private final int onnxType;
+        private final int byteSize;
+
+        Type(int onnxType, int byteSize) {
+            this.onnxType = onnxType;
+            this.byteSize = byteSize;
+        }
+
+        public int onnxType() {
+            return onnxType;
+        }
+
+        public int byteSize() {
+            return byteSize;
+        }
+    }
+
+    /** 输入张量描述：名称、数据、形状与元素类型。data 为 float[]/long[]/short[]，须与 type 匹配。 */
+    public record InputTensor(String name, Object data, long[] shape, Type type) {
+    }
+
+    /** 推理输出：数据浮点数组与各维度（输出统一转为 float）。 */
+    public record Output(float[] data, long[] shape) {
+    }
 
     private final Arena persistent;
     private final MemorySegment api;
     private final MemorySegment env;
     private final MemorySegment memoryInfo;
     private final MemorySegment runOptions;
-
+    private final MemorySegment defaultAllocator;
     private final MethodHandle getErrorCode;
     private final MethodHandle getErrorMessage;
     private final MethodHandle createTensorWithData;
@@ -99,13 +136,20 @@ public final class OnnxEngine implements AutoCloseable {
     private final MethodHandle releaseStatus;
     private final MethodHandle releaseValue;
     private final MethodHandle releaseTensorTypeAndShapeInfo;
+    private final MethodHandle createSessionOptions;
+    private final MethodHandle createSessionFromArray;
+    private final MethodHandle releaseSession;
+    private final MethodHandle releaseSessionOptions;
+    private final MethodHandle sessionGetModelMetadata;
+    private final MethodHandle modelMetadataLookupCustom;
+    private final MethodHandle releaseModelMetadata;
 
     /** 初始化引擎：加载动态库、取得 OrtApi、创建 OrtEnv/MemoryInfo/RunOptions 并包装各函数句柄。 */
     private OnnxEngine(String libPath) {
         this.persistent = Arena.ofShared();
         SymbolLookup lookup = SymbolLookup.libraryLookup(libPath, persistent);
         MemorySegment getApiBaseFn = lookup.find("OrtGetApiBase")
-                .orElseThrow(() -> new OcrException("未在动态库中找到 OrtGetApiBase 符号：" + libPath));
+                .orElseThrow(() -> new OnnxException("未在动态库中找到 OrtGetApiBase 符号：" + libPath));
         try {
             var linker = java.lang.foreign.Linker.nativeLinker();
             MethodHandle getApiBase = linker.downcallHandle(getApiBaseFn,
@@ -151,7 +195,7 @@ public final class OnnxEngine implements AutoCloseable {
 
             // 创建全局 OrtEnv
             MemorySegment envOut = persistent.allocate(ADDRESS);
-            MemorySegment logId = persistent.allocateFrom("summer-ocr");
+            MemorySegment logId = persistent.allocateFrom("summer-onnx");
             check((MemorySegment) createEnv.invoke(LOGGING_ERROR, logId, envOut));
             this.env = envOut.get(ADDRESS, 0L);
 
@@ -178,21 +222,12 @@ public final class OnnxEngine implements AutoCloseable {
             this.modelMetadataLookupCustom = apiHandle(linker, FN_MODEL_METADATA_LOOKUP_CUSTOM,
                     FunctionDescriptor.of(ADDRESS, ADDRESS, ADDRESS, ADDRESS, ADDRESS));
             this.releaseModelMetadata = apiHandle(linker, FN_RELEASE_MODEL_METADATA, FunctionDescriptor.ofVoid(ADDRESS));
-        } catch (OcrException e) {
+        } catch (OnnxException e) {
             throw e;
         } catch (Throwable t) {
-            throw new OcrException("初始化 onnxruntime 引擎失败", t);
+            throw new OnnxException("初始化 onnxruntime 引擎失败", t);
         }
     }
-
-    private final MemorySegment defaultAllocator;
-    private final MethodHandle createSessionOptions;
-    private final MethodHandle createSessionFromArray;
-    private final MethodHandle releaseSession;
-    private final MethodHandle releaseSessionOptions;
-    private final MethodHandle sessionGetModelMetadata;
-    private final MethodHandle modelMetadataLookupCustom;
-    private final MethodHandle releaseModelMetadata;
 
     /**
      * 加载 onnxruntime 动态库并初始化引擎。
@@ -202,7 +237,7 @@ public final class OnnxEngine implements AutoCloseable {
      */
     public static OnnxEngine load(String libPath) {
         if (!Files.exists(Path.of(libPath))) {
-            throw new OcrException("onnxruntime 动态库不存在：" + libPath);
+            throw new OnnxException("onnxruntime 动态库不存在：" + libPath);
         }
         return new OnnxEngine(libPath);
     }
@@ -211,7 +246,7 @@ public final class OnnxEngine implements AutoCloseable {
     private MethodHandle apiHandle(java.lang.foreign.Linker linker, int index, FunctionDescriptor fd) {
         MemorySegment fp = api.get(ADDRESS, (long) index * ADDRESS.byteSize());
         if (fp.address() == 0L) {
-            throw new OcrException("OrtApi 第 " + index + " 个函数指针为空，onnxruntime 版本可能不兼容");
+            throw new OnnxException("OrtApi 第 " + index + " 个函数指针为空，onnxruntime 版本可能不兼容");
         }
         return linker.downcallHandle(fp, fd);
     }
@@ -236,10 +271,10 @@ public final class OnnxEngine implements AutoCloseable {
             String[] inputs = readNames(session, true);
             String[] outputs = readNames(session, false);
             return new Model(session, inputs, outputs);
-        } catch (OcrException e) {
+        } catch (OnnxException e) {
             throw e;
         } catch (Throwable t) {
-            throw new OcrException("加载 ONNX 模型失败", t);
+            throw new OnnxException("加载 ONNX 模型失败", t);
         }
     }
 
@@ -287,11 +322,37 @@ public final class OnnxEngine implements AutoCloseable {
         MemorySegment msgPtr = (MemorySegment) getErrorMessage.invoke(status);
         String msg = msgPtr.address() == 0L ? "未知 onnxruntime 错误" : readCString(msgPtr);
         releaseStatus.invoke(status);
-        throw new OcrException("onnxruntime 错误：" + msg);
+        throw new OnnxException("onnxruntime 错误：" + msg);
     }
 
-    /** 推理输出：数据浮点数组与各维度。 */
-    public record Output(float[] data, long[] shape) {
+    /** IEEE 754 半精度（FP16）转单精度（FP32）：按符号/指数/尾数位重组，处理规格化与非规格化数。 */
+    private static float halfToFloat(short h) {
+        int bits = h & 0xFFFF;
+        int sign = (bits >>> 15) & 0x1;
+        int exp = (bits >>> 10) & 0x1F;
+        int mant = bits & 0x3FF;
+        int f;
+        if (exp == 0) {
+            if (mant == 0) {
+                f = sign << 31;
+            } else {
+                // 非规格化数：左移尾数直至隐含位为 1，相应扣减指数
+                int e = -1;
+                do {
+                    e++;
+                    mant <<= 1;
+                } while ((mant & 0x400) == 0);
+                mant &= 0x3FF;
+                f = (sign << 31) | ((127 - 15 - e) << 23) | (mant << 13);
+            }
+        } else if (exp == 0x1F) {
+            // 无穷或 NaN
+            f = (sign << 31) | (0xFF << 23) | (mant << 13);
+        } else {
+            // 规格化数：指数偏移从 15 调整为 127
+            f = (sign << 31) | ((exp - 15 + 127) << 23) | (mant << 13);
+        }
+        return Float.intBitsToFloat(f);
     }
 
     /** 已加载的模型会话，线程安全（onnxruntime 的 Run 支持并发调用同一会话）。 */
@@ -341,48 +402,70 @@ public final class OnnxEngine implements AutoCloseable {
                 } finally {
                     releaseModelMetadata.invoke(metadata);
                 }
-            } catch (OcrException e) {
+            } catch (OnnxException e) {
                 throw e;
             } catch (Throwable t) {
-                throw new OcrException("读取模型元数据失败：" + key, t);
+                throw new OnnxException("读取模型元数据失败：" + key, t);
             }
         }
 
         /**
-         * 以单输入（第一个输入名）执行推理，返回第一个输出。
+         * 以单输入（第一个输入名，FLOAT 类型）执行推理，返回第一个输出。
+         * 便捷方法，供 OCR 等单浮点输入场景使用；多输入场景用 {@link #run(InputTensor[])}。
          *
          * @param input 输入张量数据（按 C 序 row-major 排布的浮点）
          * @param shape 输入形状，如 {1, 3, 480, 640}
          * @return 第一个输出张量的数据与形状
          */
         public Output run(float[] input, long[] shape) {
-            try (Arena a = Arena.ofConfined()) {
-                // 输入数据拷贝到原生内存，保证 onnxruntime 持有的指针稳定
-                MemorySegment data = a.allocate(FLOAT, input.length);
-                data.copyFrom(MemorySegment.ofArray(input));
-                MemorySegment shapeSeg = a.allocate(LONG, shape.length);
-                shapeSeg.copyFrom(MemorySegment.ofArray(shape));
-                MemorySegment inValOut = a.allocate(ADDRESS);
-                check((MemorySegment) createTensorWithData.invoke(memoryInfo, data, (long) input.length * 4L,
-                        shapeSeg, (long) shape.length, ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT, inValOut));
-                MemorySegment inVal = inValOut.get(ADDRESS, 0L);
+            return run(new InputTensor[]{new InputTensor(inputNames[0], input, shape, Type.FLOAT)})[0];
+        }
 
-                MemorySegment inNames = a.allocate(ADDRESS, 1);
-                inNames.set(ADDRESS, 0L, a.allocateFrom(inputNames[0]));
-                MemorySegment inVals = a.allocate(ADDRESS, 1);
-                inVals.set(ADDRESS, 0L, inVal);
+        /**
+         * 多输入通用推理：按各输入张量的名称、数据、形状与元素类型创建 OrtValue 并执行 Run，
+         * 返回所有输出（统一转为 float，FP16 输出自动转换）。供 Embedding 等多输入场景使用。
+         *
+         * @param inputs 输入张量数组，data 须为 float[]/long[]/short[] 且与 type 匹配
+         * @return 所有输出张量，顺序与模型输出定义一致
+         */
+        public Output[] run(InputTensor[] inputs) {
+            try (Arena a = Arena.ofConfined()) {
+                int n = inputs.length;
+                MemorySegment inNames = a.allocate(ADDRESS, n);
+                MemorySegment inVals = a.allocate(ADDRESS, n);
                 int outCount = outputNames.length;
                 MemorySegment outNames = a.allocate(ADDRESS, outCount);
-                for (int i = 0; i < outCount; i++) {
-                    outNames.set(ADDRESS, (long) i * ADDRESS.byteSize(), a.allocateFrom(outputNames[i]));
-                }
                 MemorySegment outVals = a.allocate(ADDRESS, outCount);
                 try {
-                    check((MemorySegment) OnnxEngine.this.run.invoke(session, runOptions, inNames, inVals, 1L,
+                    for (int i = 0; i < n; i++) {
+                        InputTensor t = inputs[i];
+                        MemorySegment data = allocateData(a, t);
+                        MemorySegment shapeSeg = a.allocate(LONG, t.shape().length);
+                        shapeSeg.copyFrom(MemorySegment.ofArray(t.shape()));
+                        MemorySegment valOut = a.allocate(ADDRESS);
+                        check((MemorySegment) createTensorWithData.invoke(memoryInfo, data, data.byteSize(),
+                                shapeSeg, (long) t.shape().length, t.type().onnxType(), valOut));
+                        MemorySegment val = valOut.get(ADDRESS, 0L);
+                        inNames.set(ADDRESS, (long) i * ADDRESS.byteSize(), a.allocateFrom(t.name()));
+                        inVals.set(ADDRESS, (long) i * ADDRESS.byteSize(), val);
+                    }
+                    for (int i = 0; i < outCount; i++) {
+                        outNames.set(ADDRESS, (long) i * ADDRESS.byteSize(), a.allocateFrom(outputNames[i]));
+                    }
+                    check((MemorySegment) OnnxEngine.this.run.invoke(session, runOptions, inNames, inVals, (long) n,
                             outNames, (long) outCount, outVals));
-                    return readOutput(outVals.get(ADDRESS, 0L), a);
+                    Output[] results = new Output[outCount];
+                    for (int i = 0; i < outCount; i++) {
+                        results[i] = readOutput(outVals.get(ADDRESS, (long) i * ADDRESS.byteSize()), a);
+                    }
+                    return results;
                 } finally {
-                    releaseValue.invoke(inVal);
+                    for (int i = 0; i < n; i++) {
+                        MemorySegment iv = inVals.get(ADDRESS, (long) i * ADDRESS.byteSize());
+                        if (iv.address() != 0L) {
+                            releaseValue.invoke(iv);
+                        }
+                    }
                     for (int i = 0; i < outCount; i++) {
                         MemorySegment ov = outVals.get(ADDRESS, (long) i * ADDRESS.byteSize());
                         if (ov.address() != 0L) {
@@ -390,35 +473,86 @@ public final class OnnxEngine implements AutoCloseable {
                         }
                     }
                 }
-            } catch (OcrException e) {
+            } catch (OnnxException e) {
                 throw e;
             } catch (Throwable t) {
-                throw new OcrException("ONNX 推理失败", t);
+                throw new OnnxException("ONNX 推理失败", t);
             }
         }
 
-        /** 读取一个输出 OrtValue 的形状与浮点数据。 */
+        /** 按输入张量类型将数据拷贝到原生内存，返回对应布局的 MemorySegment。 */
+        private MemorySegment allocateData(Arena a, InputTensor t) {
+            return switch (t.type()) {
+                case FLOAT -> {
+                    float[] arr = (float[]) t.data();
+                    MemorySegment m = a.allocate(FLOAT, arr.length);
+                    m.copyFrom(MemorySegment.ofArray(arr));
+                    yield m;
+                }
+                case INT64 -> {
+                    long[] arr = (long[]) t.data();
+                    MemorySegment m = a.allocate(LONG, arr.length);
+                    m.copyFrom(MemorySegment.ofArray(arr));
+                    yield m;
+                }
+                case FLOAT16 -> {
+                    short[] arr = (short[]) t.data();
+                    MemorySegment m = a.allocate(SHORT, arr.length);
+                    m.copyFrom(MemorySegment.ofArray(arr));
+                    yield m;
+                }
+            };
+        }
+
+        /** 读取一个输出 OrtValue 的形状与浮点数据：按元素类型读取，FP16 自动转为 float。 */
         private Output readOutput(MemorySegment value, Arena arena) throws Throwable {
             MemorySegment infoOut = arena.allocate(ADDRESS);
             check((MemorySegment) getTensorTypeAndShape.invoke(value, infoOut));
             MemorySegment info = infoOut.get(ADDRESS, 0L);
-            MemorySegment cntOut = arena.allocate(LONG);
-            check((MemorySegment) getDimensionsCount.invoke(info, cntOut));
-            int dimCount = (int) cntOut.get(LONG, 0L);
-            MemorySegment dims = arena.allocate(LONG, dimCount);
-            check((MemorySegment) getDimensions.invoke(info, dims, (long) dimCount));
-            long[] shape = new long[dimCount];
-            long total = 1L;
-            for (int i = 0; i < dimCount; i++) {
-                shape[i] = dims.get(LONG, (long) i * LONG.byteSize());
-                total *= shape[i];
+            int elementType;
+            long[] shape;
+            long total;
+            try {
+                MemorySegment typeOut = arena.allocate(INT);
+                check((MemorySegment) getTensorElementType.invoke(info, typeOut));
+                elementType = typeOut.get(INT, 0L);
+
+                MemorySegment cntOut = arena.allocate(LONG);
+                check((MemorySegment) getDimensionsCount.invoke(info, cntOut));
+                int dimCount = (int) cntOut.get(LONG, 0L);
+                MemorySegment dims = arena.allocate(LONG, dimCount);
+                check((MemorySegment) getDimensions.invoke(info, dims, (long) dimCount));
+                shape = new long[dimCount];
+                total = 1L;
+                for (int i = 0; i < dimCount; i++) {
+                    shape[i] = dims.get(LONG, (long) i * LONG.byteSize());
+                    total *= shape[i];
+                }
+            } finally {
+                releaseTensorTypeAndShapeInfo.invoke(info);
             }
-            releaseTensorTypeAndShapeInfo.invoke(info);
             MemorySegment dataPtrOut = arena.allocate(ADDRESS);
             check((MemorySegment) getTensorMutableData.invoke(value, dataPtrOut));
             MemorySegment dataPtr = dataPtrOut.get(ADDRESS, 0L);
-            float[] out = dataPtr.reinterpret(total * 4L).toArray(FLOAT);
+            float[] out = readFloats(dataPtr, total, elementType);
             return new Output(out, shape);
+        }
+
+        /** 按元素类型从原生内存读取浮点数据：FLOAT 直读，FLOAT16 经半精度转换，其余报错。 */
+        private float[] readFloats(MemorySegment dataPtr, long total, int elementType) {
+            return switch (elementType) {
+                case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT ->
+                        dataPtr.reinterpret(total * 4L).toArray(FLOAT);
+                case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16 -> {
+                    short[] half = dataPtr.reinterpret(total * 2L).toArray(SHORT);
+                    float[] f = new float[half.length];
+                    for (int i = 0; i < half.length; i++) {
+                        f[i] = halfToFloat(half[i]);
+                    }
+                    yield f;
+                }
+                default -> throw new OnnxException("不支持的输出张量元素类型: " + elementType);
+            };
         }
 
         @Override
@@ -430,7 +564,7 @@ public final class OnnxEngine implements AutoCloseable {
             try {
                 releaseSession.invoke(session);
             } catch (Throwable t) {
-                throw new OcrException("释放会话失败", t);
+                throw new OnnxException("释放会话失败", t);
             }
         }
     }

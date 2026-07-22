@@ -1,5 +1,7 @@
 package cn.jiebaba.summer.office.ocr;
 
+import cn.jiebaba.summer.core.onnx.OnnxEngine;
+
 import java.util.List;
 
 /**

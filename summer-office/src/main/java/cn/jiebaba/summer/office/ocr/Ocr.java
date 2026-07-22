@@ -1,5 +1,8 @@
 package cn.jiebaba.summer.office.ocr;
 
+import cn.jiebaba.summer.core.onnx.OnnxEngine;
+import cn.jiebaba.summer.core.onnx.OnnxException;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -47,7 +50,11 @@ public final class Ocr implements AutoCloseable {
 
     /** 按配置创建 OCR 引擎（加载原生库与模型）。 */
     public static Ocr create(OcrConfig config) {
-        return new Ocr(config);
+        try {
+            return new Ocr(config);
+        } catch (OnnxException e) {
+            throw new OcrException(e.getMessage(), e);
+        }
     }
 
     /**
@@ -57,6 +64,15 @@ public final class Ocr implements AutoCloseable {
      * @return 识别结果
      */
     public OcrResult recognize(byte[] imageBytes) {
+        try {
+            return recognize0(imageBytes);
+        } catch (OnnxException e) {
+            throw new OcrException(e.getMessage(), e);
+        }
+    }
+
+    /** 实际识别逻辑，异常由 {@link #recognize(byte[])} 统一转换为 OcrException。 */
+    private OcrResult recognize0(byte[] imageBytes) {
         ImageUtil.Img ori = ImageUtil.decode(imageBytes);
         ImageUtil.Img resized = resizeWithinBounds(ori);
         float ratioW = (float) ori.width / resized.width;

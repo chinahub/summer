@@ -1,7 +1,7 @@
 package cn.jiebaba.summer.test.ai;
 
 import cn.jiebaba.summer.ai.document.Document;
-import cn.jiebaba.summer.boot.ai.vectorstore.JdbcVectorStore;
+import cn.jiebaba.summer.ai.vectorstore.JdbcVectorStore;
 import cn.jiebaba.summer.data.support.SqlExecutor;
 import cn.jiebaba.summer.ai.vectorstore.RetrievalResult;
 import cn.jiebaba.summer.ai.vectorstore.SearchRequest;
