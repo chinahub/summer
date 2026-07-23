@@ -32,7 +32,7 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>42.7.11</version>
+            <version>42.7.12</version>
         </dependency>
 
         <!-- JUnit 5：src/test 用例跑在真实 Jupiter 引擎上（IDEA 绿色三角 + surefire） -->
