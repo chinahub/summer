@@ -2,7 +2,7 @@
 
 > summer 的本地 AI 能力（OCR、Embedding）基于 ONNX Runtime 推理，所需原生库与模型文件作为部署期外部资产按路径加载（类比 JDBC 驱动），不打包进 JAR。本页集中给出各项资产的获取来源与目录组织建议。
 
-summer 通过 JDK 25 的 Foreign Function & Memory API（`java.lang.foreign`）直连 onnxruntime 原生库，无需 JNI 胶水、无需引入 onnxruntime 的 Java 绑定包。`OnnxEngine`（位于 summer-core，供 summer-ai 与 summer-office 共享）绑定 onnxruntime 1.16~1.20 的 C API（`ORT_API_VERSION=20`）。
+summer 通过 JDK 25 的 Foreign Function & Memory API（`java.lang.foreign`）直连 onnxruntime 原生库，无需 JNI 胶水、无需引入 onnxruntime 的 Java 绑定包。`OnnxEngine`（位于 summer-core，供 summer-ai 与 summer-office 共享）请求 onnxruntime C API 的 `ORT_API_VERSION=20`（1.16 引入）；onnxruntime 的 `OrtApi` 结构体仅追加新函数、不重排既有字段，且 `GetApi(version)` 向后兼容，因此 1.16 至最新 1.27.x 的运行时均可加载。
 
 ## 资产总览
 
@@ -11,7 +11,7 @@ summer 通过 JDK 25 的 Foreign Function & Memory API（`java.lang.foreign`）�
 | 共享 | onnxruntime 原生库 | 神经网络推理引擎，OCR 与 Embedding 共用 |
 | OCR | PP-OCR 模型 | 文本检测 / 方向分类 / 文本识别 |
 | Embedding | BGE-M3 ONNX 模型 | 文本向量化（FP16） |
-| Embedding | tokenizer.json | XLM-RoBERTa BPE 分词器 |
+| Embedding | tokenizer.json | XLM-RoBERTa 系分词器（官方为 Unigram 格式，BgeTokenizer 同时兼容 Unigram/BPE） |
 
 ## onnxruntime 原生库
 
@@ -19,11 +19,11 @@ OCR 与本地 Embedding 共用同一个 onnxruntime 原生库，下载一次即�
 
 | 平台 | 文件 | 下载 |
 | --- | --- | --- |
-| Windows x64 | `onnxruntime.dll` | [onnxruntime-win-x64-1.20.1.zip](https://github.com/microsoft/onnxruntime/releases/tag/v1.20.1)（解压取 `lib/` 下 dll） |
-| Linux x64 | `libonnxruntime.so` | [onnxruntime-linux-x64-1.20.1.tgz](https://github.com/microsoft/onnxruntime/releases/tag/v1.20.1)（解压取 `lib/` 下 so） |
-| macOS | `libonnxruntime.dylib` | [onnxruntime-osx-1.20.1](https://github.com/microsoft/onnxruntime/releases/tag/v1.20.1) |
+| Windows x64 | `onnxruntime.dll` | [onnxruntime-win-x64-1.27.1.zip](https://github.com/microsoft/onnxruntime/releases)（解压取 `lib/` 下 dll） |
+| Linux x64 | `libonnxruntime.so` | [onnxruntime-linux-x64-1.27.1.tgz](https://github.com/microsoft/onnxruntime/releases)（解压取 `lib/` 下 so） |
+| macOS | `libonnxruntime.dylib` | [onnxruntime-osx-1.27.1](https://github.com/microsoft/onnxruntime/releases)（Apple Silicon 取 `osx-arm64`，Intel 取 `osx-x86_64`） |
 
-> 版本要求：1.16~1.20（`ORT_API_VERSION=20`），推荐 1.20.1，选 CPU 版即可。
+> 版本要求：1.16 及以上（`ORT_API_VERSION=20`，C API 仅追加不重排、向后兼容），推荐最新稳定版 1.27.1，选 CPU 版即可。
 > 下载页：https://github.com/microsoft/onnxruntime/releases
 
 ## OCR 模型（PP-OCRv6）
@@ -46,7 +46,7 @@ BGE-M3 基于 XLM-RoBERTa，输出 1024 维向量，支持多语言、最长 819
 
 ### 1. tokenizer.json
 
-直接从官方仓库下载（XLM-RoBERTa BPE 分词器配置）：
+直接从官方仓库下载（XLM-RoBERTa 系分词器配置，官方为 Unigram 格式，`BgeTokenizer` 已支持）：
 
 - HuggingFace：[BAAI/bge-m3](https://huggingface.co/BAAI/bge-m3)（仓库根目录 `tokenizer.json`）
 - ModelScope：[BAAI/bge-m3](https://modelscope.cn/models/BAAI/bge-m3)
@@ -59,17 +59,18 @@ BGE-M3 基于 XLM-RoBERTa，输出 1024 维向量，支持多语言、最长 819
 
 ```bash
 pip install "optimum[onnxruntime]" transformers
-# 从 BAAI/bge-m3 导出 FP16 ONNX
-optimum-cli export onnx --model BAAI/bge-m3 --fp16 ./bge-m3-onnx
+# 从 BAAI/bge-m3 导出 FP16 ONNX（新版 optimum 用 --dtype 指定精度；--monolith 输出单文件）
+optimum-cli export onnx --model BAAI/bge-m3 --task feature-extraction --dtype fp16 --monolith ./bge-m3-onnx
 ```
 
-导出产物 `bge-m3-onnx/model.onnx`（FP16）即所需模型文件，输入名为 `input_ids`/`attention_mask`，输出 `last_hidden_state`，与 `OnnxEmbeddingModel` 约定匹配。
+导出产物 `bge-m3-onnx/model.onnx`（FP16 单文件）即所需模型文件，输入名为 `input_ids`/`attention_mask`，输出 `last_hidden_state`，与 `OnnxEmbeddingModel` 约定匹配。
 
 **方式 B：社区现成 ONNX（备选）**
 
 - HuggingFace：[Xenova/bge-m3](https://huggingface.co/Xenova/bge-m3)（`onnx/` 子目录，transformers.js 导出）
 
 > 若社区版输入名不是 `input_ids`/`attention_mask`，需用 `optimum` 重新导出以匹配 `OnnxEmbeddingModel` 的输入约定。
+> 注意：transformers.js 导出的 FP16 模型含 `InsertedPrecisionFreeCast` 节点，会触发 onnxruntime 1.27.x 的 `SimplifiedLayerNormFusion` 图优化缺陷（会话初始化失败）。实测 Xenova `model_fp16.onnx` 在 onnxruntime 1.27.1 下不可用，请优先用方式 A 自转。
 
 ### 配置示例
 
@@ -103,7 +104,8 @@ D:/ai/                         # 或任意部署目录
 
 - **JVM 参数**：`--enable-native-access=ALL-UNNAMED`（summer-boot 启动脚本已内置）
 - **JDK**：25（FFM `java.lang.foreign` 为正式 API）
-- **onnxruntime**：1.16~1.20（推荐 1.20.1）
+- **onnxruntime**：1.16 及以上（推荐最新稳定版 1.27.1）
+- **Windows VC++ 运行库**：onnxruntime 1.2x 依赖较新的 Visual C++ Redistributable。`java.exe` 目录下的依赖搜索优先于 System32，JDK 自带的 `msvcp140.dll`/`vcruntime140*.dll` 若版本过旧（如 JDK 25.0.2 自带 14.31），会导致 dll 加载报「动态链接库(DLL)初始化例程失败」；升级 JDK（25.0.4 自带 14.44 实测可用）或更新 VC++ 运行库即可
 
 ### 为何需要 `--enable-native-access=ALL-UNNAMED`
 
