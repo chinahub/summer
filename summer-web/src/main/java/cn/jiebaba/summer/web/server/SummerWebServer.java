@@ -292,17 +292,19 @@ public final class SummerWebServer {
         String target = raw.target();
         int q = target.indexOf('?');
         String path = q < 0 ? target : target.substring(0, q);
-        var endpointOpt = webSocketRegistry.match(path);
-        if (endpointOpt.isEmpty()) {
+        var matchOpt = webSocketRegistry.matchWithVariables(path);
+        if (matchOpt.isEmpty()) {
             writeError(ch, HttpStatus.NOT_FOUND.code(), "Not Found", "no WebSocket endpoint at " + path);
             return;
         }
+        var matchResult = matchOpt.get();
         try {
             if (!WebSocketHandshake.completeHandshake(raw.headers(), ch)) {
                 writeError(ch, HttpStatus.BAD_REQUEST.code(), "Bad Request", "missing Sec-WebSocket-Key");
                 return;
             }
-            WebSocketSession session = new WebSocketSession(ch, buf, endpointOpt.get());
+            WebSocketSession session = new WebSocketSession(ch, buf, matchResult.endpoint(),
+                    path, matchResult.pathVariables());
             LOG.info("WebSocket connected: " + path + " session=" + session.id());
             session.runLoop();
             LOG.info("WebSocket closed: " + path + " session=" + session.id());

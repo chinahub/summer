@@ -4,8 +4,8 @@
 #       .\build.ps1 deploy                (deploy 自动经 Git Bash 执行, 让 Git 自带 gpg 在 MSYS2 环境运行)
 #       .\build.ps1 clean deploy -Prelease
 
-$env:JAVA_HOME = 'D:\jdk\jdk-25.0.2'
-$env:Path = "D:\jdk\jdk-25.0.2\bin;D:\mvnd-1.0.5\mvn\bin;" + $env:Path
+$env:JAVA_HOME = 'D:\jdk\jdk-25.0.4'
+$env:Path = "D:\jdk\jdk-25.0.4\bin;D:\mvnd-1.0.5\mvn\bin;" + $env:Path
 
 Write-Host "JAVA_HOME=$env:JAVA_HOME"
 
@@ -28,7 +28,7 @@ if ($mvnArgs -contains 'deploy' -or $mvnArgs -contains '-Prelease') {
     if (-not (Test-Path $globalSettings)) { throw "未找到全局 settings.xml: $globalSettings (需含 ossrh 凭据)" }
     # deploy 用全局 ~/.m2/settings.xml: 它含 ossrh 服务器凭据 + huaweicloud 镜像;
     # 项目的 settings.xml 没有 <servers>, 会致 central-publishing 报 "server is null"
-    $cmd = "cd /e/summer_workspace && export JAVA_HOME=/d/jdk/jdk-25.0.2 && export PATH=`"/usr/bin:`$JAVA_HOME/bin:/d/mvnd-1.0.5/mvn/bin:`$PATH`" && mvn -s '$globalSettings' -f pom.xml $argStr"
+    $cmd = "cd /e/summer_workspace && export JAVA_HOME=/d/jdk/jdk-25.0.4 && export PATH=`"/usr/bin:`$JAVA_HOME/bin:/d/mvnd-1.0.5/mvn/bin:`$PATH`" && mvn -s '$globalSettings' -f pom.xml $argStr"
     Write-Host "[deploy] running via Git Bash: $bash"
     Write-Host "[deploy] $cmd"
     & $bash -c $cmd

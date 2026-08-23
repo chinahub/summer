@@ -280,7 +280,7 @@ action: |
 severity: P1
 status: NOT_FIXED
 hardcoded_paths:
-  - { file: "build.ps1:7", value: "$env:JAVA_HOME = 'D:\\jdk\\jdk-25.0.2'", issue: "仅限一台 Windows 机器" }
+  - { file: "build.ps1:7", value: "$env:JAVA_HOME = 'D:\\jdk\\jdk-25.0.4'", issue: "仅限一台 Windows 机器" }
   - { file: "build.ps1:8", value: "D:\\mvnd-1.0.5\\mvn\\bin", issue: "mvnd 路径硬编码" }
   - { file: "pom.xml:172", value: "<executable>D:\\Git\\usr\\bin\\gpg.exe</executable>", issue: "GPG 签名仅 Windows" }
   - { file: "pom.xml:16", value: "<maven.compiler.release>25</maven.compiler.release>", issue: "JDK 25 早期阶段" }

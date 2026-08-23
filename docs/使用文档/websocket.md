@@ -17,12 +17,30 @@
 ```java
 public final class WebSocketSession {
     public String id();
+    public String path();                          // 实际请求路径（不含查询串）
+    public Map<String, String> pathVariables();    // {var} 模板提取的路径变量
+    public String pathVariable(String name);       // 单个路径变量，无则 null
     public void sendText(String message);
     public void sendBinary(byte[] data);
     public void sendPing(byte[] data);
     public void close(CloseReason reason);
     public boolean isClosed();
     void runLoop();  // 框架内部调用，阻塞读帧
+}
+```
+
+## 路径变量
+
+端点路径支持 `{var}` 模板段，握手时先精确匹配、再逐段模板匹配，变量经
+`session.pathVariable(name)` 读取：
+
+```java
+@WebSocketEndpoint("/ws/execution/{executionId}")
+public class ExecutionEndpoint {
+    @OnOpen
+    public void onOpen(WebSocketSession session) {
+        String executionId = session.pathVariable("executionId"); // /ws/execution/123 → "123"
+    }
 }
 ```
 

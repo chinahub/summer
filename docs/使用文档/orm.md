@@ -261,6 +261,8 @@ summer:
 | `keepalive-query` | `SELECT 1` | 探活 SQL |
 | `leak-detection-threshold` | 0（关闭） | 连接持有超过此阈值时打 WARN 日志（含借出调用栈） |
 
+**嵌入式数据库提示**：SQLite、H2 等单写者（file 模式）数据库，连接池 >1 时并发写会报 `database is locked`。建议将 `pool-size: 1`（同时 `minimum-idle: 1`）以规避；SQLite 方言已内置映射（复用 MySQL 方言，`LIMIT ? OFFSET ?` 分页语法一致）。
+
 - 内置轻量连接池（HikariCP 风格：`BlockingQueue` + 动态代理 `Connection`，`close()` 归还），虚拟线程友好；
 - 池上限 `pool-size`、下限 `minimum-idle`：按需懒创建至上限、空闲回收至下限；后台线程维持下限，**池被回收后能自愈补建**，不会抽干到零需重启；
 - `max-lifetime` 每条连接随机抖动 ±2.5%，避免同时刻集体过期；过期空闲连接关闭后立即补建，借出连接归还时软淘汰；
@@ -302,31 +304,6 @@ public final class FinalOrderService {
 ```
 
 > 控制器（`@RestController`）不经过代理，不受此限制。子类代理仅拦截 public/protected 非 final 方法（private/static/final 方法不拦截）；方法内自调用也会被拦截（桥接方法 `$$summer$super$` 破递归）。
-## AOP 代理要求（重要）
-
-summer 仅使用 JDK 动态代理（零第三方依赖，不引入 CGLIB）。`@Transactional` 和 `@Aspect` 切面通过代理织入，因此：
-
-- 代理策略自动判断：**有接口**走 JDK 动态代理；**无接口且非 `final`**走手写字节码子类代理（`SubclassProxyFactory`，零依赖），事务/AOP 生效；`final` 类或工厂方法产生的无接口 bean 仍抛 `BeansException`（而非静默失效）；
-
-
-```java
-// ✅ 正确：Service 实现接口，@Transactional 生效
-public interface OrderService { void placeOrder(Order order); }
-@Service
-public class OrderServiceImpl implements OrderService {
-    @Transactional
-    public void placeOrder(Order order) { ... }
-}
-
-// ❌ 错误：无接口，启动时报 BeansException
-@Service
-public class OrderService {
-    @Transactional
-    public void placeOrder(Order order) { ... }
-}
-```
-
-> 控制器（`@RestController`）不经过代理，不受此限制。
 
 ## 自动配置
 

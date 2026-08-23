@@ -22,19 +22,37 @@ public final class WebSocketSession {
     private final ByteBuffer readBuf;
     private final WebSocketEndpointInfo endpoint;
     private final String id;
+    private final String path;
+    private final java.util.Map<String, String> pathVariables;
     private volatile boolean closed = false;
     // 分片消息缓冲区
     private final ByteArrayOutputStream fragmentBuffer = new ByteArrayOutputStream();
     private int currentFragmentOpcode = -1;
 
     public WebSocketSession(ByteChannel channel, ByteBuffer readBuf, WebSocketEndpointInfo endpoint) {
+        this(channel, readBuf, endpoint, endpoint.path(), java.util.Map.of());
+    }
+
+    public WebSocketSession(ByteChannel channel, ByteBuffer readBuf, WebSocketEndpointInfo endpoint,
+                            String path, java.util.Map<String, String> pathVariables) {
         this.channel = channel;
         this.readBuf = readBuf;
         this.endpoint = endpoint;
+        this.path = path;
+        this.pathVariables = pathVariables == null ? java.util.Map.of() : pathVariables;
         this.id = Integer.toHexString(System.identityHashCode(this));
     }
 
     public String id() { return id; }
+
+    /** 本次连接的实际请求路径（不含查询串）。 */
+    public String path() { return path; }
+
+    /** 按 {@code {var}} 模板提取的路径变量（无模板时为空 Map）。 */
+    public java.util.Map<String, String> pathVariables() { return pathVariables; }
+
+    /** 取单个路径变量，不存在返回 null。 */
+    public String pathVariable(String name) { return pathVariables.get(name); }
 
     /** 向客户端发送文本消息。 */
     public void sendText(String message) {

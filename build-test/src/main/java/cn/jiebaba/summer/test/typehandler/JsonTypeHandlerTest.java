@@ -119,6 +119,8 @@ public class JsonTypeHandlerTest {
         Assertions.assertTrue(Dialect.fromUrl("jdbc:mariadb://localhost/db") instanceof MySqlDialect);
         Assertions.assertTrue(Dialect.fromUrl("jdbc:oracle:thin:@//host:1521/db") instanceof OracleDialect);
         Assertions.assertTrue(Dialect.fromUrl("jdbc:sqlserver://host:1433;databaseName=db") instanceof SqlServerDialect);
+        Assertions.assertTrue(Dialect.fromUrl("jdbc:sqlite:test.db") instanceof MySqlDialect,
+                "sqlite URL should map to MySqlDialect (LIMIT 语法一致)");
     }
 
     @Test
@@ -129,6 +131,8 @@ public class JsonTypeHandlerTest {
         Assertions.assertTrue(Dialect.fromDriver("org.mariadb.jdbc.Driver") instanceof MySqlDialect);
         Assertions.assertTrue(Dialect.fromDriver("oracle.jdbc.OracleDriver") instanceof OracleDialect);
         Assertions.assertTrue(Dialect.fromDriver("com.microsoft.sqlserver.jdbc.SQLServerDriver") instanceof SqlServerDialect);
+        Assertions.assertTrue(Dialect.fromDriver("org.sqlite.JDBC") instanceof MySqlDialect,
+                "sqlite driver should map to MySqlDialect");
         Assertions.assertNull(Dialect.fromDriver(""), "empty driver should map to null");
         Assertions.assertNull(Dialect.fromDriver(null), "null driver should map to null");
     }

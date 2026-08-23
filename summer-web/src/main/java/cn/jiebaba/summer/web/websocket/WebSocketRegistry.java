@@ -48,6 +48,51 @@ public final class WebSocketRegistry {
         return Optional.ofNullable(endpoints.get(normalizePath(path)));
     }
 
+    /**
+     * 端点匹配结果：端点信息 + 路径变量（无模板变量时为空 Map）。
+     */
+    public record EndpointMatch(WebSocketEndpointInfo endpoint, Map<String, String> pathVariables) {
+    }
+
+    /**
+     * 先按精确路径匹配；未命中时按 {@code {var}} 模板逐段匹配（如
+     * {@code /ws/execution/{executionId}} 匹配 {@code /ws/execution/123}），
+     * 并提取路径变量。模板段数必须与请求路径段数一致。
+     */
+    public Optional<EndpointMatch> matchWithVariables(String path) {
+        String normalized = normalizePath(path);
+        WebSocketEndpointInfo exact = endpoints.get(normalized);
+        if (exact != null) {
+            return Optional.of(new EndpointMatch(exact, Map.of()));
+        }
+        String[] requestSegments = normalized.substring(1).split("/");
+        for (WebSocketEndpointInfo info : endpoints.values()) {
+            String template = info.path();
+            if (template.indexOf('{') < 0) {
+                continue;
+            }
+            String[] templateSegments = template.substring(1).split("/");
+            if (templateSegments.length != requestSegments.length) {
+                continue;
+            }
+            Map<String, String> variables = new LinkedHashMap<>();
+            boolean matched = true;
+            for (int i = 0; i < templateSegments.length; i++) {
+                String segment = templateSegments[i];
+                if (segment.length() > 2 && segment.startsWith("{") && segment.endsWith("}")) {
+                    variables.put(segment.substring(1, segment.length() - 1), requestSegments[i]);
+                } else if (!segment.equals(requestSegments[i])) {
+                    matched = false;
+                    break;
+                }
+            }
+            if (matched) {
+                return Optional.of(new EndpointMatch(info, variables));
+            }
+        }
+        return Optional.empty();
+    }
+
     public boolean hasEndpoints() {
         return !endpoints.isEmpty();
     }

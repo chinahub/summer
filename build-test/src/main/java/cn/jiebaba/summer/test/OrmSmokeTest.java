@@ -87,6 +87,21 @@ public class OrmSmokeTest {
         expect("lambda resolved price->price column", true, lambdaList.sql().contains("price > ?"));
         expect("lambda orderBy price DESC", true, lambdaList.sql().contains("ORDER BY price DESC"));
 
+        header("LambdaQueryWrapper camelCase column mapping");
+        LambdaQueryWrapper<Product> lw2 = new LambdaQueryWrapper<Product>()
+                .eq(Product::getStock, 5).orderByDesc(Product::getName);
+        SqlBuilder.Sql mapped = builder.selectList(lw2);
+        System.out.println("  " + mapped.sql());
+        expect("lambda WHERE uses stock_qty column", true, mapped.sql().contains("stock_qty = ?"));
+        expect("lambda WHERE never uses raw property", false, mapped.sql().contains("stock = ?"));
+        expect("lambda ORDER BY maps name column", true, mapped.sql().contains("ORDER BY name DESC"));
+
+        LambdaQueryWrapper<Product> lw3 = new LambdaQueryWrapper<Product>()
+                .select(Product::getStock, Product::getName);
+        SqlBuilder.Sql projected = builder.selectList(lw3);
+        System.out.println("  " + projected.sql());
+        expect("lambda select projects stock_qty", true, projected.sql().contains("stock_qty"));
+
         header("count SQL");
         SqlBuilder.Sql count = builder.selectCount(lw);
         System.out.println("  " + count.sql());

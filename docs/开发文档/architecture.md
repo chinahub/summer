@@ -207,7 +207,7 @@ private Map<String, Object> config;
 
 ## 运行时模型
 
-- 启动：`java -jar summer-sample\target\summer-sample-3.0.0-boot.jar`
+- 启动：`java -jar summer-sample\target\summer-sample-3.1.0-boot.jar`
 - 每个连接一个虚拟线程，阻塞 IO 不占平台线程；
 - 定时任务体在虚拟线程上执行；
 - 单进程、单 JVM，无外部容器。

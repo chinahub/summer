@@ -3,8 +3,8 @@
 ## 构建
 
 ```powershell
-$env:JAVA_HOME='D:\jdk\jdk-25.0.2'
-$env:Path = "D:\jdk\jdk-25.0.2\bin;D:\mvnd-1.0.5\mvn\bin;" + $env:Path
+$env:JAVA_HOME='D:\jdk\jdk-25.0.4'
+$env:Path = "D:\jdk\jdk-25.0.4\bin;D:\mvnd-1.0.5\mvn\bin;" + $env:Path
 mvn -s E:\summer_workspace\settings.xml -o clean package
 ```
 
@@ -16,7 +16,7 @@ summer 打成 Spring Boot 风格的可执行 jar：依赖以**整 jar 形式**�
 
 布局：
 ```
-summer-sample-3.0.0.jar
+summer-sample-3.1.0.jar
 ├─ cn/jiebaba/summer/loader/JarLauncher.class   # 启动器（jar 根）
 ├─ BOOT-INF/classes/...                          # 应用类与资源（application.yml）
 ├─ BOOT-INF/lib/*.jar                            # 依赖 jar（summer-* / postgresql 等）
@@ -25,15 +25,15 @@ summer-sample-3.0.0.jar
 
 构建（`mvn package` 自动触发 `summer-pack-maven-plugin` 的 `repackage`，一步产出可执行 jar）：
 ```powershell
-$env:JAVA_HOME='D:\jdk\jdk-25.0.2'
-$env:Path = "D:\jdk\jdk-25.0.2\bin;" + $env:Path
+$env:JAVA_HOME='D:\jdk\jdk-25.0.4'
+$env:Path = "D:\jdk\jdk-25.0.4\bin;" + $env:Path
 mvn -s E:\summer_workspace\settings.xml -o clean package
 ```
-产出 `summer-sample/target/summer-sample-3.0.0-boot.jar`（可执行 jar）。`classifier` 默认为 `boot`，可执行 jar 作为独立 `-boot` 产物，主产物 `summer-sample-3.0.0.jar` 保持 thin jar 供 `build-test` 等模块依赖编译。
+产出 `summer-sample/target/summer-sample-3.1.0-boot.jar`（可执行 jar）。`classifier` 默认为 `boot`，可执行 jar 作为独立 `-boot` 产物，主产物 `summer-sample-3.1.0.jar` 保持 thin jar 供 `build-test` 等模块依赖编译。
 
 运行：
 ```powershell
-java -jar summer-sample\target\summer-sample-3.0.0-boot.jar
+java -jar summer-sample\target\summer-sample-3.1.0-boot.jar
 ```
 
 > 打包插件：`summer-sample` 的 `pom.xml` 绑定了 `summer-pack-maven-plugin:repackage`（绑定 `package` 阶段），故 `mvn package` 自动产出可执行 jar。默认 `classifier=boot`，产出独立的 `<finalName>-boot.jar`，主产物 `<finalName>.jar` 保持 thin jar 不变，可被其他模块依赖；若终端应用不需要被依赖、想要单文件，可设 `<classifier></classifier>`（空）替换主产物，原 thin jar 备份为 `<finalName>.jar.original`。`startClass` 在 `pom.xml` 的 `<configuration>` 中配置。
@@ -51,7 +51,7 @@ java -jar summer-sample\target\summer-sample-3.0.0-boot.jar
         <plugin>
             <groupId>cn.jiebaba.summer</groupId>
             <artifactId>summer-pack-maven-plugin</artifactId>
-            <version>3.0.0</version>
+            <version>3.1.0</version>
             <executions>
                 <execution>
                     <goals><goal>repackage</goal></goals>
@@ -92,7 +92,7 @@ java -jar summer-sample\target\summer-sample-3.0.0-boot.jar
     <dependency>
         <groupId>cn.jiebaba.summer</groupId>
         <artifactId>summer-boot</artifactId>
-        <version>3.0.0</version>
+        <version>3.1.0</version>
     </dependency>
     <!-- 业务依赖、JDBC 驱动等按需添加 -->
 </dependencies>
@@ -127,12 +127,12 @@ logging:
 
 ## HTTP keep-alive
 
-`yaml
+```yaml
 server:
   keep-alive: true              # 开启连接复用（默认 true）
   keep-alive-timeout: 30000     # keep-alive 空闲超时（毫秒）
   max-requests-per-connection: 100  # 单连接最大请求数
-``n
+```
 开启后同一 TCP 连接可处理多个请求，减少握手开销。客户端发送 Connection: close 或达到最大请求数后关闭。
 
 环境变量自动映射为松弛属性：`SERVER_PORT` → `server.port`；系统属性优先级最高。`@Value("${app.greeting}")` 可注入并解析 `${key:default}` 占位符。
@@ -151,7 +151,7 @@ server:
 | `@Primary` | 多候选优先 |
 | `@Value("${key:default}")` | 注入配置值 |
 | `@Scope("prototype")` | 原型作用域 |
-| `@PostConstruct` `@PreDestroy` | 生命周期回调 |
+| `@PostConstruct` `@PreDestroy` | 生命周期回调（注意：为 `cn.jiebaba.summer.core.annotation` 下的框架自有注解，非 `jakarta.annotation` 版本；导入 jakarta 版本不会被容器回调） |
 | `@ComponentScan` | 覆盖扫描根包 |
 
 ### Web（summer-web）
@@ -198,7 +198,7 @@ server:
 
 | 注解 | 属性 |
 | --- | --- |
-| `@Scheduled` | `cron` / `fixedRate` / `fixedDelay` / `initialDelay` |
+| `@Scheduled` | `cron` / `fixedRate` / `fixedDelay` / `initialDelay`（位于 `cn.jiebaba.summer.core.scheduling.Scheduled`） |
 
 详见 [定时任务](scheduling.md)。
 

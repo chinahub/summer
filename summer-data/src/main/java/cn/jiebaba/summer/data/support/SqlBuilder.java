@@ -8,6 +8,7 @@ import cn.jiebaba.summer.data.dialect.PostgreSqlDialect;
 import cn.jiebaba.summer.data.dialect.Dialect;
 import cn.jiebaba.summer.data.metadata.TableFieldInfo;
 import cn.jiebaba.summer.data.metadata.TableInfo;
+import cn.jiebaba.summer.data.metadata.NamingUtils;
 import cn.jiebaba.summer.data.page.IPage;
 
 import java.util.ArrayList;
@@ -101,8 +102,12 @@ public final class SqlBuilder {
         List<Object> params = new ArrayList<>();
         applyWhere(sql, wrapper, params);
         if (wrapper != null) {
-            sql.append(wrapper.groupByClause());
-            sql.append(wrapper.orderByClause());
+            if (!wrapper.groupByClause().isEmpty()) {
+                sql.append(resolveClause(wrapper.groupByClause(), " GROUP BY "));
+            }
+            if (!wrapper.orderByClause().isEmpty()) {
+                sql.append(resolveClause(wrapper.orderByClause(), " ORDER BY "));
+            }
             if (page != null) {
                 dialect.appendPagination(sql, page.offset(), page.size(), params);
             }
@@ -160,6 +165,16 @@ public final class SqlBuilder {
         return result;
     }
 
+    /**
+     * 解析 ORDER BY / GROUP BY 子句：保留前缀（如 " ORDER BY "），
+     * 将其中的属性名逐个替换为实际列名，与 WHERE 段的解析规则保持一致。
+     */
+    private String resolveClause(String clause, String prefix) {
+        String body = clause.substring(prefix.length());
+        String resolved = resolveSegment(body);
+        return prefix + resolved;
+    }
+
     private String replacePropertyWithColumn(String segment, String property, String column) {
         if (column == null || property == null || property.isEmpty()) return segment;
         // 将整词出现的属性名替换为 SQL 列名。
@@ -177,7 +192,7 @@ public final class SqlBuilder {
             List<String> cols = new ArrayList<>();
             for (String p : lw.selectProperties()) {
                 TableFieldInfo f = table.field(p);
-                cols.add(f != null ? f.column() : p);
+                cols.add(f != null ? f.column() : NamingUtils.toSnakeCase(p));
             }
             return String.join(", ", cols);
         }

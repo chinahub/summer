@@ -1,0 +1,87 @@
+########## [1/6] ExcelSmokeTest ##########
+== write cells + structural features ==
+== worksheet structural xml ==
+== styles xml numFmt ==
+== read back values ==
+== excel facade roundtrip ==
+== inline strings + row hidden/outline ==
+
+Excel smoke test: 31 assertions passed
+
+########## [2/6] DocxSmokeTest ##########
+== docx build with heading/para/table/image ==
+== docx styles/rels/content-types ==
+== docx media resource ==
+
+Docx smoke test: 22 assertions passed
+
+########## [3/6] MdHtmlSmokeTest ##########
+== markdown block + inline ==
+== markdown advanced ==
+== html escaping ==
+== empty input ==
+
+MdHtml smoke test: 23 assertions passed
+
+########## [4/6] PdfSmokeTest ##########
+  使用字体: C:/Windows/Fonts/simhei.ttf
+== pdf cjk with embedded ttf ==
+== pdf structure counts ==
+== pdf helvetica fallback ==
+
+Pdf smoke test: 20 assertions passed
+
+########## [5/6] OcrSmokeTest ##########
+init 236ms, ocr 454ms, blocks=17
+----- TEXT -----
+间
+名称:
+系统
+添加环境
+系统
+CMake:
+已捆绑
+版本: 3.25.2
+构建工具
+已检测到: ninja
+C编译器
+已检测到:co
+C++编译器：
+已检测到:C++
+调试器：
+捆绑的LLDB
+版本:15.0.5
+----- ITEMS -----
+[0.504] 间
+[0.937] 名称:
+[1.000] 系统
+[1.000] 添加环境
+[1.000] 系统
+[1.000] CMake:
+[1.000] 已捆绑
+[0.959] 版本: 3.25.2
+[0.999] 构建工具
+[0.960] 已检测到: ninja
+[0.998] C编译器
+[0.955] 已检测到:co
+[0.918] C++编译器：
+[0.949] 已检测到:C++
+[0.933] 调试器：
+[1.000] 捆绑的LLDB
+[0.996] 版本:15.0.5
+OK: PP-OCRv6 冒烟测试通过
+
+########## [6/6] OfficeFullTest ##########
+== csv roundtrip with escaping ==
+== csv delimiter and bom ==
+== xml roundtrip ==
+== markdown roundtrip ==
+== tabledata semantics ==
+== officeformat inference ==
+== office facade factories ==
+== docx readback ==
+== pdf readback ==
+== excel file type validation ==
+== excel streaming api ==
+
+Office full test: 61 passed, 0 failed

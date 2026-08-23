@@ -343,6 +343,7 @@ final class JsonReader {
 
     /** 读取字面量值（Object 目标用）：对象→LinkedHashMap，数组→ArrayList，其余标量。 */
     private Object readLiteral() {
+        skipWs();
         int c = peek();
         return switch (c) {
             case '{' -> readLiteralObject();

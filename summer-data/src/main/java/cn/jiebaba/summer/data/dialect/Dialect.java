@@ -28,7 +28,7 @@ public interface Dialect {
         if (driverClassName == null || driverClassName.isBlank()) return null;
         String d = driverClassName.toLowerCase();
         if (d.contains("postgresql")) return new PostgreSqlDialect();
-        if (d.contains("mysql") || d.contains("mariadb") || d.contains("h2")) return new MySqlDialect();
+        if (d.contains("mysql") || d.contains("mariadb") || d.contains("h2") || d.contains("sqlite")) return new MySqlDialect();
         if (d.contains("oracle")) return new OracleDialect();
         if (d.contains("sqlserver")) return new SqlServerDialect();
         return null;
@@ -47,6 +47,7 @@ public interface Dialect {
         String lower = url.toLowerCase();
         if (lower.startsWith("jdbc:postgresql:")) return new PostgreSqlDialect();
         if (lower.startsWith("jdbc:mysql:") || lower.startsWith("jdbc:mariadb:")) return new MySqlDialect();
+        if (lower.startsWith("jdbc:sqlite:")) return new MySqlDialect();
         if (lower.startsWith("jdbc:oracle:")) return new OracleDialect();
         if (lower.startsWith("jdbc:sqlserver:")) return new SqlServerDialect();
         return new PostgreSqlDialect();
@@ -54,7 +55,7 @@ public interface Dialect {
     static Dialect of(String name) {
         if (name == null) return new PostgreSqlDialect();
         return switch (name.toLowerCase()) {
-            case "mysql", "mariadb", "h2" -> new MySqlDialect();
+            case "mysql", "mariadb", "h2", "sqlite" -> new MySqlDialect();
             case "postgres", "postgresql", "pg" -> new PostgreSqlDialect();
             case "oracle" -> new OracleDialect();
             case "sqlserver", "mssql" -> new SqlServerDialect();
