@@ -170,6 +170,34 @@ server:
 
 跨域（CORS）通过 `summer.web.cors.*` 配置自动启用，详见 [CORS](cors.md)。
 
+### 全局异常处理（summer-web）
+
+默认行为（与 Spring Boot 一致）：
+
+| 异常来源 | 响应 |
+| --- | --- |
+| 请求体非合法 JSON / 参数绑定失败 | 400（请求体开头的 UTF-8 BOM 会自动剥离） |
+| `@Valid` 校验失败 | 400 + 违规字段列表 |
+| `ResponseStatusException` | 注解/构造指定的状态码 |
+| 其余未处理异常（含业务代码抛出的 `IllegalArgumentException` 等） | 500 |
+
+业务校验异常（如 `throw new IllegalArgumentException("无效的商品SKU")`）**不会自动映射为 4xx**，需要通过 `@RestControllerAdvice` + `@ExceptionHandler` 声明映射（完整示例见 `summer-sample` 的 `GlobalExceptionHandler`）：
+
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    /** 业务校验异常统一转 400，避免前端把用户输入错误当成服务故障。 */
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(400)
+    public Map<String, Object> handleIllegalArgument(IllegalArgumentException ex) {
+        return Map.of("status", 400, "error", "Bad Request", "message", ex.getMessage());
+    }
+}
+```
+
+`@ExceptionHandler` 按异常类型最精确匹配；处理方法可声明异常、`WebRequest`、`WebResponse` 参数，返回值按 JSON 序列化，配合 `@ResponseStatus` 指定状态码。
+
 ### 校验约束（summer-web）
 
 | 注解 | 说明 |

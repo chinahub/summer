@@ -144,7 +144,13 @@ public final class HandlerMethodInvoker {
                     if (spec.required) throw new HandlerException("Request body is required");
                     return null;
                 }
-                Object bound = converter.read(raw, spec.type, spec.genericType);
+                Object bound;
+                try {
+                    bound = converter.read(raw, spec.type, spec.genericType);
+                } catch (IllegalArgumentException e) {
+                    // 请求体不是合法 JSON 或无法绑定到目标类型，属于客户端错误，统一转 400
+                    throw new HandlerException(e.getMessage() == null ? "Invalid request body" : e.getMessage(), e);
+                }
                 if (spec.valid && bound != null) Validator.requireValid(bound);
                 return bound;
             }

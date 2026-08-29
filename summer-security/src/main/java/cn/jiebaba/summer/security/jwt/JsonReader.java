@@ -12,7 +12,8 @@ public final class JsonReader {
 
     private JsonReader(String json) {
         this.json = json;
-        this.pos = 0;
+        // 剥离 UTF-8 BOM（\uFEFF），Windows 工具链（PowerShell/记事本）产出的文件常带 BOM
+        this.pos = json.startsWith("\uFEFF") ? 1 : 0;
     }
 
     public static Map<String, Object> read(String json) {
@@ -123,7 +124,7 @@ public final class JsonReader {
             break;
         }
         String num = json.substring(start, pos);
-        if (num.isEmpty()) throw new IllegalArgumentException("Invalid number at " + start);
+        if (num.isEmpty()) throw new IllegalArgumentException("Invalid number at " + start + " (got '" + peek() + "')");
         if (isFloat) return Double.parseDouble(num);
         try {
             return Long.parseLong(num);
@@ -135,12 +136,12 @@ public final class JsonReader {
     private Boolean readBoolean() {
         if (json.startsWith("true", pos)) { pos += 4; return Boolean.TRUE; }
         if (json.startsWith("false", pos)) { pos += 5; return Boolean.FALSE; }
-        throw new IllegalArgumentException("Invalid literal at " + pos);
+        throw new IllegalArgumentException("Invalid literal at " + pos + " (got '" + json.charAt(pos) + "')");
     }
 
     private Object readNull() {
         if (json.startsWith("null", pos)) { pos += 4; return null; }
-        throw new IllegalArgumentException("Invalid literal at " + pos);
+        throw new IllegalArgumentException("Invalid literal at " + pos + " (got '" + json.charAt(pos) + "')");
     }
 
     private char peek() {

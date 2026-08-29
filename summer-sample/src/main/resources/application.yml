@@ -34,9 +34,10 @@ summer:
       bcrypt:
         strength: 10
   datasource:
-    url: jdbc:postgresql://aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres?prepareThreshold=0
-    username: postgres.feodqkgqrxzvcnmuvjgt
-    password: 'MjpeDL+s=DY7D@|q'
+    # 本地 WSL docker 容器 pgvector17（pgvector/pgvector:pg17），WSL2 Mirrored 网络下 127.0.0.1 直达
+    url: jdbc:postgresql://127.0.0.1:5432/ai_db
+    username: postgres
+    password: '123456'
     driver-class-name: org.postgresql.Driver
     pool-size: 4
 

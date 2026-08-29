@@ -44,7 +44,8 @@ public final class JwtLoginFilter implements Filter {
 
     @Override
     /**
-     * 过滤器入口：匹配登录路径与 POST 方法时读取用户名密码并认证，成功签发 JWT 令牌，失败返回 401。
+     * 过滤器入口：匹配登录路径与 POST 方法时读取用户名密码并认证，成功签发 JWT 令牌；
+     * 请求体非合法 JSON 或缺少字段返回 400，认证失败返回 401。
      */
     public void doFilter(WebRequest request, WebResponse response, FilterChain chain) throws Exception {
         if (!loginPath.equalsIgnoreCase(request.path()) || !"POST".equalsIgnoreCase(request.method().name())) {
@@ -52,7 +53,13 @@ public final class JwtLoginFilter implements Filter {
             return;
         }
 
-        Map<String, Object> body = LoginBodyParser.parse(request.body());
+        Map<String, Object> body;
+        try {
+            body = LoginBodyParser.parse(request.body());
+        } catch (IllegalArgumentException e) {
+            writeError(response, HttpStatus.BAD_REQUEST.code(), "Bad Request", "invalid JSON body: " + e.getMessage());
+            return;
+        }
         Object usernameObj = body.get("username");
         Object passwordObj = body.get("password");
         if (usernameObj == null || passwordObj == null) {

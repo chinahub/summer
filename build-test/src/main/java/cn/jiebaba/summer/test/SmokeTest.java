@@ -15,6 +15,11 @@ public class SmokeTest {
      * 发起请求，结束后关闭 Web 服务与上下文。
      */
     public static void main(String[] args) throws Exception {
+        // 使用临时端口，避免与 8080 上的其他服务冲突
+        System.setProperty("server.port", "0");
+        // sample 的 application.yml 中 AI 配置默认注释；填充占位值仅为通过 chatModel 自动装配，本测试不调用 AI
+        System.setProperty("summer.ai.provider", "deepseek");
+        System.setProperty("summer.ai.api-key", "dummy-not-used");
         SummerApplication app = SummerApplication.run(Application.class, args);
         int port = app.webServer().port();
         Thread.sleep(400);

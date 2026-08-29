@@ -31,6 +31,9 @@ public class SecuritySmokeTest {
         System.setProperty("summer.security.enabled", "true");
         System.setProperty("summer.security.jwt.secret", "test-jwt-secret-for-smoke-test-32-bytes!");
         System.setProperty("summer.security.jwt.access-token-ttl", "3600");
+        // sample 的 application.yml 中 AI 配置默认注释；填充占位值仅为通过 chatModel 自动装配，本测试不调用 AI
+        System.setProperty("summer.ai.provider", "deepseek");
+        System.setProperty("summer.ai.api-key", "dummy-not-used");
         SummerApplication app = SummerApplication.run(SecurityTestApp.class, args);
         int port = app.webServer().port();
         Thread.sleep(400);
@@ -48,6 +51,13 @@ public class SecuritySmokeTest {
             // 3. 使用错误凭据登录
             expect(401, "bad login", request(port, "POST", "/login",
                     "{\"username\":\"admin\",\"password\":\"wrong\"}", null));
+
+            // 3b. 带 UTF-8 BOM 的合法 JSON 登录 -> 200（Windows PowerShell 产出的文件常带 BOM）
+            expect(200, "bom login", request(port, "POST", "/login",
+                    "\uFEFF{\"username\":\"admin\",\"password\":\"admin123\"}", null));
+
+            // 3c. 纯文本请求体 -> 400（客户端错误，而非 500）
+            expect(400, "plain-text body login", request(port, "POST", "/login", "abc", null));
 
             // 4. 无 token 访问 /me -> 401
             expect(401, "me no-token", request(port, "GET", "/me", null, null));

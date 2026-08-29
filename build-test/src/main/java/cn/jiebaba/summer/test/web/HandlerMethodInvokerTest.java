@@ -45,9 +45,23 @@ public class HandlerMethodInvokerTest {
                 new ByteArrayInputStream(raw.getBytes(StandardCharsets.UTF_8)), 8192, 8388608));
     }
 
+    private WebRequest requestBytes(byte[] raw) throws Exception {
+        return new WebRequest(RawHttpRequest.parse(new ByteArrayInputStream(raw), 8192, 8388608));
+    }
+
     private WebRequest post(String body) throws Exception {
         String raw = "POST /x HTTP/1.1\r\nHost: x\r\nContent-Length: " + body.length() + "\r\n\r\n" + body;
         return request(raw);
+    }
+
+    /** 按字节构造 POST 请求（Content-Length 按字节数计算，支持 BOM/多字节内容）。 */
+    private WebRequest postBytes(byte[] body) throws Exception {
+        String head = "POST /x HTTP/1.1\r\nHost: x\r\nContent-Length: " + body.length + "\r\n\r\n";
+        byte[] headBytes = head.getBytes(StandardCharsets.UTF_8);
+        byte[] all = new byte[headBytes.length + body.length];
+        System.arraycopy(headBytes, 0, all, 0, headBytes.length);
+        System.arraycopy(body, 0, all, headBytes.length, body.length);
+        return requestBytes(all);
     }
 
     private RouteMatch match(String name, Class<?>... params) throws Exception {
@@ -79,6 +93,37 @@ public class HandlerMethodInvokerTest {
         try {
             RouteMatch rm = match("create", User.class);
             Assertions.assertEquals("name=alice,age=30", invoker.invoke(rm, post("{\"name\":\"alice\",\"age\":30}"), response()));
+        } finally {
+            teardown();
+        }
+    }
+
+    @Test
+    void requestBodyWithUtf8Bom() throws Exception {
+        setup();
+        try {
+            RouteMatch rm = match("create", User.class);
+            byte[] bom = { (byte) 0xEF, (byte) 0xBB, (byte) 0xBF };
+            byte[] payload = "{\"name\":\"alice\",\"age\":30}".getBytes(StandardCharsets.UTF_8);
+            byte[] body = new byte[bom.length + payload.length];
+            System.arraycopy(bom, 0, body, 0, bom.length);
+            System.arraycopy(payload, 0, body, bom.length, payload.length);
+            Assertions.assertEquals("name=alice,age=30", invoker.invoke(rm, postBytes(body), response()),
+                    "带 UTF-8 BOM 的请求体应正常绑定");
+        } finally {
+            teardown();
+        }
+    }
+
+    @Test
+    void requestBodyInvalidJsonWrappedAsHandlerException() throws Exception {
+        setup();
+        try {
+            RouteMatch rm = match("create", User.class);
+            HandlerException he = Assertions.assertThrows(HandlerException.class,
+                    () -> invoker.invoke(rm, postBytes("abc".getBytes(StandardCharsets.UTF_8)), response()),
+                    "非法 JSON 请求体应包装为 HandlerException（客户端错误 400）");
+            Assertions.assertNotNull(he.getCause(), "cause 应保留原始解析异常");
         } finally {
             teardown();
         }

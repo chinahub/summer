@@ -21,6 +21,10 @@ final class JsonReader {
     JsonReader(byte[] src) {
         this.src = src;
         this.len = src.length;
+        // 剥离 UTF-8 BOM（EF BB BF）：Windows 工具链（PowerShell/记事本）产出的文件常带 BOM
+        if (len >= 3 && (src[0] & 0xFF) == 0xEF && (src[1] & 0xFF) == 0xBB && (src[2] & 0xFF) == 0xBF) {
+            this.pos = 3;
+        }
     }
 
     /** 跳过空白（空格/制表/换行/回车）。 */

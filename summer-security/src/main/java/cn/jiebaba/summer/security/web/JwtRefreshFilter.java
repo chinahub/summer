@@ -46,7 +46,7 @@ public final class JwtRefreshFilter implements Filter {
     @Override
     /**
      * 过滤器入口：匹配刷新路径与 POST 方法时读取 refreshToken 并校验，成功则签发新的访问令牌
-     * （启用轮转时一并签发新的刷新令牌），失败返回 401。
+     * （启用轮转时一并签发新的刷新令牌）；请求体非合法 JSON 或缺少字段返回 400，校验失败返回 401。
      */
     public void doFilter(WebRequest request, WebResponse response, FilterChain chain) throws Exception {
         if (!refreshUrl.equalsIgnoreCase(request.path()) || !"POST".equalsIgnoreCase(request.method().name())) {
@@ -54,7 +54,13 @@ public final class JwtRefreshFilter implements Filter {
             return;
         }
 
-        Map<String, Object> body = LoginBodyParser.parse(request.body());
+        Map<String, Object> body;
+        try {
+            body = LoginBodyParser.parse(request.body());
+        } catch (IllegalArgumentException e) {
+            writeError(response, HttpStatus.BAD_REQUEST.code(), "Bad Request", "invalid JSON body: " + e.getMessage());
+            return;
+        }
         Object refreshObj = body.get("refreshToken");
         if (refreshObj == null) {
             writeError(response, HttpStatus.BAD_REQUEST.code(), "Bad Request", "refreshToken is required");
