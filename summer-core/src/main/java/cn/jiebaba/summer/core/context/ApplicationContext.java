@@ -17,6 +17,14 @@ public interface ApplicationContext {
     <T> Map<String, T> getBeansWithAnnotation(Class<? extends Annotation> annotationType);
     Environment getEnvironment();
     boolean isRunning();
+
+    /**
+     * 向全部匹配的 {@code @EventListener} 监听器同步发布事件：按监听器声明或参数推断的
+     * 事件类型做可赋值匹配（支持子类），监听器 Bean 在首次收到事件时惰性创建。
+     * 监听器抛出的异常会向调用方传播（与 Spring 语义一致）。
+     */
+    void publishEvent(Object event);
+
     void close();
 
     /**

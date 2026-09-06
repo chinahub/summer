@@ -7,8 +7,9 @@ import java.util.Map;
 
 /**
  * 一个足以解析 application.yml 配置文件的极简 YAML 解析器：支持基于缩进的嵌套 map、
- * 内联列表、块序列、标量与带引号字符串。并非完整的 YAML 实现（不支持
- * anchors/aliases/multi-doc），但覆盖了配置中常用的结构。返回嵌套的 Map/Object 树。
+ * 内联列表、块序列、标量与带引号字符串，并支持 {@code ---} 多文档切分
+ * （{@link #parseDocuments(String)}）。并非完整的 YAML 实现（不支持 anchors/aliases），
+ * 但覆盖了配置中常用的结构。返回嵌套的 Map/Object 树。
  */
 public final class YamlParser {
 
@@ -18,6 +19,33 @@ public final class YamlParser {
         List<Line> lines = tokenize(text);
         Parser p = new Parser(lines, 0, lines.size(), 0);
         return p.parseMapping();
+    }
+
+    /**
+     * 按 YAML 多文档分隔符（{@code ---} 或 {@code ...}）切分并逐文档解析。
+     * 每个文档独立返回嵌套 Map（解析顺序保持原文档顺序）；纯空文档被跳过。
+     * 基础用法（单文档文件）返回仅含一个元素的列表，与 {@link #parse(String)} 等价。
+     */
+    public static List<Map<String, Object>> parseDocuments(String text) {
+        List<Map<String, Object>> docs = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        for (String raw : text.split("\r?\n", -1)) {
+            String trimmed = raw.trim();
+            if (trimmed.equals("---") || trimmed.equals("...")) {
+                addDocument(docs, current);
+                current.setLength(0);
+                continue;
+            }
+            current.append(raw).append('\n');
+        }
+        addDocument(docs, current);
+        return docs;
+    }
+
+    /** 将累积的文档文本解析为 Map 并加入结果；空白文档忽略。 */
+    private static void addDocument(List<Map<String, Object>> docs, StringBuilder text) {
+        if (text.toString().isBlank()) return;
+        docs.add(parse(text.toString()));
     }
 
     /** 将解析树展平为点分属性键（列表转为 [i] 索引）。 */

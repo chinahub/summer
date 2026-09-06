@@ -16,7 +16,7 @@ summer 打成 Spring Boot 风格的可执行 jar：依赖以**整 jar 形式**�
 
 布局：
 ```
-summer-sample-3.1.1.jar
+summer-sample-3.2.0.jar
 ├─ cn/jiebaba/summer/loader/JarLauncher.class   # 启动器（jar 根）
 ├─ BOOT-INF/classes/...                          # 应用类与资源（application.yml）
 ├─ BOOT-INF/lib/*.jar                            # 依赖 jar（summer-* / postgresql 等）
@@ -29,11 +29,11 @@ $env:JAVA_HOME='D:\jdk\jdk-25.0.4'
 $env:Path = "D:\jdk\jdk-25.0.4\bin;" + $env:Path
 mvn -s E:\summer_workspace\settings.xml -o clean package
 ```
-产出 `summer-sample/target/summer-sample-3.1.1-boot.jar`（可执行 jar）。`classifier` 默认为 `boot`，可执行 jar 作为独立 `-boot` 产物，主产物 `summer-sample-3.1.1.jar` 保持 thin jar 供 `build-test` 等模块依赖编译。
+产出 `summer-sample/target/summer-sample-3.2.0-boot.jar`（可执行 jar）。`classifier` 默认为 `boot`，可执行 jar 作为独立 `-boot` 产物，主产物 `summer-sample-3.2.0.jar` 保持 thin jar 供 `build-test` 等模块依赖编译。
 
 运行：
 ```powershell
-java -jar summer-sample\target\summer-sample-3.1.1-boot.jar
+java -jar summer-sample\target\summer-sample-3.2.0-boot.jar
 ```
 
 > 打包插件：`summer-sample` 的 `pom.xml` 绑定了 `summer-pack-maven-plugin:repackage`（绑定 `package` 阶段），故 `mvn package` 自动产出可执行 jar。默认 `classifier=boot`，产出独立的 `<finalName>-boot.jar`，主产物 `<finalName>.jar` 保持 thin jar 不变，可被其他模块依赖；若终端应用不需要被依赖、想要单文件，可设 `<classifier></classifier>`（空）替换主产物，原 thin jar 备份为 `<finalName>.jar.original`。`startClass` 在 `pom.xml` 的 `<configuration>` 中配置。
@@ -51,7 +51,7 @@ java -jar summer-sample\target\summer-sample-3.1.1-boot.jar
         <plugin>
             <groupId>cn.jiebaba.summer</groupId>
             <artifactId>summer-pack-maven-plugin</artifactId>
-            <version>3.1.1</version>
+            <version>3.2.0</version>
             <executions>
                 <execution>
                     <goals><goal>repackage</goal></goals>
@@ -92,7 +92,7 @@ java -jar summer-sample\target\summer-sample-3.1.1-boot.jar
     <dependency>
         <groupId>cn.jiebaba.summer</groupId>
         <artifactId>summer-boot</artifactId>
-        <version>3.1.1</version>
+        <version>3.2.0</version>
     </dependency>
     <!-- 业务依赖、JDBC 驱动等按需添加 -->
 </dependencies>

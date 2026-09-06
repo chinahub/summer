@@ -241,6 +241,7 @@ public final class SummerWebServer {
                         && shouldKeepAlive(rawReq));
                 dispatcher.dispatch(request, response);
                 if (!response.committed()) {
+                    maybeCompress(rawReq, response);
                     response.commit();
                 }
 
@@ -283,6 +284,31 @@ public final class SummerWebServer {
         // HTTP/1.1 默认 keep-alive；HTTP/1.0 需显式 keep-alive
         if ("keep-alive".equals(conn)) return true;
         return raw.protocol() != null && raw.protocol().equalsIgnoreCase("HTTP/1.1");
+    }
+
+    /**
+     * 提交前按需压缩响应体（gzip）：压缩判定与执行由
+     * {@link WebServerProperties.Compression#apply} 完成，命中时补
+     * Content-Encoding 与 Vary 头；未命中或压缩失败保持明文响应。
+     */
+    private void maybeCompress(RawHttpRequest raw, WebResponse response) {
+        WebServerProperties.Compression cfg = properties.compression();
+        if (cfg == null || response.header("Content-Encoding") != null) return;
+        byte[] compressed = cfg.apply(response.header("Content-Type"), response.body(), acceptsGzip(raw));
+        if (compressed == null) return;
+        response.body(compressed);
+        response.header("Content-Encoding", "gzip");
+        response.header("Vary", "Accept-Encoding");
+    }
+
+    /** 请求 Accept-Encoding 头是否声明支持 gzip（大小写不敏感）。 */
+    private static boolean acceptsGzip(RawHttpRequest raw) {
+        var values = raw.headers().get("accept-encoding");
+        if (values == null) return false;
+        for (String v : values) {
+            if (v != null && v.toLowerCase().contains("gzip")) return true;
+        }
+        return false;
     }
 
     /**

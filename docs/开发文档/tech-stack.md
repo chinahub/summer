@@ -9,7 +9,7 @@
 | 协程/多线程 | `Executors.newVirtualThreadPerTaskExecutor()` | Loom 虚拟线程，每个连接一个虚拟线程，海量并发、阻塞友好 |
 | JSON | 纯 JDK 反射手写 | 支持 record/JavaBean/集合/数组/泛型，零第三方依赖 |
 | 日志 | `java.util.logging`（JUL） | JDK 内置，自研 `DailyRollingFileHandler` 按天/按大小滚动；自带 SLF4J→JUL 绑定支持 Lombok `@Slf4j`（见[日志方案](../使用文档/logging.md)、[SLF4J 绑定](../使用文档/logging-slf4j.md)） |
-| 配置 | `application.yml` / `.properties` | 自研 `YamlParser`，YML 优先，支持 `${key:default}` 占位符 |
+| 配置 | `application.yml` / `.properties` | 自研 `YamlParser`（properties 同名键优先，支持 `---` 多文档）；`summer.profiles.active` 多 profile 叠加（`application-{profile}.yml`）；环境变量按需匹配；命令行 `--key=value` 最高优先；`${key:default}` 占位符 |
 | ORM | 纯 JDBC（`java.sql`） | MyBatis-Plus 风格 BaseMapper/Wrapper/分页/IService，零第三方依赖 |
 | SQL 方言 | `Dialect.of(name)` | MySQL/PostgreSQL/Oracle/SqlServer 多方言分页 |
 | 事务 | ThreadLocal 连接栈 | 声明式 `@Transactional`，嵌套加入，与 AOP 拦截器链集成 |

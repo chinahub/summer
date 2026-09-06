@@ -3,9 +3,13 @@ package cn.jiebaba.summer.boot.ai;
 import cn.jiebaba.summer.ai.model.Provider;
 import cn.jiebaba.summer.core.env.Environment;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 /**
  * summer.ai.* 配置项绑定：厂商、密钥、模型、base-url、超时、采样参数与可选的弹性策略（重试/限流/熔断），
- * 以及向量化、向量库（内存或 pgvector）、对话记忆与 RAG 检索增强的可选装配参数。
+ * 以及向量化、向量库（内存或 pgvector）、对话记忆与 RAG 检索增强的可选装配参数；
+ * 另含命名模型实例（summer.ai.models.&lt;id&gt;.*，见 {@link NamedAiModel}）构成的多模型注册表。
  */
 public class AiProperties {
 
@@ -48,6 +52,7 @@ public class AiProperties {
     private final int toolsMaxIterations;
     private final boolean loggingEnabled;
     private final String loggingTable;
+    private final Map<String, NamedAiModel> models;
 
     private AiProperties(Provider provider, String apiKey, String model, String baseUrl,
                          int timeoutSeconds, double temperature, int maxTokens,
@@ -61,7 +66,8 @@ public class AiProperties {
                          boolean memoryEnabled, int memoryMaxMessages,
                          boolean ragEnabled, int ragTopK, double ragSimilarityThreshold, String ragInstruction,
                          boolean toolsEnabled, int toolsMaxIterations,
-                         boolean loggingEnabled, String loggingTable) {
+                         boolean loggingEnabled, String loggingTable,
+                         Map<String, NamedAiModel> models) {
         this.provider = provider;
         this.apiKey = apiKey;
         this.model = model;
@@ -101,6 +107,7 @@ public class AiProperties {
         this.toolsMaxIterations = toolsMaxIterations;
         this.loggingEnabled = loggingEnabled;
         this.loggingTable = loggingTable;
+        this.models = models;
     }
 
     /** 从环境配置解析 AiProperties；未配置 provider 时返回未激活实例（provider 为 null）。 */
@@ -152,6 +159,10 @@ public class AiProperties {
         int toolsMaxIterations = env.getProperty("summer.ai.tools.max-iterations", Integer.class, 10);
         boolean loggingEnabled = env.getProperty("summer.ai.logging.enabled", Boolean.class, false);
         String loggingTable = env.getProperty("summer.ai.logging.table", String.class, "ai_call_log");
+        Map<String, NamedAiModel> models = new LinkedHashMap<>();
+        for (String id : NamedAiModel.ids(env)) {
+            models.put(id, NamedAiModel.from(id, env));
+        }
         return new AiProperties(provider, apiKey, model, baseUrl, timeoutSeconds, temperature, maxTokens,
                 retryMaxAttempts, retryInitialBackoffMillis, retryMultiplier, retryMaxBackoffMillis,
                 rateLimitPermitsPerSecond, circuitBreakerFailureThreshold, circuitBreakerWaitMillis,
@@ -162,7 +173,7 @@ public class AiProperties {
                 memoryEnabled, memoryMaxMessages,
                 ragEnabled, ragTopK, ragSimilarityThreshold, ragInstruction,
                 toolsEnabled, toolsMaxIterations,
-                loggingEnabled, loggingTable);
+                loggingEnabled, loggingTable, models);
     }
 
     /** 是否已正确配置（provider 与 api-key 齐全）。 */
@@ -175,6 +186,11 @@ public class AiProperties {
         return retryMaxAttempts > 1
                 || rateLimitPermitsPerSecond > 0
                 || circuitBreakerFailureThreshold > 0;
+    }
+
+    /** 是否配置了命名模型实例（多模型注册表非空）。 */
+    public boolean hasNamedModels() {
+        return !models.isEmpty();
     }
 
     /** 向量化是否就绪：embedding.enabled=true 且指定了 embedding.model 并可解析到 api-key。 */
@@ -267,4 +283,6 @@ public class AiProperties {
     public int getToolsMaxIterations() { return toolsMaxIterations; }
     public boolean isLoggingEnabled() { return loggingEnabled; }
     public String getLoggingTable() { return loggingTable; }
+    /** 命名模型实例（保序，按 id 字母序），多模型注册表数据源。 */
+    public Map<String, NamedAiModel> getModels() { return models; }
 }

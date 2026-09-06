@@ -1,0 +1,5 @@
+# 测试用 SPI 自动配置注册文件（ SpiFactoriesTest 使用）
+# 非法类名应被跳过
+AutoConfiguration = cn.jiebaba.summer.test.boot.TestSpiConfig
+java.lang.String
+no.such.Missing

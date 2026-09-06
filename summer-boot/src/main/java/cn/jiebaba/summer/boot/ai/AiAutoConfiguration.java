@@ -32,11 +32,14 @@ import cn.jiebaba.summer.data.support.SqlExecutor;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * summer-ai 自动配置：按 summer.ai.* 装配 ChatModel 与 ChatClient，并可选装配向量化、向量库
- * （内存或 pgvector）、对话记忆与 RAG 检索增强门面。当配置了重试/限流/熔断参数时，ChatModel
+ * summer-ai 自动配置：按 summer.ai.* 装配 ChatModel 与 ChatClient，并按 summer.ai.models.<id>.*
+ * 装配多模型注册表（AiModelRegistry，命名实例并存、按阶段引用不同厂商模型），以及可选装配向量化、
+ * 向量库（内存或 pgvector）、对话记忆与 RAG 检索增强门面。当配置了重试/限流/熔断参数时，ChatModel
  * 会被 ResilientChatModel 包装以增强弹性；启用工具调用（summer.ai.tools.enabled=true）时，
  * 收集上下文中的 ToolCallback bean 并叠加 ToolCallingChatModel 自动执行工具循环（同步与流式均支持）。
  * <p>本类位于 summer-boot，编译期引用 summer-ai（optional），运行期由 SummerApplication
@@ -52,13 +55,45 @@ public class AiAutoConfiguration {
         return AiProperties.from(env);
     }
 
-    /** 装配 ChatModel（OpenAI 兼容，覆盖 DeepSeek/GLM/MiniMax/Kimi）；未配置 provider 则快速失败；按需叠加弹性策略与工具调用循环。 */
+    /**
+     * 装配多模型注册表：为每个命名实例（summer.ai.models.&lt;id&gt;.*）创建独立的 ChatModel。
+     * 实例需 provider 与 api-key 齐全，否则启动快速失败并提示缺失项。
+     */
     @Bean
-    public ChatModel chatModel(AiProperties aiProperties, ApplicationContext context) {
+    public AiModelRegistry aiModelRegistry(AiProperties aiProperties) {
+        Map<String, ChatModel> models = new LinkedHashMap<>();
+        for (NamedAiModel named : aiProperties.getModels().values()) {
+            if (!named.isConfigured()) {
+                throw new IllegalStateException(
+                        "命名模型实例 \"" + named.getId() + "\" 配置不完整：请设置 summer.ai.models."
+                                + named.getId() + ".provider(deepseek|glm|minimax|kimi) 与 .api-key。");
+            }
+            models.put(named.getId(), new OpenAiCompatibleChatModel(
+                    named.getBaseUrl(),
+                    named.getApiKey(),
+                    named.getModel(),
+                    Duration.ofSeconds(named.getTimeoutSeconds()),
+                    named.getTemperature(),
+                    named.getMaxTokens()));
+        }
+        return new AiModelRegistry(models);
+    }
+
+    /**
+     * 装配主 ChatModel（OpenAI 兼容，覆盖 DeepSeek/GLM/MiniMax/Kimi）；未配置主模型时回退为
+     * 注册表默认实例（第一个命名实例），保证 getBean(ChatModel) 恒可用；两者皆缺则快速失败。
+     * 按需叠加弹性策略与工具调用循环。
+     */
+    @Bean
+    public ChatModel chatModel(AiProperties aiProperties, AiModelRegistry aiModelRegistry, ApplicationContext context) {
         if (!aiProperties.isConfigured()) {
+            if (!aiModelRegistry.isEmpty()) {
+                return aiModelRegistry.first();
+            }
             throw new IllegalStateException(
                     "summer-ai 已在 classpath 但未正确配置：请设置 summer.ai.provider"
-                            + "(deepseek|glm|minimax|kimi) 与 summer.ai.api-key。");
+                            + "(deepseek|glm|minimax|kimi) 与 summer.ai.api-key，"
+                            + "或配置命名实例 summer.ai.models.<id>.*。");
         }
         ChatModel model = new OpenAiCompatibleChatModel(
                 aiProperties.getBaseUrl(),

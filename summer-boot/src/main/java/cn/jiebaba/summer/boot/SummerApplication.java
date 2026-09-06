@@ -17,6 +17,8 @@ import cn.jiebaba.summer.web.server.SummerWebServer;
 import cn.jiebaba.summer.web.server.WebServerProperties;
 import cn.jiebaba.summer.web.support.ExceptionHandlerRegistry;
 import cn.jiebaba.summer.boot.data.DataAutoConfiguration;
+import cn.jiebaba.summer.boot.event.ApplicationFailedEvent;
+import cn.jiebaba.summer.boot.event.ApplicationReadyEvent;
 import cn.jiebaba.summer.boot.security.SecurityAutoConfiguration;
 import cn.jiebaba.summer.boot.web.WebAutoConfiguration;
 import cn.jiebaba.summer.boot.ai.AiAutoConfiguration;
@@ -67,48 +69,88 @@ public final class SummerApplication {
     public static SummerApplication run(Class<?> primarySource, String[] args) {
         long start = System.currentTimeMillis();
         Set<String> basePackages = resolveBasePackages(primarySource);
-        Environment environment = new Environment();
+        Environment environment = new Environment(args);
         LoggingInitializer.initialize(environment);
+        if (!environment.getActiveProfiles().isEmpty()) {
+            LOG.info("The following profiles are active: " + environment.getActiveProfiles());
+        }
         int port = environment.getProperty("server.port", Integer.class, 8080);
         String host = environment.getProperty("server.host", String.class, "0.0.0.0");
         printBanner();
         LOG.info("with PID " + ProcessHandle.current().pid());
 
-        DefaultApplicationContext context = new DefaultApplicationContext(
-                primarySource.getClassLoader(), environment, basePackages);
-        registerAutoConfigurations(context);
-        MapperRegistrar.registerDefinitions(context, basePackages);
-        context.refresh();
-        SummerUtil.setContext(context);
+        DefaultApplicationContext context = null;
+        SummerWebServer server = null;
+        boolean shutdownHookRegistered = false;
+        String stage = "config";
+        try {
+            stage = "container";
+            context = new DefaultApplicationContext(
+                    primarySource.getClassLoader(), environment, basePackages);
+            registerAutoConfigurations(context);
+            MapperRegistrar.registerDefinitions(context, basePackages);
+            context.refresh();
+            SummerUtil.setContext(context);
+            stage = "web";
+            WebRouteRegistrar.Registration registration = WebRouteRegistrar.build(context);
+            Router router = registration.router();
+            ExceptionHandlerRegistry exceptions = registration.exceptionHandlers();
 
-        WebRouteRegistrar.Registration registration = WebRouteRegistrar.build(context);
-        Router router = registration.router();
-        ExceptionHandlerRegistry exceptions = registration.exceptionHandlers();
+            MessageConverter converter = resolveConverter(context);
+            List<Filter> webFilters = new ArrayList<>(context.getBeansOfType(Filter.class).values());
+            List<SecurityFilterChain> securityChains = resolveSecurityChains(context);
+            HandlerMethodAccessChecker accessChecker = resolveAccessChecker(context);
+            server = new SummerWebServer(context, router, exceptions, converter,
+                    WebServerProperties.from(environment), webFilters, accessChecker);
+            if (!securityChains.isEmpty()) {
+                server.setFilterChainSelector(buildFilterChainSelector(webFilters, securityChains));
+            }
+            WebSocketRegistry wsRegistry = new WebSocketRegistry();
+            wsRegistry.scan(context);
+            server.setWebSocketRegistry(wsRegistry);
+            server.start();
 
-        MessageConverter converter = resolveConverter(context);
-        List<Filter> webFilters = new ArrayList<>(context.getBeansOfType(Filter.class).values());
-        List<SecurityFilterChain> securityChains = resolveSecurityChains(context);
-        HandlerMethodAccessChecker accessChecker = resolveAccessChecker(context);
-        SummerWebServer server = new SummerWebServer(context, router, exceptions, converter,
-                WebServerProperties.from(environment), webFilters, accessChecker);
-        if (!securityChains.isEmpty()) {
-            server.setFilterChainSelector(buildFilterChainSelector(webFilters, securityChains));
+            ScheduledTaskRegistrar scheduler = new ScheduledTaskRegistrar();
+            scheduler.scheduleAll(context);
+            SummerApplication app = new SummerApplication(context, server, scheduler);
+            registerShutdownHook(app);
+            shutdownHookRegistered = true;
+
+            stage = "runners";
+            invokeRunners(context, args);
+
+            context.publishEvent(new ApplicationReadyEvent(context));
+            LOG.info("Started SummerApplication in " + (System.currentTimeMillis() - start)
+                    + "ms on " + host + ":" + port + " (base packages=" + basePackages + ")");
+            return app;
+        } catch (Throwable t) {
+            // 启动失败诊断：输出阶段 + 根因摘要；关闭钩子未注册时回收已创建的资源（容器/服务器）
+            LOG.severe(buildFailureReport(start, stage, t));
+            if (context != null && shutdownHookRegistered) {
+                try {
+                    context.publishEvent(new ApplicationFailedEvent(context, stage, t));
+                } catch (Throwable ignored) {
+                    // 失败事件监听器异常不掩盖原始失败
+                }
+            }
+            if (!shutdownHookRegistered) {
+                if (server != null) {
+                    try {
+                        server.stop();
+                    } catch (Throwable ignored) {
+                        // 清理失败不影响失败报告输出
+                    }
+                }
+                if (context != null) {
+                    try {
+                        context.close();
+                    } catch (Throwable ignored) {
+                        // 清理失败不影响失败报告输出
+                    }
+                }
+            }
+            throw t;
         }
-        WebSocketRegistry wsRegistry = new WebSocketRegistry();
-        wsRegistry.scan(context);
-        server.setWebSocketRegistry(wsRegistry);
-        server.start();
-
-        ScheduledTaskRegistrar scheduler = new ScheduledTaskRegistrar();
-        scheduler.scheduleAll(context);
-        SummerApplication app = new SummerApplication(context, server, scheduler);
-        registerShutdownHook(app);
-
-        invokeRunners(context, args);
-
-        LOG.info("Started SummerApplication in " + (System.currentTimeMillis() - start)
-                + "ms on " + host + ":" + port + " (base packages=" + basePackages + ")");
-        return app;
     }
 
     /** 便捷入口：从调用方主类推断主源。 */
@@ -126,6 +168,8 @@ public final class SummerApplication {
 
     private static void registerAutoConfigurations(DefaultApplicationContext context) {
         List<Class<?>> configs = new ArrayList<>(AUTO_CONFIG_CLASSES);
+        // SPI 扩展：从 classpath 根 META-INF/summer.factories 读取第三方自动配置类
+        configs.addAll(loadSpiConfigurations());
         // 可选模块 summer-ai：仅当其在 classpath 时注册自动配置。仿 spring-boot 的
         // @ConditionalOnClass，但用存在性探测代替 ASM 读注解，零字节码第三方库依赖；
         // summer-ai 不在时 AiAutoConfiguration 永不被加载，故不会 NoClassDefFoundError。
@@ -157,6 +201,61 @@ public final class SummerApplication {
             return true;
         } catch (Throwable e) {
             return false;
+        }
+    }
+
+    /**
+     * 从 classpath 根 {@code META-INF/summer.factories} 读取第三方自动配置类：
+     * 每行一个全限定类名；兼容 Spring Boot 风格的 {@code key=类名1,类名2}（key 忽略）。
+     * {@code #} 注释与空行忽略；类不在 classpath（可选依赖未引入）时跳过并记录日志，
+     * 非法类名或非 @Configuration 类同样跳过。重复类名去重。
+     */
+    private static List<Class<?>> loadSpiConfigurations() {
+        Set<String> seen = new LinkedHashSet<>();
+        try {
+            var urls = SummerApplication.class.getClassLoader()
+                    .getResources("META-INF/summer.factories");
+            while (urls.hasMoreElements()) {
+                parseSpiFactories(urls.nextElement(), seen);
+            }
+        } catch (IOException e) {
+            LOG.fine("Failed to read META-INF/summer.factories: " + e.getMessage());
+        }
+        List<Class<?>> configs = new ArrayList<>();
+        for (String name : seen) {
+            try {
+                Class<?> clazz = Class.forName(name, false, SummerApplication.class.getClassLoader());
+                if (!AnnotationUtils.hasAnnotation(clazz, cn.jiebaba.summer.core.annotation.Configuration.class)) {
+                    LOG.warning("Skipped summer.factories entry (not a @Configuration): " + name);
+                    continue;
+                }
+                configs.add(clazz);
+            } catch (Throwable e) {
+                LOG.warning("Skipped summer.factories entry (class not found): " + name);
+            }
+        }
+        if (!configs.isEmpty()) {
+            LOG.info("Loaded " + configs.size() + " auto-configuration(s) from summer.factories: " + seen);
+        }
+        return configs;
+    }
+
+    /** 解析单个 summer.factories 资源为全限定类名集合。 */
+    private static void parseSpiFactories(java.net.URL url, Set<String> out) {
+        try (InputStream in = url.openStream()) {
+            String text = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            for (String rawLine : text.split("\r?\n")) {
+                String line = rawLine.trim();
+                if (line.isEmpty() || line.startsWith("#")) continue;
+                int eq = line.indexOf('=');
+                String body = eq >= 0 ? line.substring(eq + 1) : line;
+                for (String name : body.split(",")) {
+                    String trimmed = name.trim();
+                    if (!trimmed.isEmpty()) out.add(trimmed);
+                }
+            }
+        } catch (IOException e) {
+            LOG.fine("Failed to parse " + url + ": " + e.getMessage());
         }
     }
 
@@ -314,6 +413,35 @@ public final class SummerApplication {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * 构建启动失败的诊断报告（对齐 Spring Boot 的 APPLICATION FAILED TO START 风格）：
+     * 输出失败阶段、耗时、异常类型与消息、根因链及行动建议。纯文本生成，无副作用。
+     *
+     * @param startMillis 启动起始毫秒（用于耗时统计）
+     * @param stage       失败阶段：config/container/web/runners
+     * @param failure     启动过程中抛出的异常
+     */
+    public static String buildFailureReport(long startMillis, String stage, Throwable failure) {
+        StringBuilder sb = new StringBuilder(512);
+        sb.append('\n').append("***************************").append('\n');
+        sb.append("APPLICATION FAILED TO START").append('\n');
+        sb.append("***************************").append('\n');
+        sb.append("Stage: ").append(stage).append('\n');
+        sb.append("Time: ").append(System.currentTimeMillis() - startMillis).append("ms").append('\n');
+        sb.append("Error: ").append(failure.getClass().getName()).append(": ")
+                .append(failure.getMessage()).append('\n');
+        Throwable root = failure;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        if (root != failure) {
+            sb.append("Root cause: ").append(root.getClass().getName()).append(": ")
+                    .append(root.getMessage()).append('\n');
+        }
+        sb.append("Action: 请检查上方错误信息中的配置指引（summer.* 配置项）后重新启动。");
+        return sb.toString();
     }
 
     private static void printBanner() {

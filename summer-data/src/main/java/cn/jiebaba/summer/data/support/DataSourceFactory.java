@@ -525,8 +525,20 @@ public final class DataSourceFactory {
                     new PooledConnectionHandler(pc, this));
         }
 
+        /**
+         * JDBC 契约方法：默认凭证（未指定或与池配置一致）从池借出；
+         * 其他凭证为显式旁路，直接建立独立物理连接——不经过池（不受 pool-size/
+         * 泄漏检测管控，调用方须自行 close），仅用于临时管理类查询等场景。
+         */
         @Override
         public Connection getConnection(String username, String password) throws SQLException {
+            boolean defaultCredentials = username == null || username.isBlank()
+                    || username.equals(props.username());
+            if (defaultCredentials) {
+                return getConnection();
+            }
+            Logger.getLogger(DataSourceFactory.class.getName()).fine(
+                    "Bypassing connection pool for non-default credentials: " + username);
             return DriverManager.getConnection(props.url(), username, password);
         }
 

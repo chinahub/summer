@@ -14,6 +14,8 @@ import cn.jiebaba.summer.core.aop.MethodInterceptor;
 import cn.jiebaba.summer.core.aop.ProxyAdvisor;
 import cn.jiebaba.summer.core.aop.SubclassProxyFactory;
 import cn.jiebaba.summer.core.aop.SummerProxy;
+import cn.jiebaba.summer.core.context.event.ContextClosedEvent;
+import cn.jiebaba.summer.core.context.event.ContextRefreshedEvent;
 import cn.jiebaba.summer.core.env.Environment;
 import cn.jiebaba.summer.core.scanner.AnnotationUtils;
 import cn.jiebaba.summer.core.scanner.ClassPathScanner;
@@ -72,8 +74,10 @@ public class DefaultApplicationContext implements ApplicationContext {
         scanAndRegister();
         processBeanMethods();
         preInstantiateSingletons();
+        collectEventListeners();
         running = true;
         LOG.info("summer: context ready with " + singletonObjects.size() + " singletons");
+        publishEvent(new ContextRefreshedEvent(this));
     }
 
     private void scanAndRegister() {
@@ -100,21 +104,29 @@ public class DefaultApplicationContext implements ApplicationContext {
 
     /**
      * 处理 Bean 上的 @Bean 等工厂方法，注册其产生的 Bean 定义。
-     * <p>两轮处理：先注册普通 @Bean 方法，再评估带 {@link ConditionalOnMissingBean}
-     * 的退避注册，保证后者评估时用户定义的同类型 Bean 均已可见。
+     * <p>三轮处理：第一轮注册无条件的普通 {@code @Bean} 方法；第二轮注册仅带
+     * {@link ConditionalOnProperty}/{@link ConditionalOnClass}（环境条件，评估无时序依赖）
+     * 的方法；第三轮评估带 {@link ConditionalOnMissingBean} 的退避注册（此时用户定义的
+     * 同类型 Bean 均已可见）。同一方法可组合多个条件注解，全部满足才注册。
      */
     private void processBeanMethods() {
-        for (int pass = 0; pass < 2; pass++) {
+        // 类级环境条件评估结果缓存（按类身份），避免三轮循环中重复评估与重复日志
+        Map<Class<?>, Boolean> classConditionCache = new java.util.IdentityHashMap<>();
+        for (int pass = 0; pass < 3; pass++) {
             for (BeanDefinition def : new ArrayList<>(beanDefinitions.values())) {
                 Class<?> configClass = def.getBeanClass();
                 if (def.getFactoryMethod() != null) continue;
                 if (!AnnotationUtils.hasAnnotation(configClass, Configuration.class)) continue;
+                if (!classConditionCache.computeIfAbsent(configClass, this::matchesClassConditions)) continue;
                 for (Method method : configClass.getDeclaredMethods()) {
                     Bean bean = method.getAnnotation(Bean.class);
                     if (bean == null) continue;
-                    boolean conditional = method.isAnnotationPresent(ConditionalOnMissingBean.class);
-                    // 第一轮仅普通方法，第二轮仅带退避注解的方法
-                    if (conditional != (pass == 1)) continue;
+                    boolean hasMissingBean = method.isAnnotationPresent(ConditionalOnMissingBean.class);
+                    boolean hasEnvCondition = method.isAnnotationPresent(ConditionalOnProperty.class)
+                            || method.isAnnotationPresent(ConditionalOnClass.class);
+                    // 第一轮仅无条件方法，第二轮仅环境条件方法，第三轮仅含退避条件的方法
+                    if (hasMissingBean != (pass == 2)) continue;
+                    if (!hasMissingBean && hasEnvCondition != (pass == 1)) continue;
                     BeanDefinition bd = new BeanDefinition();
                     bd.setBeanClass(method.getReturnType());
                     String n = firstNonEmpty(bean.value(), bean.name());
@@ -126,10 +138,85 @@ public class DefaultApplicationContext implements ApplicationContext {
                     bd.setFactoryMethod(method);
                     bd.setInitMethodName(firstNonEmpty(bean.initMethod(), null));
                     bd.setDestroyMethodName(firstNonEmpty(bean.destroyMethod(), null));
-                    if (conditional && skipConditionalBean(bd, method)) continue;
+                    // 环境条件（配置项/classpath）先评估；退避条件在最后评估
+                    if (!matchesEnvironmentConditions(bd.getName(), configClass, method)) continue;
+                    if (hasMissingBean && skipConditionalBean(bd, method)) continue;
                     registerBeanDefinition(bd.getName(), bd);
                 }
             }
+        }
+    }
+
+    /**
+     * 评估 {@code @Configuration} 类级环境条件（{@link ConditionalOnProperty}/
+     * {@link ConditionalOnClass}）：不满足时该配置类的全部 {@code @Bean} 方法被跳过。
+     */
+    private boolean matchesClassConditions(Class<?> configClass) {
+        ConditionalOnProperty prop = configClass.getAnnotation(ConditionalOnProperty.class);
+        if (prop != null && !matchesOnProperty(configClass.getSimpleName(), prop)) {
+            LOG.info("Skipped conditional configuration '" + configClass.getName()
+                    + "': property condition not satisfied");
+            return false;
+        }
+        ConditionalOnClass cond = configClass.getAnnotation(ConditionalOnClass.class);
+        if (cond != null && !matchesOnClass(configClass.getSimpleName(), cond)) {
+            LOG.info("Skipped conditional configuration '" + configClass.getName()
+                    + "': class condition not satisfied");
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 评估方法级环境条件（{@link ConditionalOnProperty} 与 {@link ConditionalOnClass}，
+     * 类级条件已在 {@link #matchesClassConditions(Class)} 评估）：全部满足返回 true。
+     */
+    private boolean matchesEnvironmentConditions(String beanName, Class<?> configClass, Method method) {
+        ConditionalOnProperty prop = method.getAnnotation(ConditionalOnProperty.class);
+        if (prop != null && !matchesOnProperty(beanName, prop)) return false;
+        ConditionalOnClass cond = method.getAnnotation(ConditionalOnClass.class);
+        if (cond != null && !matchesOnClass(beanName, cond)) return false;
+        return true;
+    }
+
+    /** 评估 {@link ConditionalOnProperty}：所有配置键全部满足才返回 true。 */
+    private boolean matchesOnProperty(String beanName, ConditionalOnProperty prop) {
+        for (String name : prop.name()) {
+            String value = environment.getProperty(name);
+            if (value == null) {
+                if (prop.matchIfMissing()) continue;
+                LOG.info("Skipped conditional bean '" + beanName + "': property '" + name + "' missing");
+                return false;
+            }
+            String expected = prop.havingValue();
+            boolean matched = expected.isEmpty() ? !"false".equalsIgnoreCase(value)
+                    : expected.equalsIgnoreCase(value);
+            if (!matched) {
+                LOG.info("Skipped conditional bean '" + beanName + "': property '" + name
+                        + "'='" + value + "' does not match '" + expected + "'");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** 评估 {@link ConditionalOnClass}：全部全限定类名都在 classpath 才返回 true。 */
+    private boolean matchesOnClass(String beanName, ConditionalOnClass cond) {
+        for (String name : cond.name()) {
+            if (isClassPresent(name)) continue;
+            LOG.info("Skipped conditional bean '" + beanName + "': class '" + name + "' not on classpath");
+            return false;
+        }
+        return true;
+    }
+
+    /** 探测类是否存在（不初始化，不触发静态块），任一错误视为不存在。 */
+    private boolean isClassPresent(String name) {
+        try {
+            Class.forName(name, false, classLoader);
+            return true;
+        } catch (Throwable e) {
+            return false;
         }
     }
 
@@ -171,6 +258,56 @@ public class DefaultApplicationContext implements ApplicationContext {
         for (String name : aspects) getBean(name);
         collectAopRegistries();
         for (String name : others) getBean(name);
+    }
+
+    /** 事件监听器注册项：Bean 名、监听方法与监听的事件类型（null 表示监听全部事件）。 */
+    private record ListenerEntry(String beanName, Method method, Class<?> eventType) {}
+
+    private final List<ListenerEntry> eventListeners = new CopyOnWriteArrayList<>();
+
+    @Override
+    public void publishEvent(Object event) {
+        if (event == null) return;
+        for (ListenerEntry entry : eventListeners) {
+            if (entry.eventType() != null && !entry.eventType().isInstance(event)) continue;
+            Object target = getBean(entry.beanName());
+            ReflectionUtils.makeAccessible(entry.method());
+            Object[] args = entry.method().getParameterCount() > 0 ? new Object[]{event} : new Object[0];
+            ReflectionUtils.invokeMethod(entry.method(), target, args);
+        }
+    }
+
+    /**
+     * 收集容器中全部 {@code @EventListener} 方法为监听器注册项：
+     * 注解 value 声明事件类型（可多个，逐类型注册），缺省退避方法唯一参数类型；
+     * 无参方法视为监听全部事件。参数个数不为 0/1 的方法跳过并告警。
+     * 监听器 Bean 在首次事件发布时惰性创建。
+     */
+    private void collectEventListeners() {
+        eventListeners.clear();
+        for (BeanDefinition def : beanDefinitions.values()) {
+            Class<?> type = def.getBeanClass();
+            if (type == null) continue;
+            for (Method method : type.getMethods()) {
+                EventListener listener = method.getAnnotation(EventListener.class);
+                if (listener == null) continue;
+                int paramCount = method.getParameterCount();
+                if (paramCount > 1) {
+                    LOG.warning("Skipped @EventListener with " + paramCount
+                            + " parameters: " + type.getName() + "." + method.getName());
+                    continue;
+                }
+                String beanName = def.getName();
+                if (listener.value().length > 0) {
+                    for (Class<?> eventType : listener.value()) {
+                        eventListeners.add(new ListenerEntry(beanName, method, eventType));
+                    }
+                } else {
+                    Class<?> eventType = paramCount == 1 ? method.getParameterTypes()[0] : null;
+                    eventListeners.add(new ListenerEntry(beanName, method, eventType));
+                }
+            }
+        }
     }
 
     private boolean isAspectOrAdvisor(BeanDefinition def) {
@@ -393,12 +530,40 @@ public class DefaultApplicationContext implements ApplicationContext {
             }
         }
         for (Method method : effectiveType(bean).getMethods()) {
+            Value valueAnn = method.getAnnotation(Value.class);
+            if (valueAnn != null) {
+                // 方法级 @Value：setter 风格注入，仅支持单参数方法（参数类型做配置值转换）
+                if (method.getParameterCount() == 1) {
+                    ReflectionUtils.makeAccessible(method);
+                    Object arg = resolveValue(valueAnn.value(), method.getParameterTypes()[0]);
+                    ReflectionUtils.invokeMethod(method, bean, arg);
+                } else {
+                    LOG.warning("Skipped @Value on method '" + method.getName()
+                            + "' with " + method.getParameterCount() + " parameters (single-parameter setter expected)");
+                }
+                continue;
+            }
             if (method.isAnnotationPresent(Autowired.class) && method.getParameterCount() > 0) {
                 ReflectionUtils.makeAccessible(method);
                 Object[] args = resolveExecutableArgs(method.getParameters(), method.getGenericParameterTypes());
                 ReflectionUtils.invokeMethod(method, bean, args);
             }
         }
+        bindConfigurationProperties(bean, def);
+    }
+
+    /**
+     * 类标注 {@link ConfigurationProperties} 时按前缀执行声明式配置绑定：
+     * 前缀缺省退避类名 kebab-case；绑定在 @Autowired 注入之后执行，
+     * 可注入的字段值同时满足 @Value 优先。
+     */
+    private void bindConfigurationProperties(Object bean, BeanDefinition def) {
+        ConfigurationProperties props = AnnotationUtils.findAnnotation(def.getBeanClass(), ConfigurationProperties.class);
+        if (props == null) return;
+        String prefix = props.value() != null && !props.value().isBlank()
+                ? props.value().trim()
+                : PropertiesBinder.kebab(def.getBeanClass().getSimpleName());
+        PropertiesBinder.bind(bean, def.getBeanClass(), prefix, environment);
     }
 
     private void initializeBean(String name, Object bean, BeanDefinition def) {
@@ -519,6 +684,12 @@ public class DefaultApplicationContext implements ApplicationContext {
     @Override
     public void close() {
         running = false;
+        // 关闭事件先于 Bean 销毁发布；监听器异常不阻断资源释放
+        try {
+            publishEvent(new ContextClosedEvent(this));
+        } catch (Throwable t) {
+            LOG.warning("Error publishing ContextClosedEvent: " + t.getMessage());
+        }
         List<String> reverse = new ArrayList<>(destructionOrder);
         Collections.reverse(reverse);
         for (String name : reverse) {

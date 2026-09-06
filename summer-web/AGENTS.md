@@ -28,4 +28,6 @@
 - **NIMA 模型**：参考 Helidon NIMA，使用阻塞式 ServerSocketChannel + 虚拟线程，每个请求一个虚拟线程
 - **路由匹配**：Router 支持 path variable（如 `/api/user/{id}`），不支持正则路径
 - **参数校验**：Validator 递归校验嵌套对象，校验失败返回 400 + 违规列表
+- **gzip 压缩**：`server.compression.enabled`（默认关）+ `mime-types` + `min-response-size`，提交前按
+  Accept-Encoding/Content-Type/长度判定，未满足或压缩失败回退明文
 - **抽象优先**：关键接口（WebRequest/WebResponse/MessageConverter/HandlerMethodArgumentResolver）针对接口编程

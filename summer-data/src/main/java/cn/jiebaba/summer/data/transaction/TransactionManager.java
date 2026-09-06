@@ -28,6 +28,17 @@ public final class TransactionManager {
 
     /** 开启事务（或加入当前事务）；绑定了新连接时返回 true。 */
     public boolean begin() {
+        return begin(false);
+    }
+
+    /**
+     * 开启事务（或加入当前事务）；绑定了新连接时返回 true。
+     * readOnly=true 时将连接标记为只读（驱动级优化提示）；嵌套加入已有事务时不改变
+     * 连接属性（由最外层事务决定）。事务结束时总是恢复为可写，避免连接归还池后残留状态。
+     *
+     * @param readOnly 是否只读事务（对应 {@code @Transactional(readOnly = true)}）
+     */
+    public boolean begin(boolean readOnly) {
         Deque<Connection> stack = HOLDER.get();
         if (!stack.isEmpty()) {
             return false; // 加入已有事务
@@ -35,6 +46,14 @@ public final class TransactionManager {
         try {
             Connection conn = dataSource.getConnection();
             conn.setAutoCommit(false);
+            if (readOnly) {
+                try {
+                    conn.setReadOnly(true);
+                } catch (SQLException e) {
+                    // 个别驱动不支持只读标记：记录后继续事务
+                    LOG.warning("Driver ignored setReadOnly(true): " + e.getMessage());
+                }
+            }
             stack.push(conn);
             return true;
         } catch (SQLException e) {
@@ -64,13 +83,18 @@ public final class TransactionManager {
         }
     }
 
-    /** 结束事务：若由本调用方开启，则关闭并解绑连接。 */
+    /** 结束事务：若由本调用方开启，则恢复只读标记、关闭并解绑连接。 */
     public void end(boolean began) {
         if (!began) return;
         Deque<Connection> stack = HOLDER.get();
         Connection conn = stack.poll();
         if (conn != null) {
             try {
+                try {
+                    conn.setReadOnly(false);
+                } catch (SQLException e) {
+                    LOG.log(java.util.logging.Level.FINE, "Failed to reset read-only flag", e);
+                }
                 conn.setAutoCommit(true);
                 conn.close();
             } catch (SQLException e) {

@@ -51,8 +51,8 @@ build-test ──depends──> summer-sample / summer-boot / summer-data / summ
 | 包 | 内容 |
 | --- | --- |
 | `cn.jiebaba.summer.core.annotation` | 构造型与 DI 注解：`@Component/@Service/@Repository/@Controller/@Configuration`、`@Bean/@Autowired/@Value/@Scope/@Qualifier/@Primary/@Lazy/@PostConstruct/@PreDestroy/@ComponentScan/@Order` |
-| `cn.jiebaba.summer.core.context` | `ApplicationContext` 接口、`DefaultApplicationContext`（IoC 容器实现）、`BeanDefinition`、生命周期接口 |
-| `cn.jiebaba.summer.core.env` | `Environment`：属性加载、`${key:default}` 占位符解析、类型转换；`YamlParser` 解析 `application.yml` |
+| `cn.jiebaba.summer.core.context` | `ApplicationContext` 接口、`DefaultApplicationContext`（IoC 容器实现，含 `publishEvent` 事件发布与 `@EventListener` 监听、`@ConfigurationProperties` 绑定）、`BeanDefinition`、生命周期接口 |
+| `cn.jiebaba.summer.core.env` | `Environment`：属性加载（基础 + `application-{profile}` 叠加 + 环境变量按需 + 命令行）、`${key:default}` 占位符解析、类型转换；`YamlParser` 解析 `application.yml`（含 `---` 多文档） |
 | `cn.jiebaba.summer.core.scanner` | `ClassPathScanner`（类路径类扫描）、`AnnotationUtils`（元注解递归查找） |
 | `cn.jiebaba.summer.core.aop` | `@Aspect/@Pointcut/@Around/@Before/@After/@AfterReturning/@AfterThrowing`、`PointcutMatcher`（`execution()` 表达式）、`AdvisedProxyFactory`（JDK 动态代理 + 拦截器链）、`SubclassProxyFactory`（手写字节码子类代理，无接口 bean 走此路径）、`SummerProxy`（子类代理标记）、`JoinPoint/ProceedingJoinPoint` |
 | `cn.jiebaba.summer.core.scheduling` | `@Scheduled`（cron/fixedRate/fixedDelay）、`CronExpression`（5 段表达式 + 下次触发计算）、`ScheduledTaskRegistrar`（定时线程池触发 + 虚拟线程执行任务体） |
@@ -63,7 +63,7 @@ build-test ──depends──> summer-sample / summer-boot / summer-data / summ
 
 - **构造器注入**：优先无参构造，有 `@Autowired` 构造器则选它；
 - **字段/Setter 注入**：`@Autowired` 字段与 setter 方法在 `populateBean` 阶段注入；
-- **`@Value`**：从 `Environment` 解析占位符并按类型转换；
+- **`@Value`**：字段/构造器参数/setter 方法（单参数）从 `Environment` 解析占位符并按类型转换；
 - **循环依赖**：单例三级缓存（`singletonObjects` / `earlySingletonObjects` / `inCreation`），构造器循环抛异常；
 - **集合/数组注入**：把同类型所有 bean 注入为 `List`/数组；
 - **`@Qualifier/@Primary`**：多候选消歧；
@@ -194,8 +194,8 @@ private Map<String, Object> config;
 
 - `SummerApplication.run(Class<?> primarySource, String[] args)`：
   1. 推断主类所在包为扫描根包（支持 `@SummerApplication(scanBasePackages=...)` / `@ComponentScan` 覆盖）；
-  2. 构建 `Environment`（加载 `application.yml`/`.properties`）、`LoggingInitializer.initialize`；
-  3. 注册自动配置类（`DataAutoConfiguration`、`SecurityAutoConfiguration`、`WebAutoConfiguration`，并按 classpath 探测可选注册 `AiAutoConfiguration`）+ `MapperRegistrar.registerDefinitions`（mapper bean 定义）；
+  2. 构建 `Environment`（按序合并 `application.yml`/`.properties`、`summer.profiles.active` 激活的 `application-{profile}.*`、环境变量、系统属性与命令行 `--key=value`）、`LoggingInitializer.initialize`；
+  3. 注册自动配置类（`DataAutoConfiguration`、`SecurityAutoConfiguration`、`WebAutoConfiguration`，并按 classpath 探测可选注册 `AiAutoConfiguration`；另从 `META-INF/summer.factories` 加载第三方自动配置）+ `MapperRegistrar.registerDefinitions`（mapper bean 定义）；
   4. `context.refresh()` 完成扫描与 Bean 装配（含 AOP 代理织入）；
   5. `WebRouteRegistrar.build(context)` 构建路由与异常注册表；
   6. `SummerWebServer.createDefault(...).start()`；
@@ -207,7 +207,7 @@ private Map<String, Object> config;
 
 ## 运行时模型
 
-- 启动：`java -jar summer-sample\target\summer-sample-3.1.1-boot.jar`
+- 启动：`java -jar summer-sample\target\summer-sample-3.2.0-boot.jar`
 - 每个连接一个虚拟线程，阻塞 IO 不占平台线程；
 - 定时任务体在虚拟线程上执行；
 - 单进程、单 JVM，无外部容器。

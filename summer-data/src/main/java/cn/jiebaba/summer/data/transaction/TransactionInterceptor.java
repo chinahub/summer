@@ -47,7 +47,7 @@ public final class TransactionInterceptor implements MethodInterceptor, ProxyAdv
         if (tx == null) {
             return jp.proceed();
         }
-        boolean began = transactionManager.begin();
+        boolean began = transactionManager.begin(tx.readOnly());
         try {
             Object result = jp.proceed();
             if (began) transactionManager.commit();

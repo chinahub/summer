@@ -50,6 +50,11 @@ public final class WebResponse {
         return this;
     }
 
+    /** 当前响应体字节数组（只读视图，供压缩等提交前处理使用）。 */
+    public byte[] body() {
+        return body;
+    }
+
     public boolean committed() { return committed; }
 
     /**
