@@ -61,10 +61,4 @@ public class UsernamePasswordAuthenticationToken implements Authentication {
                     "Cannot set this token to trusted; use the authenticated constructor");
         }
     }
-
-    @Override
-    public String getName() {
-        if (principal == null) return "";
-        return principal.toString();
-    }
 }

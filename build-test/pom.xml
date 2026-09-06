@@ -6,7 +6,7 @@
     <parent>
         <groupId>cn.jiebaba.summer</groupId>
         <artifactId>summer-parent</artifactId>
-        <version>3.1.0</version>
+        <version>3.1.1</version>
     </parent>
     <artifactId>build-test</artifactId>
     <name>build-test</name>

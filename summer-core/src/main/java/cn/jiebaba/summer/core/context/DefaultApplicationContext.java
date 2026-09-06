@@ -100,29 +100,64 @@ public class DefaultApplicationContext implements ApplicationContext {
 
     /**
      * 处理 Bean 上的 @Bean 等工厂方法，注册其产生的 Bean 定义。
+     * <p>两轮处理：先注册普通 @Bean 方法，再评估带 {@link ConditionalOnMissingBean}
+     * 的退避注册，保证后者评估时用户定义的同类型 Bean 均已可见。
      */
     private void processBeanMethods() {
-        for (BeanDefinition def : new ArrayList<>(beanDefinitions.values())) {
-            Class<?> configClass = def.getBeanClass();
-            if (def.getFactoryMethod() != null) continue;
-            if (!AnnotationUtils.hasAnnotation(configClass, Configuration.class)) continue;
-            for (Method method : configClass.getDeclaredMethods()) {
-                Bean bean = method.getAnnotation(Bean.class);
-                if (bean == null) continue;
-                BeanDefinition bd = new BeanDefinition();
-                bd.setBeanClass(method.getReturnType());
-                String n = firstNonEmpty(bean.value(), bean.name());
-                bd.setName((n != null && !n.isEmpty()) ? n : method.getName());
-                bd.setScope(method.isAnnotationPresent(Scope.class) ? method.getAnnotation(Scope.class).value() : BeanDefinition.SCOPE_SINGLETON);
-                bd.setPrimary(bean.primary() || method.isAnnotationPresent(Primary.class));
-                bd.setLazyInit(method.isAnnotationPresent(Lazy.class));
-                bd.setFactoryBeanName(def.getName());
-                bd.setFactoryMethod(method);
-                bd.setInitMethodName(firstNonEmpty(bean.initMethod(), null));
-                bd.setDestroyMethodName(firstNonEmpty(bean.destroyMethod(), null));
-                registerBeanDefinition(bd.getName(), bd);
+        for (int pass = 0; pass < 2; pass++) {
+            for (BeanDefinition def : new ArrayList<>(beanDefinitions.values())) {
+                Class<?> configClass = def.getBeanClass();
+                if (def.getFactoryMethod() != null) continue;
+                if (!AnnotationUtils.hasAnnotation(configClass, Configuration.class)) continue;
+                for (Method method : configClass.getDeclaredMethods()) {
+                    Bean bean = method.getAnnotation(Bean.class);
+                    if (bean == null) continue;
+                    boolean conditional = method.isAnnotationPresent(ConditionalOnMissingBean.class);
+                    // 第一轮仅普通方法，第二轮仅带退避注解的方法
+                    if (conditional != (pass == 1)) continue;
+                    BeanDefinition bd = new BeanDefinition();
+                    bd.setBeanClass(method.getReturnType());
+                    String n = firstNonEmpty(bean.value(), bean.name());
+                    bd.setName((n != null && !n.isEmpty()) ? n : method.getName());
+                    bd.setScope(method.isAnnotationPresent(Scope.class) ? method.getAnnotation(Scope.class).value() : BeanDefinition.SCOPE_SINGLETON);
+                    bd.setPrimary(bean.primary() || method.isAnnotationPresent(Primary.class));
+                    bd.setLazyInit(method.isAnnotationPresent(Lazy.class));
+                    bd.setFactoryBeanName(def.getName());
+                    bd.setFactoryMethod(method);
+                    bd.setInitMethodName(firstNonEmpty(bean.initMethod(), null));
+                    bd.setDestroyMethodName(firstNonEmpty(bean.destroyMethod(), null));
+                    if (conditional && skipConditionalBean(bd, method)) continue;
+                    registerBeanDefinition(bd.getName(), bd);
+                }
             }
         }
+    }
+
+    /**
+     * 评估 {@link ConditionalOnMissingBean} 条件：按注解 value/name 或方法返回类型
+     * 检查容器中是否已有同类型（可赋值匹配）或同名的 Bean 定义，存在则跳过注册。
+     *
+     * @param bd     拟注册的 Bean 定义
+     * @param method 带 @ConditionalOnMissingBean 的工厂方法
+     * @return {@code true} 表示容器已有匹配 Bean，应跳过注册
+     */
+    private boolean skipConditionalBean(BeanDefinition bd, Method method) {
+        ConditionalOnMissingBean cond = method.getAnnotation(ConditionalOnMissingBean.class);
+        for (String name : cond.name()) {
+            if (!name.isEmpty() && beanDefinitions.containsKey(name)) {
+                LOG.info("Skipped conditional bean '" + bd.getName() + "': bean named '" + name + "' already registered");
+                return true;
+            }
+        }
+        Class<?>[] types = cond.value();
+        if (types.length == 0) types = new Class<?>[]{ method.getReturnType() };
+        for (Class<?> type : types) {
+            if (getBeanNamesForType(type).length > 0) {
+                LOG.info("Skipped conditional bean '" + bd.getName() + "': bean of type " + type.getName() + " already registered");
+                return true;
+            }
+        }
+        return false;
     }
 
     private void preInstantiateSingletons() {

@@ -52,13 +52,13 @@ public class AiAutoConfiguration {
         return AiProperties.from(env);
     }
 
-    /** 装配 ChatModel（OpenAI 兼容，覆盖 DeepSeek/GLM/MiniMax）；未配置 provider 则快速失败；按需叠加弹性策略与工具调用循环。 */
+    /** 装配 ChatModel（OpenAI 兼容，覆盖 DeepSeek/GLM/MiniMax/Kimi）；未配置 provider 则快速失败；按需叠加弹性策略与工具调用循环。 */
     @Bean
     public ChatModel chatModel(AiProperties aiProperties, ApplicationContext context) {
         if (!aiProperties.isConfigured()) {
             throw new IllegalStateException(
                     "summer-ai 已在 classpath 但未正确配置：请设置 summer.ai.provider"
-                            + "(deepseek|glm|minimax) 与 summer.ai.api-key。");
+                            + "(deepseek|glm|minimax|kimi) 与 summer.ai.api-key。");
         }
         ChatModel model = new OpenAiCompatibleChatModel(
                 aiProperties.getBaseUrl(),

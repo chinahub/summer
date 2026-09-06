@@ -1,6 +1,7 @@
 package cn.jiebaba.summer.boot.security;
 
 import cn.jiebaba.summer.core.annotation.Bean;
+import cn.jiebaba.summer.core.annotation.ConditionalOnMissingBean;
 import cn.jiebaba.summer.core.annotation.Configuration;
 import cn.jiebaba.summer.core.env.Environment;
 import cn.jiebaba.summer.security.authentication.AuthenticationManager;
@@ -52,50 +53,60 @@ public class SecurityAutoConfiguration {
     private volatile byte[] cachedSecret;
 
     @Bean
+    @ConditionalOnMissingBean
     public PasswordEncoder passwordEncoder(Environment env) {
         int strength = env.getProperty("summer.security.password.bcrypt.strength", Integer.class, 10);
         return new BCryptPasswordEncoder(strength);
     }
 
     @Bean
+    @ConditionalOnMissingBean
     public UserDetailsService userDetailsService(Environment env) {
         return InMemoryUserDetailsManager.fromEnvironment(env.all());
     }
 
     @Bean
+    @ConditionalOnMissingBean
     public DaoAuthenticationProvider authenticationProvider(UserDetailsService userDetailsService,
-                                                            PasswordEncoder passwordEncoder) {
+                                                             PasswordEncoder passwordEncoder) {
         return new DaoAuthenticationProvider(userDetailsService, passwordEncoder);
     }
 
     @Bean
+    @ConditionalOnMissingBean
     public AuthenticationManager authenticationManager(DaoAuthenticationProvider provider) {
         return new ProviderManager(List.of(provider));
     }
 
     @Bean
+    @ConditionalOnMissingBean
     public JwtEncoder jwtEncoder(Environment env) {
         return new JwtEncoder(sharedSecret(env));
     }
 
     @Bean
+    @ConditionalOnMissingBean
     public JwtDecoder jwtDecoder(Environment env) {
         return new JwtDecoder(sharedSecret(env));
     }
 
     @Bean
+    @ConditionalOnMissingBean
     public HandlerMethodAccessChecker accessChecker(Environment env) {
         boolean enabled = env.getProperty("summer.security.enabled", Boolean.class, false);
         return new MethodSecurityEnforcer(enabled);
     }
 
+    // 返回类型为宽接口 HandlerMethodArgumentResolver，按精确类型退避，避免被用户的其他参数解析器误触发
     @Bean
+    @ConditionalOnMissingBean(AuthenticationPrincipalArgumentResolver.class)
     public HandlerMethodArgumentResolver authenticationPrincipalResolver(UserDetailsService userDetailsService) {
         return new AuthenticationPrincipalArgumentResolver(userDetailsService);
     }
 
     /** 绑定 summer.security.csrf.* 配置项为 CsrfProperties。 */
     @Bean
+    @ConditionalOnMissingBean
     public CsrfProperties csrfProperties(Environment env) {
         return CsrfProperties.from(env);
     }

@@ -40,7 +40,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.logging.Logger;
 
 public final class SummerApplication {
@@ -319,7 +322,27 @@ public final class SummerApplication {
             / __| | | | '_ ` _ \\| '_ ` _ \\ / _ \\ '__|
             \\__ \\ |_| | | | | | | | | | | |  __/ |  \s
             |___/\\__,_|_| |_| |_|_| |_| |_|\\___|_|  \s
-            :: v3.0.0 ::
-                """);
+            :: v%s ::
+                """.formatted(resolveVersion()));
+    }
+
+    /**
+     * 从 jar 内 Maven 自动生成的 {@code pom.properties} 解析框架版本号，
+     * 供启动 banner 显示；读取失败时（如 IDE 中直接运行未打包的 classes）回退为 {@code dev}。
+     */
+    private static String resolveVersion() {
+        try (InputStream in = SummerApplication.class.getResourceAsStream(
+                "/META-INF/maven/cn.jiebaba.summer/summer-boot/pom.properties")) {
+            if (in != null) {
+                Properties props = new Properties();
+                props.load(in);
+                String version = props.getProperty("version");
+                if (version != null && !version.isBlank()) {
+                    return version;
+                }
+            }
+        } catch (IOException ignored) {
+        }
+        return "dev";
     }
 }

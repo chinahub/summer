@@ -1,5 +1,7 @@
 package cn.jiebaba.summer.security.core;
 
+import cn.jiebaba.summer.security.userdetails.UserDetails;
+
 import java.util.Collection;
 
 /**
@@ -24,9 +26,14 @@ public interface Authentication {
 
     void setAuthenticated(boolean authenticated) throws IllegalArgumentException;
 
-    /** 便捷方法：将主体呈现为名称（用户名）。 */
+    /**
+     * 便捷方法：将主体呈现为名称（用户名）。
+     * 主体为 {@link UserDetails} 时返回其 {@code getUsername()}（JWT 签发等场景依赖）；
+     * 否则返回其 {@code toString()}。
+     */
     default String getName() {
         Object principal = getPrincipal();
+        if (principal instanceof UserDetails ud) return ud.getUsername();
         return principal == null ? "" : principal.toString();
     }
 }

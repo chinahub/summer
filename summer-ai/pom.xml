@@ -6,11 +6,11 @@
     <parent>
         <groupId>cn.jiebaba.summer</groupId>
         <artifactId>summer-parent</artifactId>
-        <version>3.1.0</version>
+        <version>3.1.1</version>
     </parent>
     <artifactId>summer-ai</artifactId>
     <name>summer-ai</name>
-    <description>summer AI 核心库：纯 JDK 的国内大模型对话抽象与 OpenAI 兼容实现（DeepSeek/GLM/MiniMax），零第三方依赖，不依赖 summer-boot。</description>
+    <description>summer AI 核心库：纯 JDK 的国内大模型对话抽象与 OpenAI 兼容实现（DeepSeek/GLM/MiniMax/Kimi），零第三方依赖，不依赖 summer-boot。</description>
     <dependencies>
         <dependency>
             <groupId>cn.jiebaba.summer</groupId>

@@ -97,7 +97,7 @@
 
 - [x] summer-ai：纯 JDK 国内大模型对话抽象（OpenAI 兼容），零第三方依赖，不依赖 summer-boot
 - [x] `ChatModel` 接口：同步 `call` 与 SSE 流式 `stream` 两种调用方式
-- [x] `OpenAiCompatibleChatModel`：`HttpURLConnection` 阻塞式实现（无 selector），覆盖 DeepSeek/GLM/MiniMax
+- [x] `OpenAiCompatibleChatModel`：`HttpURLConnection` 阻塞式实现（无 selector），覆盖 DeepSeek/GLM/MiniMax/Kimi
 - [x] `ChatClient` fluent 门面：链式拼装 system/user/assistant 消息与 `ChatOptions`
 - [x] 思维链解析：`reasoning_content`（思考模型特有）与 token 用量（含 `prompt_cache_hit_tokens`）
 - [x] `Provider` 枚举：内置厂商默认 base-url 与模型名，配置覆盖即可切换新版本

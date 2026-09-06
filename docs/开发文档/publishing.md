@@ -28,7 +28,7 @@
 
 ### 1. JDK 与 Maven
 
-- JDK 25+（实测 jdk-25.0.4）
+- JDK 25+（本机使用 `D:\jdk\jdk-25.0.4`，实测 jdk-25.0.4）
 - Maven 3.9+（实测 mvnd 1.0.5 内置 Maven 3.9.14）
 
 ### 2. GPG 签名密钥

@@ -31,6 +31,9 @@ public interface IService<T> {
 
     default T getOne(AbstractWrapper<T, ?> wrapper) { return baseMapper().selectOne(wrapper); }
 
+    /** 统计全部记录数（无查询条件）。 */
+    default long count() { return count(null); }
+
     default long count(AbstractWrapper<T, ?> wrapper) { return baseMapper().selectCount(wrapper); }
 
     default IPage<T> page(IPage<T> page, AbstractWrapper<T, ?> wrapper) {

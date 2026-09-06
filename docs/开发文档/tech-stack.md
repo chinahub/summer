@@ -17,7 +17,7 @@
 | 定时任务 | `ScheduledThreadPoolExecutor` + 虚拟线程 | `@Scheduled`：cron 5 段 + fixedRate/fixedDelay |
 | 参数校验 | 手写 Bean Validation 子集 | `@Valid` + 约束注解，递归校验，400 违规列表 |
 | 工具集（utils） | 纯 JDK 手写 | `StringUtil`/`DateUtil`/`JsonUtil`/`SecurityUtil`/`SummerUtil`，参考 commons-lang3 与 hutool，详见 [工具集](../使用文档/utils.md) |
-| 大模型对话（AI） | 纯 JDK `HttpURLConnection` + 自研 `ChatModel`/`ChatClient` | OpenAI 兼容协议直连 DeepSeek/GLM/MiniMax；阻塞式无 selector，支持 SSE 流式与思维链；不依赖 summer-boot，复用 summer-core `JsonUtil`，零第三方依赖，详见 [AI 对话](../使用文档/ai.md) |
+| 大模型对话（AI） | 纯 JDK `HttpURLConnection` + 自研 `ChatModel`/`ChatClient` | OpenAI 兼容协议直连 DeepSeek/GLM/MiniMax/Kimi；阻塞式无 selector，支持 SSE 流式与思维链；不依赖 summer-boot，复用 summer-core `JsonUtil`，零第三方依赖，详见 [AI 对话](../使用文档/ai.md) |
 | 文档处理（Office） | 纯 JDK（csv/md/xml）+ FastExcel/iText（optional） | 自研 `OfficeReader`/`OfficeWriter`/`TableReader`/`TableWriter` 抽象；csv/md/xml 零第三方依赖；xlsx/docx 用 FastExcel（Apache-2.0），pdf 用 iText 7（AGPL-3.0），均 optional 按 classpath 探测条件激活；`Excel` fluent API 支持 TableData 与 Bean 双模式，详见 [路线图](roadmap.md) 第九阶段 |
 | 构建 | Maven（pom modelVersion 4.0.0） | 多模块；离线模式 |
 | 测试 | JUnit 5（Jupiter）+ 自研 `@SummerTest`/`SummerExtension` 整合层 | 参照 Spring Boot Test/Helidon/Quarkus 的 `@ExtendWith` 整合形态：用例写真实 `org.junit.jupiter.api.Test`，IDEA 绿色三角与 surefire 原生执行；`SmokeTest`/`OrmSmokeTest`/`DbSmokeTest` 等进程内冒烟测试保留（沙箱限制进程间 loopback，用同进程自验证全链路），详见下文「为什么不走 junit-like」 |

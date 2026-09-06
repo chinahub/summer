@@ -49,14 +49,14 @@ summer:
   # summer-ai 已在 classpath：取消下列注释并填入 api-key 后启用 AI 示例（/ai/** 端点）。
   # 未配置 summer.ai.provider 与 summer.ai.api-key 时，启动会快速失败（属预期行为）。
   # ai:
-  #   provider: deepseek              # deepseek | glm | minimax
+  #   provider: deepseek              # deepseek | glm | minimax | kimi
   #   api-key: sk-your-api-key-here
   #   # model: deepseek-chat          # 可选，省略用厂商默认
   #   # base-url: https://api.deepseek.com
   #   # timeout-seconds: 60
   #   # temperature: 0.7
   #   # max-tokens: 2048
-  #   # 向量化：DeepSeek 无 embedding 服务，需指向 GLM 等支持 embedding 的厂商
+  #   # 向量化：DeepSeek、Kimi 无 embedding 服务，需指向 GLM 等支持 embedding 的厂商
   #   # embedding:
   #   #   enabled: true
   #   #   model: embedding-3

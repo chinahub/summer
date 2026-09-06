@@ -8,7 +8,7 @@ summer-parent (pom)
 ├── summer-web             嵌入式 HTTP 服务器（ServerSocketChannel 阻塞 + 虚拟线程，参考 Helidon NIMA；支持 TLS / chunked）/ 路由 / JSON / 参数绑定 / 异常 / 校验
 ├── summer-data            ORM：BaseMapper/Wrapper/分页/IService/事务/多方言，纯 JDBC，零第三方依赖
 ├── summer-security        安全模块：JWT 无状态认证 / BCrypt / URL·方法级授权，纯 JDK，零第三方依赖
-├── summer-ai              大模型对话抽象：ChatModel/ChatClient，OpenAI 兼容（DeepSeek/GLM/MiniMax），同步与 SSE 流式，纯 JDK
+├── summer-ai              大模型对话抽象：ChatModel/ChatClient，OpenAI 兼容（DeepSeek/GLM/MiniMax/Kimi），同步与 SSE 流式，纯 JDK
 ├── summer-office          文档处理：解析与生成 xlsx/docx/pdf/xml/csv/md，纯 JDK 实现 csv/md/xml，xlsx/docx/pdf 按 classpath 探测激活第三方实现（POI/PDFBox）
 ├── summer-boot            SummerApplication.run() 启动器 / 自动配置 / 数据源 / Mapper装配 / 关闭钩子
 ├── summer-boot-loader     可执行 jar 启动器 JarLauncher（java -jar 入口，BOOT-INF 解压+类路径重建），由 summer-pack-maven-plugin 内置打包
@@ -166,12 +166,12 @@ private Map<String, Object> config;
 | 包 | 内容 |
 | --- | --- |
 | `cn.jiebaba.summer.ai.chat` | `ChatModel` 接口（`call`/`stream`）、`ChatClient` fluent 门面、`Prompt`/`Message`/`ChatOptions`/`ChatResponse`/`ChatResponseMetadata` |
-| `cn.jiebaba.summer.ai.model` | `Provider` 枚举（DeepSeek/GLM/MiniMax，内置默认 base-url 与模型名） |
+| `cn.jiebaba.summer.ai.model` | `Provider` 枚举（DeepSeek/GLM/MiniMax/Kimi，内置默认 base-url 与模型名） |
 | `cn.jiebaba.summer.ai.model.openai` | `OpenAiCompatibleChatModel`：`HttpURLConnection` 阻塞式实现，同步解析 JSON、流式解析 SSE |
 | `cn.jiebaba.summer.ai` | `AiException` 统一运行期异常 |
 
 - **纯 JDK**：用 `HttpURLConnection`（阻塞式，无 selector）直连各厂商 `OpenAI 兼容` 端点，JSON 序列化/解析复用 summer-core 的 `JsonUtil`，零第三方依赖；
-- **OpenAI 兼容**：DeepSeek、GLM（智谱）、MiniMax 仅 base-url 与模型名不同，请求/响应/SSE 流式协议一致；
+- **OpenAI 兼容**：DeepSeek、GLM（智谱）、MiniMax、Kimi 仅 base-url 与模型名不同，请求/响应/SSE 流式协议一致；
 - **思维链与用量**：解析 `reasoning_content`（思考模型特有）与 `usage`（含 `prompt_cache_hit_tokens`），详见 [AI 对话](../使用文档/ai.md)。
 
 ## summer-office 职责
@@ -207,7 +207,7 @@ private Map<String, Object> config;
 
 ## 运行时模型
 
-- 启动：`java -jar summer-sample\target\summer-sample-3.1.0-boot.jar`
+- 启动：`java -jar summer-sample\target\summer-sample-3.1.1-boot.jar`
 - 每个连接一个虚拟线程，阻塞 IO 不占平台线程；
 - 定时任务体在虚拟线程上执行；
 - 单进程、单 JVM，无外部容器。

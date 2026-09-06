@@ -2,14 +2,15 @@ package cn.jiebaba.summer.ai.model;
 
 /**
  * 国内大模型厂商档案，内置默认 base-url 与默认模型名（均可被配置覆盖）。
- * 默认模型名为当前稳定版本示例；切换 DeepSeek-V4、GLM-5.2、MiniMax-M3 等
+ * 默认模型名为当前稳定版本示例；切换 DeepSeek-V4、GLM-5.4、MiniMax-M3 等
  * 新版本时通过 summer.ai.model 配置指定即可，无需改代码。
  */
 public enum Provider {
 
     DEEPSEEK("https://api.deepseek.com", "deepseek-chat"),
-    GLM("https://open.bigmodel.cn/api/paas/v4", "glm-4"),
-    MINIMAX("https://api.minimax.chat/v1", "MiniMax-Text-01");
+    GLM("https://open.bigmodel.cn/api/paas/v4", "glm-5.3-flash"),
+    MINIMAX("https://api.minimax.chat/v1", "MiniMax-Text-01"),
+    KIMI("https://api.moonshot.cn/v1", "kimi-k3");
 
     private final String defaultBaseUrl;
     private final String defaultModel;
