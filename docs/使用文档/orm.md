@@ -161,9 +161,21 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> {
 | `mysql` / `mariadb` / `h2` | MySqlDialect | `LIMIT ? OFFSET ?` | `json`（`setString`） |
 | `oracle` | OracleDialect | `OFFSET ? FETCH NEXT ? ROWS ONLY` | `CLOB`（`setString`） |
 | `sqlserver` | SqlServerDialect | `OFFSET ? FETCH NEXT ? ROWS ONLY` | `nvarchar(max)`（`setString`） |
-| 未识别 | PostgreSqlDialect | `LIMIT ? OFFSET ?` | 默认 |
+| 未识别 | PostgreSqlDialect（打 WARNING） | `LIMIT ? OFFSET ?` | 默认 |
 
 `Dialect.appendPagination(sql, offset, size, params)` 按各方言正确处理参数顺序；`jsonColumnType()`/`setJsonParameter()`/`getJsonResult()` 让 JSON 字段按方言绑定原生列类型（见下文 TypeHandler）。`SqlBuilder` 持有 dialect 字段，`DataAutoConfiguration` 通过 `Dialect.detect(driver, url)` 注册 `Dialect` bean。
+
+### 标识符按需转义
+
+`Dialect.quote(identifier)` **按需转义**：命中保留字（如 `order`/`level`/`user`/`row`）、含非法字符或以非字母/下划线开头的标识符才加引号；普通列名/表名保持裸名（保留 Oracle 等数据库未加引号时的大小写隐式解析行为）。各方言引号语法：MySQL 反引号 `` ` ``、PostgreSQL 双引号 `"`、Oracle 双引号且统一转大写（`level` → `"LEVEL"`，与隐式存储一致）、SQL Server 方括号 `[ ]`。`SqlBuilder` 生成的全部 INSERT/UPDATE/DELETE/SELECT 已接入该转义。Oracle 真机验证（23ai）：`LEVEL` 为保留字，裸建列报 ORA-03050，转义后 `"LEVEL"` 正常读写。
+
+### Oracle / SQL Server 适配说明
+
+- **字符串回读**：String 字段统一走 `rs.getString()`，Oracle `CLOB`、SQL Server `nvarchar(max)` 均正确返回文本内容；时间字段统一走 `rs.getTimestamp()`，规避个别驱动 `getObject` 返回私有类型（如 `oracle.sql.TIMESTAMP`）
+- **keepalive 探活**：未显式配置 `keepalive-query` 时按方言兜底——Oracle 自动改写为 `SELECT 1 FROM DUAL`，其余保持 `SELECT 1`；显式配置优先
+- **主键**：SQL Server `IDENTITY` 列配合 `IdType.AUTO`（`getGeneratedKeys` 回填）可用；Oracle 需 12c+ IDENTITY 列（传统 sequence 不支持，`ASSIGN_ID` 雪花式不依赖数据库序列）
+- **多数据源**：当前全局单 `Dialect` bean（按 `summer.datasource.url` 探测），多数据源混用不同数据库时需注意（per-DS 方言为后续规划）
+- **驱动自备**：框架零第三方依赖，Oracle/SQL Server 驱动（`ojdbc11`、`mssql-jdbc`）由应用自行引入；mssql-jdbc 10.x+ 默认加密，本地无证书连接需在 URL 显式加 `encrypt=false` 或 `encrypt=true;trustServerCertificate=true`
 
 ### TypeHandler 与 JSONB 列
 
@@ -258,7 +270,7 @@ summer:
 | `idle-timeout` | 600000 | 空闲连接存活时长（毫秒），仅当空闲数 > `minimum-idle` 时回收 |
 | `max-lifetime` | 1800000 | 连接最大存活时长（毫秒），每条连接随机抖动 ±2.5% 避免同时过期；过期后自动替补 |
 | `keepalive-time` | 0（关闭） | 空闲超过此值时用 `keepalive-query` 探活（毫秒）；置于 PgBouncer/Supabase 等代理后建议开启 |
-| `keepalive-query` | `SELECT 1` | 探活 SQL |
+| `keepalive-query` | `SELECT 1`（Oracle 未显式配置时自动 `SELECT 1 FROM DUAL`） | 探活 SQL |
 | `leak-detection-threshold` | 0（关闭） | 连接持有超过此阈值时打 WARN 日志（含借出调用栈） |
 
 **嵌入式数据库提示**：SQLite、H2 等单写者（file 模式）数据库，连接池 >1 时并发写会报 `database is locked`。建议将 `pool-size: 1`（同时 `minimum-idle: 1`）以规避；SQLite 方言已内置映射（复用 MySQL 方言，`LIMIT ? OFFSET ?` 分页语法一致）。

@@ -1,6 +1,8 @@
 package cn.jiebaba.summer.data.support;
 
 import cn.jiebaba.summer.core.env.Environment;
+import cn.jiebaba.summer.data.dialect.Dialect;
+import cn.jiebaba.summer.data.dialect.OracleDialect;
 
 public record DataProperties(String url, String username, String password,
                              String driver, int poolSize,
@@ -14,6 +16,15 @@ public record DataProperties(String url, String username, String password,
 
     public static DataProperties from(Environment env, String prefix) {
         int poolSize = env.getProperty(prefix + ".pool-size", Integer.class, 8);
+        String keepaliveQuery = env.getProperty(prefix + ".keepalive-query", "SELECT 1");
+        if (!env.containsProperty(prefix + ".keepalive-query")) {
+            // 未显式配置探活 SQL 时按方言兜底：Oracle 的 SELECT 1 语法非法，需 FROM DUAL
+            Dialect dialect = Dialect.detect(env.getProperty(prefix + ".driver-class-name", ""),
+                    env.getProperty(prefix + ".url", ""));
+            if (dialect instanceof OracleDialect) {
+                keepaliveQuery = "SELECT 1 FROM DUAL";
+            }
+        }
         return new DataProperties(
                 env.getProperty(prefix + ".url", ""),
                 env.getProperty(prefix + ".username", ""),
@@ -24,7 +35,7 @@ public record DataProperties(String url, String username, String password,
                 env.getProperty(prefix + ".leak-detection-threshold", Long.class, 0L),
                 env.getProperty(prefix + ".idle-timeout", Long.class, 600000L),
                 env.getProperty(prefix + ".max-lifetime", Long.class, 1800000L),
-                env.getProperty(prefix + ".keepalive-query", "SELECT 1"),
+                keepaliveQuery,
                 env.getProperty(prefix + ".minimum-idle", Integer.class, poolSize),
                 env.getProperty(prefix + ".keepalive-time", Long.class, 0L));
     }

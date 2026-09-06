@@ -114,7 +114,8 @@ HandlerMethodInvoker.invoke
 控制器方法执行 → 返回值（经 AOP 代理）
    │
    ▼
-writeResult：@ResponseBody → JSON；String → text；byte[] → octet-stream
+writeResult：@ResponseBody → JSON；String → text；byte[] → octet-stream；
+SseEmitter → chunked SSE 事件流（text/event-stream，请求线程逐帧消费）
    │  异常 → ExceptionHandlerRegistry → @ExceptionHandler 或默认错误体
    ▼
 WebResponse.commit（聚集写：状态行+头+body 一次发到通道）
@@ -207,7 +208,7 @@ private Map<String, Object> config;
 
 ## 运行时模型
 
-- 启动：`java -jar summer-sample\target\summer-sample-3.2.0-boot.jar`
+- 启动：`java -jar summer-sample\target\summer-sample-3.2.1-boot.jar`
 - 每个连接一个虚拟线程，阻塞 IO 不占平台线程；
 - 定时任务体在虚拟线程上执行；
 - 单进程、单 JVM，无外部容器。

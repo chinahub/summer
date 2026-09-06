@@ -19,8 +19,12 @@ import cn.jiebaba.summer.web.http.WebResponse;
 import cn.jiebaba.summer.core.json.Json;
 import cn.jiebaba.summer.web.routing.RouteMatch;
 import cn.jiebaba.summer.web.routing.Router;
+import cn.jiebaba.summer.web.sse.SseEmitter;
+import cn.jiebaba.summer.web.sse.SseEvent;
 import cn.jiebaba.summer.web.support.ExceptionHandlerRegistry;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.concurrent.CompletionStage;
 import java.util.List;
@@ -140,6 +144,10 @@ public final class RequestDispatcher {
         if (result instanceof WebResponse) {
             return;
         }
+        if (result instanceof SseEmitter emitter) {
+            writeSse(emitter, response);
+            return;
+        }
         if (responseBody) {
             response.contentType(converter.defaultContentType());
             response.body(converter.write(result, response.header("Accept")));
@@ -153,6 +161,51 @@ public final class RequestDispatcher {
             response.contentType(converter.defaultContentType());
             response.body(converter.write(result, response.header("Accept")));
         }
+    }
+
+    /**
+     * 驱动 SSE 事件流：在请求线程上从 {@link SseEmitter} 内部队列取事件，按混合编码
+     * （SseEvent 完整帧 / String 原样 data / 其他对象 JSON data）以 chunked 分块逐帧写出；
+     * emitter 正常完成、异常完成或空闲超时后收尾。客户端断开（写失败）时标记连接不复用。
+     */
+    private void writeSse(SseEmitter emitter, WebResponse response) {
+        response.header("Cache-Control", "no-cache");
+        response.header("X-Accel-Buffering", "no");
+        response.contentType("text/event-stream");
+        try {
+            response.commitChunked();
+            while (true) {
+                Object item = emitter.take();
+                if (item == SseEmitter.COMPLETE) break;
+                if (item instanceof SseEmitter.Failure failure) {
+                    emitter.fireError(failure.error());
+                    break;
+                }
+                if (item == null) {
+                    emitter.fireTimeout();
+                    break;
+                }
+                response.writeChunk(encodeSseFrame(item));
+            }
+            response.finishChunked();
+        } catch (IOException e) {
+            response.keepAlive(false);
+            LOG.log(Level.FINE, "SSE write failed, connection closed", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            response.keepAlive(false);
+        } finally {
+            emitter.fireCompletion();
+        }
+    }
+
+    /** 混合编码：SseEvent 完整帧；String 原样 data（多行拆分）；其他对象 JSON 序列化作 data。 */
+    private byte[] encodeSseFrame(Object item) {
+        if (item instanceof SseEvent event) return event.encode();
+        String data = item instanceof String s
+                ? s
+                : new String(converter.write(item, "application/json"), StandardCharsets.UTF_8);
+        return SseEvent.of(data).encode();
     }
 
     private void writeNoRoute(WebResponse response, HttpMethod method, String path) {

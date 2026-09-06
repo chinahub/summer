@@ -47,6 +47,7 @@
 | 文档 | 内容 |
 | --- | --- |
 | [WebSocket](使用文档/websocket.md) | `@WebSocketEndpoint`，纯 JDK 握手+帧协议（RFC 6455） |
+| [SSE](使用文档/sse.md) | 服务端事件推送：`SseEmitter` + `SseEvent`，chunked 分块，LLM 流式转发 |
 | [文件上传](使用文档/multipart.md) | `multipart/form-data` 解析、`@RequestPart` + `MultipartFile` |
 | [CORS](使用文档/cors.md) | 跨域配置 |
 

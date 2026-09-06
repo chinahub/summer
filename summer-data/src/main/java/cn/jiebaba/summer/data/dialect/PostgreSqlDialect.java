@@ -13,7 +13,7 @@ public final class PostgreSqlDialect implements Dialect {
         params.add(size);
         params.add(offset);
     }
-    @Override public String quote(String identifier) { return "\"" + identifier + "\""; }
+    @Override public String escapeQuote(String identifier) { return "\"" + identifier + "\""; }
     @Override public String jsonColumnType() { return "jsonb"; }
     @Override public void setJsonParameter(PreparedStatement ps, int index, String json) throws SQLException {
         ps.setObject(index, pgObject("jsonb", json));

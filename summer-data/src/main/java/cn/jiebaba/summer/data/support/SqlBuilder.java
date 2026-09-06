@@ -44,10 +44,10 @@ public final class SqlBuilder {
                 continue;
             }
             if (value == null) continue;
-            columns.add(f.column());
+            columns.add(col(f.column()));
             params.add(wrap(f, value));
         }
-        String sql = "INSERT INTO " + table.qualifiedTableName()
+        String sql = "INSERT INTO " + tbl()
                 + " (" + String.join(", ", columns) + ")"
                 + " VALUES (" + placeholders(columns.size()) + ")";
         return new Sql(sql, params);
@@ -61,33 +61,33 @@ public final class SqlBuilder {
         for (TableFieldInfo f : fields) {
             Object value = f.getValue(entity);
             if (value == null) continue;
-            sets.add(f.column() + " = ?");
+            sets.add(col(f.column()) + " = ?");
             params.add(wrap(f, value));
         }
         params.add(table.idField().getValue(entity));
-        String sql = "UPDATE " + table.qualifiedTableName()
+        String sql = "UPDATE " + tbl()
                 + (sets.isEmpty() ? "" : " SET " + String.join(", ", sets))
-                + " WHERE " + table.idField().column() + " = ?";
+                + " WHERE " + col(table.idField().column()) + " = ?";
         return new Sql(sql, params);
     }
 
     public Sql deleteById(Object id) {
         if (table.idField() == null) throw new IllegalStateException("Entity has no id field");
         if (table.hasLogicDelete()) {
-            String sql = "UPDATE " + table.qualifiedTableName()
-                    + " SET " + table.logicDeleteField().column() + " = " + table.logicDeleteField().logicDeleteValue()
-                    + " WHERE " + table.idField().column() + " = ?";
+            String sql = "UPDATE " + tbl()
+                    + " SET " + col(table.logicDeleteField().column()) + " = " + table.logicDeleteField().logicDeleteValue()
+                    + " WHERE " + col(table.idField().column()) + " = ?";
             return new Sql(sql, List.of(id));
         }
-        String sql = "DELETE FROM " + table.qualifiedTableName()
-                + " WHERE " + table.idField().column() + " = ?";
+        String sql = "DELETE FROM " + tbl()
+                + " WHERE " + col(table.idField().column()) + " = ?";
         return new Sql(sql, List.of(id));
     }
 
     public Sql selectById(Object id) {
         StringBuilder sql = new StringBuilder("SELECT ").append(selectColumns(null))
-                .append(" FROM ").append(table.qualifiedTableName())
-                .append(" WHERE ").append(table.idField().column()).append(" = ?");
+                .append(" FROM ").append(tbl())
+                .append(" WHERE ").append(col(table.idField().column())).append(" = ?");
         appendLogicDelete(sql, null);
         return new Sql(sql.toString(), List.of(id));
     }
@@ -98,7 +98,7 @@ public final class SqlBuilder {
 
     public Sql selectList(AbstractWrapper<?, ?> wrapper, IPage<?> page) {
         StringBuilder sql = new StringBuilder("SELECT ").append(selectColumns(wrapper))
-                .append(" FROM ").append(table.qualifiedTableName());
+                .append(" FROM ").append(tbl());
         List<Object> params = new ArrayList<>();
         applyWhere(sql, wrapper, params);
         if (wrapper != null) {
@@ -119,7 +119,7 @@ public final class SqlBuilder {
     }
 
     public Sql selectCount(AbstractWrapper<?, ?> wrapper) {
-        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM ").append(table.qualifiedTableName());
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM ").append(tbl());
         List<Object> params = new ArrayList<>();
         applyWhere(sql, wrapper, params);
         return new Sql(sql.toString(), params);
@@ -130,14 +130,14 @@ public final class SqlBuilder {
         if (!where.isEmpty()) {
             sql.append(" WHERE ").append(where);
         } else if (table.hasLogicDelete()) {
-            sql.append(" WHERE ").append(table.logicDeleteField().column())
+            sql.append(" WHERE ").append(col(table.logicDeleteField().column()))
                .append(" = ").append(table.logicDeleteField().logicNotDeleteValue());
         }
     }
 
     private void appendLogicDelete(StringBuilder sql, AbstractWrapper<?, ?> wrapper) {
         if (table.hasLogicDelete()) {
-            sql.append(" AND ").append(table.logicDeleteField().column())
+            sql.append(" AND ").append(col(table.logicDeleteField().column()))
                .append(" = ").append(table.logicDeleteField().logicNotDeleteValue());
         }
     }
@@ -160,7 +160,7 @@ public final class SqlBuilder {
     private String resolveSegment(String segment) {
         String result = segment;
         for (TableFieldInfo f : table.fields()) {
-            result = replacePropertyWithColumn(result, f.property(), f.column());
+            result = replacePropertyWithColumn(result, f.property(), col(f.column()));
         }
         return result;
     }
@@ -192,14 +192,20 @@ public final class SqlBuilder {
             List<String> cols = new ArrayList<>();
             for (String p : lw.selectProperties()) {
                 TableFieldInfo f = table.field(p);
-                cols.add(f != null ? f.column() : NamingUtils.toSnakeCase(p));
+                cols.add(col(f != null ? f.column() : NamingUtils.toSnakeCase(p)));
             }
             return String.join(", ", cols);
         }
         List<String> cols = new ArrayList<>();
-        for (TableFieldInfo f : table.fields()) cols.add(f.column());
+        for (TableFieldInfo f : table.fields()) cols.add(col(f.column()));
         return String.join(", ", cols);
     }
+
+    /** 列名按方言按需转义（保留字/特殊字符加引号，普通标识符保持裸名）。 */
+    private String col(String column) { return dialect.quote(column); }
+
+    /** 表名按方言按需转义（qualifiedTableName 的 schema 与表名分段处理）。 */
+    private String tbl() { return dialect.quote(table.qualifiedTableName()); }
 
     private static Object wrap(TableFieldInfo f, Object value) {
         return f.typeHandler() != null ? new JdbcValue(value, f.typeHandler()) : value;

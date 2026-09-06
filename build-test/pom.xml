@@ -6,7 +6,7 @@
     <parent>
         <groupId>cn.jiebaba.summer</groupId>
         <artifactId>summer-parent</artifactId>
-        <version>3.2.0</version>
+        <version>3.2.1</version>
     </parent>
     <artifactId>build-test</artifactId>
     <name>build-test</name>
@@ -58,6 +58,17 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>42.7.12</version>
+        </dependency>
+        <!-- Oracle / SQL Server 真库冒烟（DialectDbSmokeTest）：驱动仅测试使用，不随发布模块传递 -->
+        <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ojdbc11</artifactId>
+            <version>23.5.0.24.07</version>
+        </dependency>
+        <dependency>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
+            <version>12.8.1.jre11</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

@@ -11,6 +11,7 @@ public final class SqlServerDialect implements Dialect {
         params.add(offset);
         params.add(size);
     }
+    @Override public String escapeQuote(String identifier) { return "[" + identifier + "]"; }
     @Override public String jsonColumnType() { return "nvarchar(max)"; }
     @Override public void setJsonParameter(PreparedStatement ps, int index, String json) throws SQLException {
         ps.setString(index, json);

@@ -19,6 +19,7 @@
 | `cn.jiebaba.summe.web.websocket` | WebSocket：RFC 6455 握手+帧协议，@WebSocketEndpoint |
 | `cn.jiebaba.summe.web.multipart` | 文件上传：multipart/form-data 解析，MultipartFile |
 | `cn.jiebaba.summe.web.cors` | CORS：CorsFilter + CorsProperties |
+| `cn.jiebaba.summe.web.sse` | SSE：SseEmitter（异步推送）+ SseEvent（帧模型），chunked 分块响应 |
 | `cn.jiebaba.summe.web.filter` | 过滤器链：Filter/FilterChain |
 | `cn.jiebaba.summe.web.support` | Web 路由注册 + 异常处理注册 |
 | `cn.jiebaba.summe.web.annotation` | Web 注解：@RestController/@RestControllerAdvice/@RequestParam/@PathVariable/@RequestPart/@ResponseStatus |
@@ -30,4 +31,7 @@
 - **参数校验**：Validator 递归校验嵌套对象，校验失败返回 400 + 违规列表
 - **gzip 压缩**：`server.compression.enabled`（默认关）+ `mime-types` + `min-response-size`，提交前按
   Accept-Encoding/Content-Type/长度判定，未满足或压缩失败回退明文
+- **SSE**：handler 返回 `SseEmitter`（`cn.jiebaba.summer.web.sse`）即开启事件流；请求线程从内部队列
+  取事件按 chunked 写出（`SseEvent` 完整帧/String data/其他 JSON data 混合编码），`text/event-stream`
+  + `Cache-Control: no-cache`；complete/completeWithError/空闲超时结束流，客户端断开关闭连接
 - **抽象优先**：关键接口（WebRequest/WebResponse/MessageConverter/HandlerMethodArgumentResolver）针对接口编程

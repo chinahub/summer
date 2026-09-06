@@ -19,6 +19,8 @@ import cn.jiebaba.summer.web.annotation.RequestParam;
 import cn.jiebaba.summer.web.annotation.RequestPart;
 import cn.jiebaba.summer.web.annotation.RestController;
 import cn.jiebaba.summer.web.multipart.MultipartFile;
+import cn.jiebaba.summer.web.sse.SseEmitter;
+import cn.jiebaba.summer.web.sse.SseEvent;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -27,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * summer-ai 能力演示：同步对话、流式对话（服务端聚合返回）、对话记忆、RAG 检索增强与文档入库。
+ * summer-ai 能力演示：同步对话、流式对话（SSE 转发）、对话记忆、RAG 检索增强与文档入库。
  * ChatClient 由 summer-boot 按 summer.ai.* 自动装配；记忆/RAG/向量库为可选装配（@Lazy），
  * 未启用时对应端点返回提示而非抛错，便于在仅配置对话能力时也能运行本示例。
  */
@@ -59,18 +61,29 @@ public class AiController {
         return out;
     }
 
-    /** 流式对话：服务端逐 token 消费流并聚合为完整文本返回（summer-web 暂未提供 SSE 端点）。 */
+    /**
+     * 流式对话（SSE）：handler 返回 SseEmitter 后立即返回，由后台虚拟线程逐 token 消费
+     * 模型流推送 data 帧，末尾发送 {@code event: done} 帧后结束流。浏览器 EventSource
+     * 或 curl 均可接收。需 summer.ai.* 配置完整。
+     */
     @GetMapping("/stream")
-    public Map<String, Object> stream(@RequestParam("q") String question) {
-        StringBuilder sb = new StringBuilder();
-        try (java.util.stream.Stream<ChatResponse> s = chatClient.prompt(SYSTEM).user(question).stream()) {
-            s.forEach(chunk -> {
-                if (chunk.content() != null) {
-                    sb.append(chunk.content());
-                }
-            });
-        }
-        return Map.of("content", sb.toString());
+    public SseEmitter stream(@RequestParam("q") String question) {
+        SseEmitter emitter = new SseEmitter(0);
+        Thread.startVirtualThread(() -> {
+            try (java.util.stream.Stream<ChatResponse> s = chatClient.prompt(SYSTEM).user(question).stream()) {
+                s.forEach(chunk -> {
+                    if (chunk.content() != null && !chunk.content().isEmpty()) {
+                        emitter.send(chunk.content());
+                    }
+                });
+            } catch (Exception e) {
+                emitter.completeWithError(e);
+                return;
+            }
+            emitter.send(SseEvent.of("[DONE]", "done"));
+            emitter.complete();
+        });
+        return emitter;
     }
 
     /** 带记忆的多轮对话：按 conv 维护会话历史。需 summer.ai.memory.enabled=true。 */

@@ -257,6 +257,15 @@ public final class SqlExecutor {
                     Object value;
                     if (f.typeHandler() != null) {
                         value = f.typeHandler().getResult(rs, idx, f.javaType(), dialect);
+                    } else if (f.javaType() == String.class) {
+                        // 字符串字段统一走 getString：VARCHAR/CLOB/NVARCHAR 均正确返回内容，
+                        // 规避 Oracle 驱动 getObject 对 CLOB 返回 CLOB 对象而非文本的问题
+                        value = rs.getString(idx);
+                    } else if (isTemporal(f.javaType())) {
+                        // 时间字段统一走 getTimestamp（标准 java.sql.Timestamp），
+                        // 规避个别驱动 getObject 返回私有类型（如 oracle.sql.TIMESTAMP）
+                        value = rs.getTimestamp(idx);
+                        if (value != null) value = coerce(value, f.javaType());
                     } else {
                         value = rs.getObject(idx);
                         if (value != null) value = coerce(value, f.javaType());
@@ -271,6 +280,14 @@ public final class SqlExecutor {
             }
         }
         return rows;
+    }
+
+    /** 是否为时间类目标类型（走 rs.getTimestamp 标准取值路径）。 */
+    private static boolean isTemporal(Class<?> type) {
+        return type == LocalDateTime.class || type == LocalDate.class || type == LocalTime.class
+                || type == Instant.class || type == OffsetDateTime.class
+                || type == java.sql.Timestamp.class || type == java.sql.Date.class
+                || type == java.sql.Time.class || type == java.util.Date.class;
     }
 
     /**

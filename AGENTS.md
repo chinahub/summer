@@ -8,7 +8,7 @@
 summer 是基于 JDK 25 内置库、虚拟线程构建的类 Spring Boot 轻量级 Java 微服务框架。
 - **定位**：零 Servlet、尽量零第三方依赖，`java -jar` 直接运行
 - **包名**：`cn.jiebaba.summer`
-- **版本**：3.2.0
+- **版本**：3.2.1
 - **许可**：Apache 2.0
 - **JDK**：25（`maven.compiler.release=25`）
 - **构建**：Maven，多模块（parent POM，11 个子模块）
