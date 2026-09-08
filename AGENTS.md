@@ -40,7 +40,7 @@ mvn clean deploy -P release
 | summer-web | 嵌入式 HTTP(NIMA) + 路由 + 校验 + WebSocket | ServerSocketChannel, 虚拟线程, 路由/绑定, JSON, multipart, CORS, 参数校验 |
 | summer-data | ORM + 事务 + 多数据源 | BaseMapper/Wrapper/分页/IService, 多方言, @DS/@DSTransactional |
 | summer-security | JWT 无状态认证 + BCrypt + 授权 | JwtEncoder/Decoder, SecurityFilterChain, @PreAuthorize, CSRF |
-| summer-ai | 大模型对话抽象 + RAG + 向量存储 | ChatClient, OpenAI 兼容, SSE 流式, 工具调用, embedding, 重试/熔断 |
+| summer-ai | 大模型对话抽象 + RAG + 向量存储 + A2A 跨实例协作 | ChatClient, OpenAI 兼容, SSE 流式, 工具调用, embedding, 重试/熔断, agent(A2A 委派/契约/恢复) |
 | summer-office | 文档读写（xlsx/docx/pdf/csv/md/xml）+ OCR | 纯 JDK csv/md/xml, POI/PDFBox 按 classpath 探测激活, ONNX OCR |
 | summer-boot | 启动器 + 自动配置 | SummerApplication.run(), 各模块 AutoConfiguration, Mapper 注册 |
 | summer-boot-loader | 可执行 jar 启动器 | JarLauncher（`java -jar` 入口） |

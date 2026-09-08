@@ -4,6 +4,8 @@ import cn.jiebaba.summer.ai.embedding.EmbeddingModel;
 import cn.jiebaba.summer.ai.memory.ChatMemory;
 import cn.jiebaba.summer.ai.rag.RagClient;
 import cn.jiebaba.summer.ai.vectorstore.VectorStore;
+import cn.jiebaba.summer.boot.ai.AiAutoConfiguration;
+import cn.jiebaba.summer.core.context.BeanDefinition;
 import cn.jiebaba.summer.core.context.DefaultApplicationContext;
 import cn.jiebaba.summer.core.env.Environment;
 import org.junit.jupiter.api.AfterEach;
@@ -19,6 +21,15 @@ import java.util.Set;
  * 独立作用域上下文，不启动 Web/DB，不发起真实网络调用（仅构造对象）。
  */
 public class AiExtendedAutoConfigTest {
+
+    /** 程序化注册 AiAutoConfiguration（对齐 SummerApplication 的注册方式；不扫描框架包）。 */
+    private static DefaultApplicationContext aiContext(Environment env) {
+        DefaultApplicationContext ctx = new DefaultApplicationContext(
+                null, env, Set.of("cn.jiebaba.summer.nonexistent"));
+        String name = DefaultApplicationContext.decapitalize(AiAutoConfiguration.class.getSimpleName());
+        ctx.registerBeanDefinition(name, new BeanDefinition(name, AiAutoConfiguration.class));
+        return ctx;
+    }
 
     @BeforeEach
     void clearProps() {
@@ -44,7 +55,7 @@ public class AiExtendedAutoConfigTest {
         System.setProperty("summer.ai.memory.max-messages", "10");
         System.setProperty("summer.ai.rag.enabled", "true");
         Environment env = new Environment();
-        DefaultApplicationContext ctx = new DefaultApplicationContext(null, env, Set.of("cn.jiebaba.summer.boot.ai"));
+        DefaultApplicationContext ctx = aiContext(env);
         try {
             ctx.refresh();
             EmbeddingModel embedding = ctx.getBean(EmbeddingModel.class);
@@ -66,7 +77,7 @@ public class AiExtendedAutoConfigTest {
         System.setProperty("summer.ai.provider", "deepseek");
         System.setProperty("summer.ai.api-key", "dummy-key");
         Environment env = new Environment();
-        DefaultApplicationContext ctx = new DefaultApplicationContext(null, env, Set.of("cn.jiebaba.summer.boot.ai"));
+        DefaultApplicationContext ctx = aiContext(env);
         try {
             ctx.refresh();
             Assertions.assertThrows(RuntimeException.class,
@@ -83,7 +94,7 @@ public class AiExtendedAutoConfigTest {
         System.setProperty("summer.ai.provider", "deepseek");
         System.setProperty("summer.ai.api-key", "dummy-key");
         Environment env = new Environment();
-        DefaultApplicationContext ctx = new DefaultApplicationContext(null, env, Set.of("cn.jiebaba.summer.boot.ai"));
+        DefaultApplicationContext ctx = aiContext(env);
         try {
             ctx.refresh();
             // 未启用 memory/rag/vectorstore 时，refresh 仍成功（@Lazy 不实例化），

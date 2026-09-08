@@ -77,6 +77,7 @@
 - [x] `StringUtil`（参考 commons-lang3 StringUtils）：判空/截取/split/join/填充/替换/大小写/判断等 ~90 个方法，全 `null` 容错
 - [x] `DateUtil`（参考 hutool DateUtil）：基于 `java.time` 的格式化/解析/偏移/区间/边界/字段提取，`Date`↔`LocalDateTime` 互转
 - [x] `JsonUtil`（参考 hutool JSONUtil）：纯 JDK 序列化/解析/类型绑定，含 `JSONObject`/`JSONArray`，支持 record/Bean/Map/集合/枚举/`Optional`/`java.time`
+- [x] `JsonUtil` 大整数精确解析修复：无类型 `parse` 整数字面量读为 `Long`（实测原实现读为 Double，19 位雪花 id 经 `getLong` 丢精度），超出 long 范围降级 `BigInteger`；浮点仍为 `Double`
 - [x] `SecurityUtil`（参考 hutool SecureUtil）：MD5/SHA 摘要、HMAC、AES/DES 对称、RSA 非对称+签名验签、Base64/Hex、UUID
 - [x] `SummerUtil`：IoC 容器静态门面，`getBean`/`registerBean`/`unregisterBean`（触发销毁回调）
 - [x] IoC 容器扩展：`ApplicationContext` 新增 `registerBean`/`unregisterBean`，`SummerApplication.run()` 自动绑定上下文
@@ -120,6 +121,7 @@
 - [x] 流式 token 用量（`stream_options.include_usage=true`，末帧 `usage` 解析填入 `ChatResponse.metadata`，工具循环 `emit` 透传）
 - [x] 向量库元数据过滤（`SearchRequest` 增 `filter` 键值对等值匹配；pgvector 走 `metadata::jsonb @> ?::jsonb`，内存走谓词）
 - [x] AI 调用日志 / 观测性（`LoggingChatModel` 装饰器记录每次 LLM 调用的模型/token/耗时/成败/提问摘要；`summer.ai.logging.enabled` 开关 + `ai_call_log` 表，`JdbcAiCallLogger` 复用 `SqlExecutor` 惰性建表）
+- [x] A2A 跨实例 Agent 协作（`cn.jiebaba.summer.ai.agent`：AgentTask/AgentExecutor SPI、持久契约 ContractStore/FileContractStore、A2aCoordinator 出域委派+入域接域+双向恢复、A2aGateway 防环网关；summer-boot `A2aAutoConfiguration` 按 `summer.ai.a2a.*` opt-in 装配并注册 /ai/a2a/** 端点；见 [AI 文档](../使用文档/ai.md)）
 
 ### 待开发（summer-ai）
 - [ ] DB 驱动厂商凭据（生产级）：`AiAutoConfiguration` 支持从 `ai_provider_info` 表实时读取 provider/baseurl/api-key（当前仅冒烟测试实现，未接入自动配置）

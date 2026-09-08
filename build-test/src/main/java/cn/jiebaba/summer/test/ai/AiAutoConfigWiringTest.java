@@ -1,5 +1,6 @@
 package cn.jiebaba.summer.test.ai;
 
+import cn.jiebaba.summer.boot.ai.AiAutoConfiguration;
 import cn.jiebaba.summer.ai.chat.ChatModel;
 import cn.jiebaba.summer.ai.model.openai.OpenAiCompatibleChatModel;
 import cn.jiebaba.summer.ai.retry.ResilientChatModel;
@@ -7,6 +8,7 @@ import cn.jiebaba.summer.ai.tools.Tool;
 import cn.jiebaba.summer.ai.tools.ToolCallback;
 import cn.jiebaba.summer.ai.tools.ToolCallingChatModel;
 import cn.jiebaba.summer.ai.tools.ToolParameter;
+import cn.jiebaba.summer.core.context.BeanDefinition;
 import cn.jiebaba.summer.core.context.DefaultApplicationContext;
 import cn.jiebaba.summer.core.env.Environment;
 import org.junit.jupiter.api.AfterEach;
@@ -20,6 +22,16 @@ import java.util.Set;
 
 /** summer-boot AiAutoConfiguration 弹性包装与工具调用的装配测试（独立作用域上下文，不启动 Web/DB）。 */
 public class AiAutoConfigWiringTest {
+
+    /** 程序化注册 AiAutoConfiguration（对齐 SummerApplication 的注册方式；不扫描框架包
+     * cn.jiebaba.summer.boot.ai——包内还含 A2a 端点组件，会受其开关状态干扰）。 */
+    private static DefaultApplicationContext aiContext(Environment env) {
+        DefaultApplicationContext ctx = new DefaultApplicationContext(
+                null, env, Set.of("cn.jiebaba.summer.nonexistent"));
+        String name = DefaultApplicationContext.decapitalize(AiAutoConfiguration.class.getSimpleName());
+        ctx.registerBeanDefinition(name, new BeanDefinition(name, AiAutoConfiguration.class));
+        return ctx;
+    }
 
     @BeforeEach
     void clearProps() {
@@ -36,7 +48,7 @@ public class AiAutoConfigWiringTest {
         System.setProperty("summer.ai.provider", "deepseek");
         System.setProperty("summer.ai.api-key", "dummy-key");
         Environment env = new Environment();
-        DefaultApplicationContext ctx = new DefaultApplicationContext(null, env, Set.of("cn.jiebaba.summer.boot.ai"));
+        DefaultApplicationContext ctx = aiContext(env);
         try {
             ctx.refresh();
             ChatModel model = ctx.getBean(ChatModel.class);
@@ -54,7 +66,7 @@ public class AiAutoConfigWiringTest {
         System.setProperty("summer.ai.api-key", "dummy-key");
         System.setProperty("summer.ai.retry.max-attempts", "3");
         Environment env = new Environment();
-        DefaultApplicationContext ctx = new DefaultApplicationContext(null, env, Set.of("cn.jiebaba.summer.boot.ai"));
+        DefaultApplicationContext ctx = aiContext(env);
         try {
             ctx.refresh();
             ChatModel model = ctx.getBean(ChatModel.class);
@@ -73,7 +85,7 @@ public class AiAutoConfigWiringTest {
         System.setProperty("summer.ai.api-key", "dummy-key");
         System.setProperty("summer.ai.tools.enabled", "true");
         Environment env = new Environment();
-        DefaultApplicationContext ctx = new DefaultApplicationContext(null, env, Set.of("cn.jiebaba.summer.boot.ai"));
+        DefaultApplicationContext ctx = aiContext(env);
         try {
             ToolCallback echo = new Tool("echo", "回显文本",
                     List.of(ToolParameter.string("text", "待回显文本")),
@@ -98,7 +110,7 @@ public class AiAutoConfigWiringTest {
         System.setProperty("summer.ai.api-key", "dummy-key");
         System.setProperty("summer.ai.tools.enabled", "true");
         Environment env = new Environment();
-        DefaultApplicationContext ctx = new DefaultApplicationContext(null, env, Set.of("cn.jiebaba.summer.boot.ai"));
+        DefaultApplicationContext ctx = aiContext(env);
         try {
             ctx.refresh();
             ChatModel model = ctx.getBean(ChatModel.class);

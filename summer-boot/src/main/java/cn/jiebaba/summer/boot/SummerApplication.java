@@ -22,6 +22,7 @@ import cn.jiebaba.summer.boot.event.ApplicationReadyEvent;
 import cn.jiebaba.summer.boot.security.SecurityAutoConfiguration;
 import cn.jiebaba.summer.boot.web.WebAutoConfiguration;
 import cn.jiebaba.summer.boot.ai.AiAutoConfiguration;
+import cn.jiebaba.summer.boot.ai.A2aAutoConfiguration;
 import cn.jiebaba.summer.boot.office.OfficeAutoConfiguration;
 import cn.jiebaba.summer.boot.ocr.OcrAutoConfiguration;
 import cn.jiebaba.summer.boot.data.MapperRegistrar;
@@ -175,6 +176,11 @@ public final class SummerApplication {
         // summer-ai 不在时 AiAutoConfiguration 永不被加载，故不会 NoClassDefFoundError。
         if (isClassPresent("cn.jiebaba.summer.ai.chat.ChatModel")) {
             configs.add(AiAutoConfiguration.class);
+        }
+        // 可选模块 summer-ai A2A 跨实例协作：仅当其在 classpath 时注册自动配置
+        //（summer.ai.a2a.enabled=true 才实际装配 bean，见 A2aAutoConfiguration 上的条件注解）。
+        if (isClassPresent("cn.jiebaba.summer.ai.agent.A2aCoordinator")) {
+            configs.add(A2aAutoConfiguration.class);
         }
         // 可选模块 summer-office：仅当其在 classpath 时注册自动配置。
         if (isClassPresent("cn.jiebaba.summer.office.Office")) {
