@@ -291,7 +291,15 @@ final class JsonReader {
             }
         }
         String token = new String(src, start, pos - start, StandardCharsets.UTF_8);
-        return floating ? Double.parseDouble(token) : Long.parseLong(token);
+        if (floating) {
+            return Double.parseDouble(token);
+        }
+        try {
+            return Long.parseLong(token);
+        } catch (NumberFormatException e) {
+            // 超出 long 范围的整数字面量：以 BigInteger 保留精确值（JSON 规范允许任意精度整数）
+            return new java.math.BigInteger(token);
+        }
     }
 
     /**

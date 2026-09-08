@@ -121,4 +121,37 @@ public class JsonUtilTest {
         Assertions.assertEquals(1, m.get("a").intValue());
         Assertions.assertEquals(2, m.get("b").intValue());
     }
+
+    /** 回归：雪花级长整数（19 位，超出 double 安全整数）在无类型解析中必须精确为 Long，而非 Double。 */
+    @Test
+    public void bigLongParsedExactly() {
+        String json = "{\"id\":1875798709925576711}";
+        JSONObject obj = JsonUtil.parseObj(json);
+        Object raw = obj.get("id");
+        Assertions.assertTrue(raw instanceof Long, "整数字面量应为 Long，实际: " + raw.getClass());
+        Assertions.assertEquals(1875798709925576711L, obj.getLong("id").longValue());
+        Assertions.assertEquals("1875798709925576711", obj.getStr("id"));
+        Assertions.assertEquals(1875798709925576711L, ((Number) JsonUtil.parse("1875798709925576711")).longValue());
+    }
+
+    /** 超出 long 范围的整数字面量以 BigInteger 保留精确值，且序列化回写不变形。 */
+    @Test
+    public void beyondLongParsedAsBigInteger() {
+        String json = "{\"id\":123456789012345678901234567890}";
+        JSONObject obj = JsonUtil.parseObj(json);
+        Object raw = obj.get("id");
+        Assertions.assertTrue(raw instanceof java.math.BigInteger, "超范围整数应为 BigInteger，实际: " + raw.getClass());
+        Assertions.assertEquals("123456789012345678901234567890", obj.getStr("id"));
+        Assertions.assertEquals("{\"id\":123456789012345678901234567890}", JsonUtil.toJsonStr(obj));
+    }
+
+    /** typed 绑定路径的 long 字段不受无类型解析改动影响（流式读取本就精确）。 */
+    @Test
+    public void typedLongBindingStillExact() {
+        record Holder(long id) {}
+        Holder h = JsonUtil.toBean("{\"id\":1875798709925576711}", Holder.class);
+        Assertions.assertEquals(1875798709925576711L, h.id());
+        Assertions.assertEquals("1875798709925576711", JsonUtil.toJsonStr(new Holder(1875798709925576711L))
+                .substring("{\"id\":".length(), "{\"id\":".length() + 19));
+    }
 }

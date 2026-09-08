@@ -990,7 +990,15 @@ public final class Json {
                 while (pos < src.length && Character.isDigit(src[pos])) pos++;
             }
             String token = new String(src, start, pos - start);
-            return floating ? Double.valueOf(token) : Long.valueOf(token);
+            if (floating) {
+                return Double.valueOf(token);
+            }
+            try {
+                return Long.valueOf(token);
+            } catch (NumberFormatException e) {
+                // 超出 long 范围的整数字面量：以 BigInteger 保留精确值（JSON 规范允许任意精度整数）
+                return new java.math.BigInteger(token);
+            }
         }
 
         Boolean readBoolean() {
