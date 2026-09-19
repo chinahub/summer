@@ -30,7 +30,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * summer-office 补充测试：覆盖现有冒烟测试未触及的组件与边界场景。
+ * office 模块补充测试（现位于 summer-boot）：覆盖现有冒烟测试未触及的组件与边界场景。
  * <p>覆盖项：CSV 读写往返与转义、XML 读写往返、Markdown 读写往返、TableData 不可变性与计数、
  * OfficeFormat 扩展名推断与异常、Office 门面工厂、各 Reader 读回自产 Writer 输出、
  * Excel 文件类型校验（拒绝 XLS/非 ZIP）、Excel 流式读写 API。

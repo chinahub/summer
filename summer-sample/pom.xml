@@ -6,7 +6,7 @@
     <parent>
         <groupId>cn.jiebaba.summer</groupId>
         <artifactId>summer-parent</artifactId>
-        <version>3.2.1</version>
+        <version>4.0</version>
     </parent>
     <artifactId>summer-sample</artifactId>
     <name>summer-sample</name>
@@ -17,15 +17,10 @@
             <artifactId>summer-boot</artifactId>
             <version>${summer.version}</version>
         </dependency>
-        <!-- summer-boot 以 optional 引入 summer-ai/summer-office（不传递），AI 示例需显式声明 -->
+        <!-- AI 示例需显式声明 summer-ai（summer-boot 不再传递引入） -->
         <dependency>
             <groupId>cn.jiebaba.summer</groupId>
             <artifactId>summer-ai</artifactId>
-            <version>${summer.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>cn.jiebaba.summer</groupId>
-            <artifactId>summer-office</artifactId>
             <version>${summer.version}</version>
         </dependency>
 
@@ -52,7 +47,7 @@
             <plugin>
                 <groupId>cn.jiebaba.summer</groupId>
                 <artifactId>summer-pack-maven-plugin</artifactId>
-                <version>3.2.1</version>
+                <version>4.0</version>
                 <executions>
                     <execution>
                         <goals><goal>repackage</goal></goals>

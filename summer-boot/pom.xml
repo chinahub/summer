@@ -6,44 +6,23 @@
     <parent>
         <groupId>cn.jiebaba.summer</groupId>
         <artifactId>summer-parent</artifactId>
-        <version>3.2.1</version>
+        <version>4.0</version>
     </parent>
     <artifactId>summer-boot</artifactId>
     <name>summer-boot</name>
-    <description>summer application bootstrap: SummerApplication.run(), auto-configuration, data layer wiring and shutdown hooks.</description>
+    <description>summer application bootstrap and core runtime: SummerApplication.run(), auto-configuration, IoC/AOP/logging/scheduling (原 summer-core）、嵌入式 HTTP/web（原 summer-web）、ORM/事务/多数据源（原 summer-data）、JWT 安全（原 summer-security）、文档读写（原 summer-office，OCR 移至 summer-support）。</description>
     <dependencies>
+        <!-- SLF4J API：仅用于 SLF4J→JUL 绑定适配，optional 不传递给使用者，保持运行时零第三方依赖 -->
         <dependency>
-            <groupId>cn.jiebaba.summer</groupId>
-            <artifactId>summer-core</artifactId>
-            <version>${summer.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>cn.jiebaba.summer</groupId>
-            <artifactId>summer-web</artifactId>
-            <version>${summer.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>cn.jiebaba.summer</groupId>
-            <artifactId>summer-data</artifactId>
-            <version>${summer.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>cn.jiebaba.summer</groupId>
-            <artifactId>summer-security</artifactId>
-            <version>${summer.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>cn.jiebaba.summer</groupId>
-            <artifactId>summer-ai</artifactId>
-            <version>${summer.version}</version>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- JUnit 5 整合层（@SummerTest/SummerExtension）：optional 不传递给使用者，保持运行时零第三方依赖 -->
         <dependency>
-            <groupId>cn.jiebaba.summer</groupId>
-            <artifactId>summer-office</artifactId>
-            <version>${summer.version}</version>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
             <optional>true</optional>
         </dependency>
     </dependencies>
 </project>
-

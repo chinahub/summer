@@ -1,6 +1,6 @@
 # SLF4J 绑定（@Slf4j 支持）
 
-Summer 自带一个轻量 SLF4J 2.x 绑定，位于 `summer-core` 的 `cn.jiebaba.summer.core.logging.slf4j` 包。它把所有 SLF4J 调用转发到 `java.util.logging`（JUL），因此 Lombok `@Slf4j` 生成的日志、以及直接使用 `org.slf4j.Logger` 的日志，都会统一走 Summer 的日志管道。
+Summer 自带一个轻量 SLF4J 2.x 绑定，位于 `summer-boot` 的 `cn.jiebaba.summer.core.logging.slf4j` 包。它把所有 SLF4J 调用转发到 `java.util.logging`（JUL），因此 Lombok `@Slf4j` 生成的日志、以及直接使用 `org.slf4j.Logger` 的日志，都会统一走 Summer 的日志管道。
 
 ## 设计要点
 
@@ -10,7 +10,7 @@ Summer 自带一个轻量 SLF4J 2.x 绑定，位于 `summer-core` 的 `cn.jiebab
 
 ## 依赖引入
 
-`summer-core` 将 `org.slf4j:slf4j-api` 声明为 `optional`（版本由父 pom 的 `<slf4j.version>` 统一管理，不硬编码）。需要使用 `@Slf4j` 的应用在自身模块显式引入 slf4j-api 即可：
+`summer-boot` 将 `org.slf4j:slf4j-api` 声明为 `optional`（版本由父 pom 的 `<slf4j.version>` 统一管理，不硬编码）。需要使用 `@Slf4j` 的应用在自身模块显式引入 slf4j-api 即可：
 
 ```xml
 <dependency>

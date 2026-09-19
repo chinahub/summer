@@ -2,15 +2,19 @@
 
 ## 模块划分
 
+> 4.0 起模块从 11 个精简为 7 个：原 summer-core / summer-web / summer-data / summer-security /
+> summer-office（除 OCR）的全部源码并入 summer-boot（包名不变）；OCR 独立为新模块 summer-support。
+
 ```
 summer-parent (pom)
-├── summer-core            IoC 容器 / 依赖注入 / 组件扫描 / 配置环境 / 日志 / AOP / 定时任务 / 工具集（utils） / 自研测试微框架（core.test 包）
-├── summer-web             嵌入式 HTTP 服务器（ServerSocketChannel 阻塞 + 虚拟线程，参考 Helidon NIMA；支持 TLS / chunked）/ 路由 / JSON / 参数绑定 / 异常 / 校验
-├── summer-data            ORM：BaseMapper/Wrapper/分页/IService/事务/多方言，纯 JDBC，零第三方依赖
-├── summer-security        安全模块：JWT 无状态认证 / BCrypt / URL·方法级授权，纯 JDK，零第三方依赖
-├── summer-ai              大模型对话抽象：ChatModel/ChatClient，OpenAI 兼容（DeepSeek/GLM/MiniMax/Kimi），同步与 SSE 流式，纯 JDK
-├── summer-office          文档处理：解析与生成 xlsx/docx/pdf/xml/csv/md，纯 JDK 实现 csv/md/xml，xlsx/docx/pdf 按 classpath 探测激活第三方实现（POI/PDFBox）
-├── summer-boot            SummerApplication.run() 启动器 / 自动配置 / 数据源 / Mapper装配 / 关闭钩子
+├── summer-boot            启动器 + 核心运行时：SummerApplication.run() / 自动配置 / 数据源 / Mapper装配 / 关闭钩子
+│                          （原 summer-core：IoC 容器 / 依赖注入 / 组件扫描 / 配置环境 / 日志 / AOP / 定时任务 / 工具集 / core.test 测试微框架）
+│                          （原 summer-web：嵌入式 HTTP 服务器（ServerSocketChannel 阻塞 + 虚拟线程，参考 Helidon NIMA；支持 TLS / chunked）/ 路由 / JSON / 参数绑定 / 异常 / 校验）
+│                          （原 summer-data：ORM：BaseMapper/Wrapper/分页/IService/事务/多方言，纯 JDBC，零第三方依赖）
+│                          （原 summer-security：安全模块：JWT 无状态认证 / BCrypt / URL·方法级授权，纯 JDK，零第三方依赖）
+│                          （原 summer-office：文档处理：解析与生成 xlsx/docx/pdf/xml/csv/md，xlsx/docx/pdf 均为自研实现，零第三方依赖）
+├── summer-support         OCR 文字识别（cn.jiebaba.summer.support.ocr）：DB 检测 + 方向分类 + CRNN 识别，FFM 直连 onnxruntime 原生库
+├── summer-ai              大模型对话抽象：ChatModel/ChatClient，OpenAI 兼容（DeepSeek/GLM/MiniMax/Kimi），同步与 SSE 流式，纯 JDK；AI 自动配置（cn.jiebaba.summer.boot.ai 包）随本模块发布
 ├── summer-boot-loader     可执行 jar 启动器 JarLauncher（java -jar 入口，BOOT-INF 解压+类路径重建），由 summer-pack-maven-plugin 内置打包
 ├── summer-pack-maven-plugin  repackage goal：mvn package 自动产出 BOOT-INF 可执行 jar
 ├── summer-sample          示例应用（Application + controller/service/repository/aspect），端到端验证
@@ -20,20 +24,18 @@ summer-parent (pom)
 ## 依赖关系（自底向上）
 
 ```
-summer-sample ──depends──> summer-boot ──depends──> summer-data ──depends──> summer-core
-                                └──depends──> summer-web  ──depends──> summer-core
-                                └──depends──> summer-ai   ──depends──> summer-core  （optional，按 classpath 探测条件激活）
-                                └──depends──> summer-office ──depends──> summer-core  （optional，按 classpath 探测条件激活）
+summer-sample ──depends──> summer-boot  （零 summer-* 依赖：core/web/data/security/office 源码已并入）
+                    └──depends──> summer-ai      ──depends──> summer-boot
+                    └──depends──> summer-support ──depends──> summer-boot
 summer-pack-maven-plugin ──depends──> summer-boot-loader  （可执行 jar 启动器，插件内置）
-build-test ──depends──> summer-sample / summer-boot / summer-data / summer-core  （集中式测试）
+build-test ──depends──> summer-sample / summer-boot / summer-ai / summer-support  （集中式测试）
 ```
 
-- `summer-core` 是地基，零第三方依赖；
-- `summer-web` 依赖 `summer-core`（不再依赖 `jdk.httpserver`，改用 `java.net`）；
-- `summer-data` 依赖 `summer-core`（用 JDK 的 `java.sql`）；
-- `summer-ai` 依赖 `summer-core`（用其 `JsonUtil`），不依赖 summer-boot；`summer-boot` 以 `optional` 引入并在启动时按 classpath 探测条件注册 `AiAutoConfiguration`；
-- `summer-boot` 组装 core + web + data + security + ai + office（后四者 optional），提供启动入口；`summer-boot-loader` 提供可执行 jar 启动器，作为 `summer-pack-maven-plugin` 的依赖被内置打包，应用项目无需单独声明；
-- `summer-sample` 是使用者，仅需依赖 boot，打包由 `summer-pack-maven-plugin` 内置 loader，业务包无需额外声明（classpath 模式，反射不受强封装限制）。
+- `summer-boot` 是地基与唯一核心 jar，零第三方运行时依赖（仅 SLF4J API / JUnit API 为 optional）；
+- `summer-ai` 依赖 `summer-boot`（用其 `JsonUtil`/`SqlExecutor` 等 core/data 能力）；其自动配置类（`cn.jiebaba.summer.boot.ai` 包，随 summer-ai 发布）由 `summer-boot` 在启动时按 classpath 探测（`isClassPresent`）+ `Class.forName` 反射注册——summer-boot 不能编译期依赖 summer-ai，否则两模块构成 Maven 循环依赖；
+- `summer-support`（OCR）同样只依赖 `summer-boot`，`OcrAutoConfiguration` 由 `summer-boot` 探测 `cn.jiebaba.summer.support.ocr.Ocr` 后反射注册；
+- `summer-boot` 组装原 core + web + data + security + office，提供启动入口；`summer-boot-loader` 提供可执行 jar 启动器，作为 `summer-pack-maven-plugin` 的依赖被内置打包，应用项目无需单独声明；
+- `summer-sample` 是使用者，仅需依赖 boot（+ ai 示例显式声明 summer-ai），打包由 `summer-pack-maven-plugin` 内置 loader，业务包无需额外声明（classpath 模式，反射不受强封装限制）。
 
 ### 为何 summer-boot-loader 独立成模块
 
@@ -46,7 +48,7 @@ build-test ──depends──> summer-sample / summer-boot / summer-data / summ
 - **离线可解析**：loader 零传递依赖，是 pom 中明确强调的 offline-resolvable 前提；插件自身的 Maven 依赖全部 `provided` + 通配排除，互不污染。
 - **独立演进**：loader 的清单契约（`Main-Class`/`Start-Class`/`BOOT-INF` 布局）是运行期协议，插件是构建工具，二者发版节奏不同，可各自修复与演进。
 
-## summer-core 职责
+## summer-boot · core 职责（原 summer-core，包名不变）
 
 | 包 | 内容 |
 | --- | --- |
@@ -70,7 +72,7 @@ build-test ──depends──> summer-sample / summer-boot / summer-data / summ
 - **生命周期**：`@PostConstruct` → `InitializingBean` → `initMethod`；销毁逆序 `@PreDestroy` → `DisposableBean` → `destroyMethod`；
 - **AOP 集成**：`preInstantiateSingletons` 先实例化 `@Aspect` 并收集 advisor；单例创建时按需代理——有接口走 JDK 动态代理（`AdvisedProxyFactory`），无接口且非 final 走手写字节码子类代理（`SubclassProxyFactory`，桥接方法 `$$summer$super$` 破自调用递归）；`@Transactional` 的 `TransactionInterceptor` 同属拦截器链。
 
-## summer-web 职责
+## summer-boot · web 职责（原 summer-web，包名不变）
 
 | 包 | 内容 |
 | --- | --- |
@@ -127,7 +129,7 @@ WebResponse.commit（聚集写：状态行+头+body 一次发到通道）
 - 注册后按 **特异性评分排序**（字面量 > 变量，长 > 短），先到先匹配，保证精确路由优先于通配；
 - 类级 `@RequestMapping("/users")` + 方法级 `@GetMapping("/{id}")` 合并为 `/users/{id}`。
 
-## summer-data 职责
+## summer-boot · data 职责（原 summer-data，包名不变）
 
 | 包 | 内容 |
 | --- | --- |
@@ -143,11 +145,11 @@ WebResponse.commit（聚集写：状态行+头+body 一次发到通道）
 
 ### TypeHandler 与方言驱动的 JSON 类型
 
-MyBatis 的 `TypeHandler<T>` 负责逐参数的 Java↔JDBC 绑定（`ParameterMapping` 带 `javaType/jdbcType/typeHandler`），summer-data 对齐此设计但简化为两层职责切分：
+MyBatis 的 `TypeHandler<T>` 负责逐参数的 Java↔JDBC 绑定（`ParameterMapping` 带 `javaType/jdbcType/typeHandler`），summer-boot（data 层）对齐此设计但简化为两层职责切分：
 
-- **`TypeHandler`**（`summer-data.support`）：`setParameter()`/`getResult()`，负责 **Java 对象 ↔ JSON 文本**（序列化用 summer-core `JsonUtil`，零第三方依赖）。
+- **`TypeHandler`**（`cn.jiebaba.summer.data.support`，原 summer-data）：`setParameter()`/`getResult()`，负责 **Java 对象 ↔ JSON 文本**（序列化用 summer-boot `JsonUtil`，零第三方依赖）。
 - **`Dialect`**：`jsonColumnType()`/`setJsonParameter()`/`getJsonResult()` 负责 **JSON 文本 ↔ 原生列类型**，按方言实现：
-  - PostgreSQL → `jsonb`，用 `PGobject(type="jsonb")`（反射构建并缓存，不硬依赖驱动类，summer-data 编译期无需 pg 驱动）；
+  - PostgreSQL → `jsonb`，用 `PGobject(type="jsonb")`（反射构建并缓存，不硬依赖驱动类，data 层编译期无需 pg 驱动）；
   - MySQL → `json`，`setString` 即可；Oracle → `CLOB`，`setString`；SQL Server → `nvarchar(max)`，`setString`。
 
 内置 `JsonTypeHandler` 一个声明即可让读写双向按当前方言出 `jsonb`/`json`/`CLOB`：
@@ -171,11 +173,11 @@ private Map<String, Object> config;
 | `cn.jiebaba.summer.ai.model.openai` | `OpenAiCompatibleChatModel`：`HttpURLConnection` 阻塞式实现，同步解析 JSON、流式解析 SSE |
 | `cn.jiebaba.summer.ai` | `AiException` 统一运行期异常 |
 
-- **纯 JDK**：用 `HttpURLConnection`（阻塞式，无 selector）直连各厂商 `OpenAI 兼容` 端点，JSON 序列化/解析复用 summer-core 的 `JsonUtil`，零第三方依赖；
+- **纯 JDK**：用 `HttpURLConnection`（阻塞式，无 selector）直连各厂商 `OpenAI 兼容` 端点，JSON 序列化/解析复用 summer-boot 的 `JsonUtil`，零第三方依赖；
 - **OpenAI 兼容**：DeepSeek、GLM（智谱）、MiniMax、Kimi 仅 base-url 与模型名不同，请求/响应/SSE 流式协议一致；
 - **思维链与用量**：解析 `reasoning_content`（思考模型特有）与 `usage`（含 `prompt_cache_hit_tokens`），详见 [AI 对话](../使用文档/ai.md)。
 
-## summer-office 职责
+## summer-boot · office 职责（原 summer-office，OCR 已移至 summer-support，包名不变）
 
 | 包 | 内容 |
 | --- | --- |
@@ -190,7 +192,7 @@ private Map<String, Object> config;
 - **纯 JDK**：csv/md/xml 零第三方依赖，与框架核心原则一致；
 - **第三方按需激活**：xlsx（Apache POI XSSF）、docx（POI XWPF）、pdf（Apache PDFBox）以 `optional` 引入，运行期按 classpath 探测条件激活；
 - **许可证说明**：xlsx/docx 使用 Apache-2.0 兼容库（FastExcel/POI）；pdf 使用 iText（AGPL-3.0 开源），使用者须遵守 AGPL 或替换为 Apache PDFBox（Apache-2.0）；
-- **独立可用**：summer-office 仅依赖 summer-core，可脱离 summer-boot 单独使用（与 summer-ai 同构）。
+- **独立可用**：office 代码已并入 summer-boot，与 core/web/data/security 同 jar 发布。
 ## summer-boot 职责
 
 - `SummerApplication.run(Class<?> primarySource, String[] args)`：
@@ -208,7 +210,7 @@ private Map<String, Object> config;
 
 ## 运行时模型
 
-- 启动：`java -jar summer-sample\target\summer-sample-3.2.1-boot.jar`
+- 启动：`java -jar summer-sample\target\summer-sample-4.0-boot.jar`
 - 每个连接一个虚拟线程，阻塞 IO 不占平台线程；
 - 定时任务体在虚拟线程上执行；
 - 单进程、单 JVM，无外部容器。

@@ -16,7 +16,7 @@ summer 打成 Spring Boot 风格的可执行 jar：依赖以**整 jar 形式**�
 
 布局：
 ```
-summer-sample-3.2.1.jar
+summer-sample-4.0.jar
 ├─ cn/jiebaba/summer/loader/JarLauncher.class   # 启动器（jar 根）
 ├─ BOOT-INF/classes/...                          # 应用类与资源（application.yml）
 ├─ BOOT-INF/lib/*.jar                            # 依赖 jar（summer-* / postgresql 等）
@@ -29,11 +29,11 @@ $env:JAVA_HOME='D:\jdk\jdk-25.0.4'
 $env:Path = "D:\jdk\jdk-25.0.4\bin;" + $env:Path
 mvn -s E:\summer_workspace\settings.xml -o clean package
 ```
-产出 `summer-sample/target/summer-sample-3.2.1-boot.jar`（可执行 jar）。`classifier` 默认为 `boot`，可执行 jar 作为独立 `-boot` 产物，主产物 `summer-sample-3.2.1.jar` 保持 thin jar 供 `build-test` 等模块依赖编译。
+产出 `summer-sample/target/summer-sample-4.0-boot.jar`（可执行 jar）。`classifier` 默认为 `boot`，可执行 jar 作为独立 `-boot` 产物，主产物 `summer-sample-4.0.jar` 保持 thin jar 供 `build-test` 等模块依赖编译。
 
 运行：
 ```powershell
-java -jar summer-sample\target\summer-sample-3.2.1-boot.jar
+java -jar summer-sample\target\summer-sample-4.0-boot.jar
 ```
 
 > 打包插件：`summer-sample` 的 `pom.xml` 绑定了 `summer-pack-maven-plugin:repackage`（绑定 `package` 阶段），故 `mvn package` 自动产出可执行 jar。默认 `classifier=boot`，产出独立的 `<finalName>-boot.jar`，主产物 `<finalName>.jar` 保持 thin jar 不变，可被其他模块依赖；若终端应用不需要被依赖、想要单文件，可设 `<classifier></classifier>`（空）替换主产物，原 thin jar 备份为 `<finalName>.jar.original`。`startClass` 在 `pom.xml` 的 `<configuration>` 中配置。
@@ -51,7 +51,7 @@ java -jar summer-sample\target\summer-sample-3.2.1-boot.jar
         <plugin>
             <groupId>cn.jiebaba.summer</groupId>
             <artifactId>summer-pack-maven-plugin</artifactId>
-            <version>3.2.1</version>
+            <version>4.0</version>
             <executions>
                 <execution>
                     <goals><goal>repackage</goal></goals>
@@ -92,7 +92,7 @@ java -jar summer-sample\target\summer-sample-3.2.1-boot.jar
     <dependency>
         <groupId>cn.jiebaba.summer</groupId>
         <artifactId>summer-boot</artifactId>
-        <version>3.2.1</version>
+        <version>4.0</version>
     </dependency>
     <!-- 业务依赖、JDBC 驱动等按需添加 -->
 </dependencies>
@@ -139,7 +139,7 @@ server:
 
 ## 注解速查
 
-### IoC（summer-core）
+### IoC（summer-boot）
 
 | 注解 | 作用 |
 | --- | --- |
@@ -154,7 +154,7 @@ server:
 | `@PostConstruct` `@PreDestroy` | 生命周期回调（注意：为 `cn.jiebaba.summer.core.annotation` 下的框架自有注解，非 `jakarta.annotation` 版本；导入 jakarta 版本不会被容器回调） |
 | `@ComponentScan` | 覆盖扫描根包 |
 
-### Web（summer-web）
+### Web（summer-boot）
 
 | 注解 | 作用 |
 | --- | --- |
@@ -170,7 +170,7 @@ server:
 
 跨域（CORS）通过 `summer.web.cors.*` 配置自动启用，详见 [CORS](cors.md)。
 
-### 全局异常处理（summer-web）
+### 全局异常处理（summer-boot）
 
 默认行为（与 Spring Boot 一致）：
 
@@ -179,9 +179,10 @@ server:
 | 请求体非合法 JSON / 参数绑定失败 | 400（请求体开头的 UTF-8 BOM 会自动剥离） |
 | `@Valid` 校验失败 | 400 + 违规字段列表 |
 | `ResponseStatusException` | 注解/构造指定的状态码 |
-| 其余未处理异常（含业务代码抛出的 `IllegalArgumentException` 等） | 500 |
+| 业务代码抛出的 `IllegalArgumentException` | 400（默认映射，message 原样返回） |
+| 其余未处理异常 | 500 |
 
-业务校验异常（如 `throw new IllegalArgumentException("无效的商品SKU")`）**不会自动映射为 4xx**，需要通过 `@RestControllerAdvice` + `@ExceptionHandler` 声明映射（完整示例见 `summer-sample` 的 `GlobalExceptionHandler`）：
+业务校验异常（如 `throw new IllegalArgumentException("无效的商品SKU")`）默认返回 400。如需自定义响应结构或其他异常类型的映射，可通过 `@RestControllerAdvice` + `@ExceptionHandler` 声明（优先级高于默认映射；完整示例见 `summer-sample` 的 `GlobalExceptionHandler`）：
 
 ```java
 @RestControllerAdvice
@@ -198,7 +199,7 @@ public class GlobalExceptionHandler {
 
 `@ExceptionHandler` 按异常类型最精确匹配；处理方法可声明异常、`WebRequest`、`WebResponse` 参数，返回值按 JSON 序列化，配合 `@ResponseStatus` 指定状态码。
 
-### 校验约束（summer-web）
+### 校验约束（summer-boot）
 
 | 注解 | 说明 |
 | --- | --- |
@@ -210,7 +211,7 @@ public class GlobalExceptionHandler {
 
 均支持 `message` 自定义提示。详见 [参数校验](validation.md)。
 
-### AOP（summer-core）
+### AOP（summer-boot）
 
 | 注解 | 作用 |
 | --- | --- |
@@ -222,7 +223,7 @@ public class GlobalExceptionHandler {
 
 详见 [AOP](aop.md)。
 
-### 定时任务（summer-core）
+### 定时任务（summer-boot）
 
 | 注解 | 属性 |
 | --- | --- |
@@ -230,7 +231,7 @@ public class GlobalExceptionHandler {
 
 详见 [定时任务](scheduling.md)。
 
-### WebSocket（summer-web）
+### WebSocket（summer-boot）
 
 | 注解 | 作用 |
 | --- | --- |
@@ -238,7 +239,7 @@ public class GlobalExceptionHandler {
 | `@OnOpen` `@OnMessage` `@OnClose` `@OnError` | 连接生命周期回调 |
 
 详见 [WebSocket](websocket.md)。
-### 多数据源（summer-data）
+### 多数据源（summer-boot）
 
 | 注解 | 作用 |
 | --- | --- |
@@ -248,7 +249,7 @@ public class GlobalExceptionHandler {
 
 详见 [多数据源](multi-datasource.md)。
 
-### 数据访问（summer-data）
+### 数据访问（summer-boot）
 
 | 注解 | 作用 |
 | --- | --- |
@@ -257,7 +258,7 @@ public class GlobalExceptionHandler {
 
 详见 [数据访问 ORM](orm.md)。
 
-## 工具集（summer-core utils）
+## 工具集（summer-boot utils）
 
 summer 在 `cn.jiebaba.summer.core.util` 下提供纯 JDK 工具类，API 风格参考 commons-lang3 与 hutool，业务代码可直接静态调用。详见 [工具集](utils.md)。
 
@@ -345,7 +346,7 @@ public class ProductController {
 
 ## JSON 字段（JSONB）
 
-summer-data 的 `TypeHandler` + 方言驱动 JSON 类型绑定，一个 `@TableField(typeHandler=...)` 声明即可让读写双向按当前方言出 `jsonb`/`json`/`CLOB`。设计细节见 [开发文档 - TypeHandler 与方言驱动的 JSON 类型](../开发文档/architecture.md)。
+summer-boot 的 `TypeHandler` + 方言驱动 JSON 类型绑定，一个 `@TableField(typeHandler=...)` 声明即可让读写双向按当前方言出 `jsonb`/`json`/`CLOB`。设计细节见 [开发文档 - TypeHandler 与方言驱动的 JSON 类型](../开发文档/architecture.md)。
 
 **建表**（PostgreSQL）：
 

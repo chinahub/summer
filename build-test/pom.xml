@@ -6,7 +6,7 @@
     <parent>
         <groupId>cn.jiebaba.summer</groupId>
         <artifactId>summer-parent</artifactId>
-        <version>3.2.1</version>
+        <version>4.0</version>
     </parent>
     <artifactId>build-test</artifactId>
     <name>build-test</name>
@@ -19,17 +19,7 @@
     </properties>
 
     <dependencies>
-        <!-- 测试框架 + 单测覆盖的核心能力 -->
-        <dependency>
-            <groupId>cn.jiebaba.summer</groupId>
-            <artifactId>summer-core</artifactId>
-            <version>${summer.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>cn.jiebaba.summer</groupId>
-            <artifactId>summer-data</artifactId>
-            <version>${summer.version}</version>
-        </dependency>
+        <!-- summer-boot 已整合原 core/data 等模块，单测覆盖的核心能力均来自 summer-boot -->
         <dependency>
             <groupId>cn.jiebaba.summer</groupId>
             <artifactId>summer-boot</artifactId>
@@ -41,10 +31,10 @@
             <artifactId>summer-ai</artifactId>
             <version>${summer.version}</version>
         </dependency>
-        <!-- summer-office OCR 冒烟测试：FFM 调用 onnxruntime，PP-OCRv6 流水线 -->
+        <!-- summer-support OCR 冒烟测试：FFM 调用 onnxruntime，PP-OCRv6 流水线 -->
         <dependency>
             <groupId>cn.jiebaba.summer</groupId>
-            <artifactId>summer-office</artifactId>
+            <artifactId>summer-support</artifactId>
             <version>${summer.version}</version>
         </dependency>
         <!-- SmokeTest 依赖 sample 的 entity/mapper/service -->

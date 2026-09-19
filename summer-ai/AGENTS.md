@@ -4,7 +4,7 @@
 
 ## 模块职责
 
-大模型对话抽象 + RAG + 工具调用 + 向量存储 + 重试/熔断。依赖 summer-core。纯 JDK HTTP 客户端实现。
+大模型对话抽象 + RAG + 工具调用 + 向量存储 + 重试/熔断。依赖 summer-boot（原 core/data 已并入）；AI 自动配置（`cn.jiebaba.summer.boot.ai` 包）随本模块发布，包名不变。纯 JDK HTTP 客户端实现。
 
 ## 关键包
 

@@ -5,11 +5,11 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>cn.jiebaba.summer</groupId>
     <artifactId>summer-parent</artifactId>
-    <version>3.2.1</version>
+    <version>4.0</version>
     <packaging>pom</packaging>
     <name>summer</name>
     <url>https://jiebaba.cn</url>
-    <description>summer is a lightweight Java microservice framework, hoping to help developers use it like Spring, which is also the origin of the name.</description>
+    <description>summer是一个轻量级的Java微服务框架，希望帮助开发者像使用Spring一样使用它，这也是名称的由来。</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -19,17 +19,13 @@
         <maven.jar.plugin.version>3.5.0</maven.jar.plugin.version>
         <maven.surefire.plugin.version>3.5.5</maven.surefire.plugin.version>
         <maven.shade.plugin.version>3.6.0</maven.shade.plugin.version>
-        <summer.version>3.2.1</summer.version>
+        <summer.version>4.0</summer.version>
         <slf4j.version>2.0.17</slf4j.version>
         <junit.jupiter.version>5.12.2</junit.jupiter.version>
     </properties>
     <modules>
-        <module>summer-core</module>
-        <module>summer-web</module>
-        <module>summer-data</module>
-        <module>summer-security</module>
+        <module>summer-support</module>
         <module>summer-ai</module>
-        <module>summer-office</module>
         <module>summer-boot</module>
         <module>summer-boot-loader</module>
         <module>summer-pack-maven-plugin</module>
@@ -44,7 +40,7 @@
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.version}</version>
             </dependency>
-            <!-- JUnit 5：测试模块整合（summer-core optional）与 summer-sample/build-test 的 test 依赖 -->
+            <!-- JUnit 5：测试模块整合（summer-boot optional，@SummerTest/SummerExtension）与 summer-sample/build-test 的 test 依赖 -->
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter</artifactId>

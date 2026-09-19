@@ -12,7 +12,7 @@ import java.util.Locale;
  * pgvector 向量类型处理器：将 Java float[] 与 pgvector 文本字面量 [v1,v2,...] 互转。
  * 写入时以字面量字符串绑定，配合 SQL 中的 {@code ?::vector} 显式转换；
  * 读取时解析向量列的文本表示回 float[]。零第三方依赖，不依赖 pgvector JDBC 类型。
- * 作为 summer-data {@link TypeHandler} 扩展点的一个实现，供 JdbcVectorStore 复用。
+ * 作为 summer-boot（data 层）{@link TypeHandler} 扩展点的一个实现，供 JdbcVectorStore 复用。
  */
 public class VectorTypeHandler implements TypeHandler {
 

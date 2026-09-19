@@ -1,6 +1,6 @@
 # summer 工具集（utils）
 
-> summer-core 内置工具类集合，全部基于 JDK 实现，零第三方依赖。
+> summer-boot 内置工具类集合，全部基于 JDK 实现，零第三方依赖。
 
 summer 在 `cn.jiebaba.summer.core.util` 包下提供以下工具类，API 风格参考 commons-lang3 与 hutool，业务代码可直接静态调用。
 

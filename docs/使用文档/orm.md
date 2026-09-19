@@ -1,10 +1,10 @@
-# 数据访问 ORM（summer-data）
+# 数据访问 ORM（summer-boot）
 
 模仿 MyBatis-Plus 的使用方式，底层用纯 JDBC（`java.sql`，JDK 内置），不引入 MyBatis。框架核心零第三方依赖；JDBC 驱动由使用者自备（运行时依赖）。
 
 ## 模块
 
-`summer-data`（依赖 `summer-core`，用 JDK 的 `java.sql`），由 `summer-boot` 自动配置装配。
+`summer-boot`（data 层，基于 JDK 的 `java.sql`），由自动配置装配。
 
 ## 实体注解
 
@@ -91,7 +91,19 @@ new LambdaQueryWrapper<Product>()
 // → WHERE name = ? AND price > ? ORDER BY price DESC
 ```
 
-支持：`eq/ne/gt/ge/lt/le`、`like/likeLeft/likeRight/notLike`、`isNull/isNotNull`、`in/notIn`、`between`、`orderByAsc/Desc`、`groupBy`、`and(Consumer)/or(Consumer)` 嵌套、`last`。采用自类型泛型，链式调用保留具体类型。
+支持：`eq/ne/gt/ge/lt/le`、`like/likeLeft/likeRight/notLike`、`isNull/isNotNull`、`in/notIn`、`between`、`orderByAsc/Desc`、`groupBy`、`and(Consumer)/or(Consumer)` 嵌套、`or()` 连接符、`last`。采用自类型泛型，链式调用保留具体类型。
+
+`or()` 语义与 MyBatis-Plus 一致：只把**紧随其后的一个条件**以 OR 连接，其余相邻条件默认 AND（AND 优先级高于 OR）；嵌套组合用 `and(Consumer)/or(Consumer)` 生成带括号的条件组：
+
+```java
+// WHERE (name LIKE ? OR sku_id LIKE ?)
+new LambdaQueryWrapper<Product>()
+    .and(x -> x.like(Product::getName, kw).or().like(Product::getSkuId, kw));
+
+// WHERE a = ? AND b = ? OR c = ?（等价 (a AND b) OR c）
+new QueryWrapper<Product>()
+    .eq("a", 1).eq("b", 2).or().eq("c", 3);
+```
 
 ## 分页
 
@@ -179,9 +191,9 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> {
 
 ### TypeHandler 与 JSONB 列
 
-对标 MyBatis 的 `TypeHandler<T>`，summer-data 拆为两层职责：
+对标 MyBatis 的 `TypeHandler<T>`，summer-boot 拆为两层职责：
 
-- **`TypeHandler`**（`setParameter()`/`getResult()`）：负责 Java 对象 ↔ JSON 文本，序列化用 summer-core `JsonUtil`（零第三方依赖）。
+- **`TypeHandler`**（`setParameter()`/`getResult()`）：负责 Java 对象 ↔ JSON 文本，序列化用 summer-boot `JsonUtil`（零第三方依赖）。
 - **`Dialect`**：负责 JSON 文本 ↔ 原生列类型，按方言实现（PG 用 `PGobject(type="jsonb")`，反射构建不硬依赖驱动类）。
 
 内置 `JsonTypeHandler`，一个声明即可读写双向按当前方言出 `jsonb`/`json`/`CLOB`：
@@ -205,7 +217,7 @@ public class Widget {
 
 ## 向量类型与自定义查询（pgvector）
 
-向量检索（RAG 语义搜索）的结果集常含**计算列**（如相似度 `score`），无法直接映射到实体；summer-data 为此提供两个互补扩展点，配合 `JdbcValue` + `TypeHandler` 即可零第三方依赖对接 pgvector：
+向量检索（RAG 语义搜索）的结果集常含**计算列**（如相似度 `score`），无法直接映射到实体；summer-boot 为此提供两个互补扩展点，配合 `JdbcValue` + `TypeHandler` 即可零第三方依赖对接 pgvector：
 
 - **`RowMapper<T>`**（`support/RowMapper.java`）：`@FunctionalInterface`，将 `ResultSet` 每行映射为任意对象（借鉴 Spring 同名接口）。适用于含计算列、聚合列、跨表投影或数据库特有算子的自定义查询。
 - **`SqlExecutor.query(SqlBuilder.Sql sql, RowMapper<T> rowMapper)`**：在实体映射重载 `query(Sql, TableInfo)` 之外新增的重载，执行任意 SQL 并按 `RowMapper` 映射；连接/事务/参数绑定/日志统一由 `SqlExecutor` 管理，与 `BaseMapper` 同源、不绕过数据层。
@@ -213,7 +225,7 @@ public class Widget {
 ### 自定义查询（含计算列）
 
 ```java
-SqlExecutor sqlExecutor = ...;  // 由 summer-data 自动装配
+SqlExecutor sqlExecutor = ...;  // 由 summer-boot 自动装配
 SqlBuilder.Sql sql = new SqlBuilder.Sql(
         "SELECT id, name, price * 1.1 AS new_price FROM product WHERE price > ? ORDER BY new_price",
         List.of(100));

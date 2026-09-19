@@ -17,8 +17,8 @@
 | 定时任务 | `ScheduledThreadPoolExecutor` + 虚拟线程 | `@Scheduled`：cron 5 段 + fixedRate/fixedDelay |
 | 参数校验 | 手写 Bean Validation 子集 | `@Valid` + 约束注解，递归校验，400 违规列表 |
 | 工具集（utils） | 纯 JDK 手写 | `StringUtil`/`DateUtil`/`JsonUtil`/`SecurityUtil`/`SummerUtil`，参考 commons-lang3 与 hutool，详见 [工具集](../使用文档/utils.md) |
-| 大模型对话（AI） | 纯 JDK `HttpURLConnection` + 自研 `ChatModel`/`ChatClient` | OpenAI 兼容协议直连 DeepSeek/GLM/MiniMax/Kimi；阻塞式无 selector，支持 SSE 流式与思维链；不依赖 summer-boot，复用 summer-core `JsonUtil`，零第三方依赖，详见 [AI 对话](../使用文档/ai.md) |
-| 文档处理（Office） | 纯 JDK（csv/md/xml）+ FastExcel/iText（optional） | 自研 `OfficeReader`/`OfficeWriter`/`TableReader`/`TableWriter` 抽象；csv/md/xml 零第三方依赖；xlsx/docx 用 FastExcel（Apache-2.0），pdf 用 iText 7（AGPL-3.0），均 optional 按 classpath 探测条件激活；`Excel` fluent API 支持 TableData 与 Bean 双模式，详见 [路线图](roadmap.md) 第九阶段 |
+| 大模型对话（AI） | 纯 JDK `HttpURLConnection` + 自研 `ChatModel`/`ChatClient` | OpenAI 兼容协议直连 DeepSeek/GLM/MiniMax/Kimi；阻塞式无 selector，支持 SSE 流式与思维链；依赖 summer-boot（复用其 core 的 `JsonUtil` 等能力），零第三方依赖，详见 [AI 对话](../使用文档/ai.md) |
+| 文档处理（Office） | 纯 JDK 自研（xlsx SAX/ZipOutputStream、docx ZipFile+StAX、pdf 直接生成/解析对象结构） | 自研 `OfficeReader`/`OfficeWriter`/`TableReader`/`TableWriter` 抽象；csv/md/xml 零第三方依赖；xlsx/docx 用 FastExcel（Apache-2.0），pdf 用 iText 7（AGPL-3.0），均 optional 按 classpath 探测条件激活；`Excel` fluent API 支持 TableData 与 Bean 双模式，详见 [路线图](roadmap.md) 第九阶段 |
 | 构建 | Maven（pom modelVersion 4.0.0） | 多模块；离线模式 |
 | 测试 | JUnit 5（Jupiter）+ 自研 `@SummerTest`/`SummerExtension` 整合层 | 参照 Spring Boot Test/Helidon/Quarkus 的 `@ExtendWith` 整合形态：用例写真实 `org.junit.jupiter.api.Test`，IDEA 绿色三角与 surefire 原生执行；`SmokeTest`/`OrmSmokeTest`/`DbSmokeTest` 等进程内冒烟测试保留（沙箱限制进程间 loopback，用同进程自验证全链路），详见下文「为什么不走 junit-like」 |
 
@@ -29,10 +29,10 @@
 - 反射、注解处理、字节码读取均用 JDK 内置 API；
 - 组件扫描直接读类路径的 `.class`/`.jar` 文件；
 - 唯一运行期外部依赖是 **JDBC 驱动**（由使用者自备，如 `postgresql`、`mysql-connector-j`）。
-- SLF4J 绑定为**可选**：`summer-core` 以 `optional` 引入 `slf4j-api`，仅当使用方显式引入时才由 SLF4J `ServiceLoader` 激活，框架自身运行期仍是零第三方依赖。
-- **summer-ai** 同样零第三方依赖：仅依赖 summer-core（用其 `JsonUtil`），不依赖 summer-boot；以 `optional` 被 summer-boot 引入，启动时按 classpath 探测条件激活（详见 [AI 对话](../使用文档/ai.md)）。
-- **summer-office** 核心零第三方依赖：csv/md/xml 纯 JDK 实现；xlsx/docx 以 `optional` 引入 FastExcel（Apache-2.0，传递引入 POI），pdf 以 `optional` 引入 iText 7（AGPL-3.0 开源），按 classpath 探测条件激活；商业的 Aspose.Words 不引入。
-- **测试侧 JUnit 5 不进运行期**：`summer-core` 仅以 `optional` 引入 `junit-jupiter-api`（供 `@SummerTest`/`SummerExtension` 整合层编译）；`junit-jupiter`、`junit-platform-launcher` 只在 summer-sample（test scope）与 build-test（不发布模块）中使用，均不进入框架运行期的传递依赖。
+- SLF4J 绑定为**可选**：`summer-boot`（原 summer-core）以 `optional` 引入 `slf4j-api`，仅当使用方显式引入时才由 SLF4J `ServiceLoader` 激活，框架自身运行期仍是零第三方依赖。
+- **summer-ai** 同样零第三方依赖：仅依赖 summer-boot（用其 core/data 能力）；其自动配置类随本模块发布，由 summer-boot 启动时按 classpath 探测反射激活（详见 [AI 对话](../使用文档/ai.md)）。
+- **summer-office** 已并入 summer-boot：xlsx/docx/pdf 均为自研实现（SAX/ZipOutputStream/StAX/直接生成 PDF 对象结构），零第三方依赖；OCR 独立为 summer-support 模块
+- **测试侧 JUnit 5 不进运行期**：`summer-boot` 仅以 `optional` 引入 `junit-jupiter-api`（供 `@SummerTest`/`SummerExtension` 整合层编译）；`junit-jupiter`、`junit-platform-launcher` 只在 summer-sample（test scope）与 build-test（不发布模块）中使用，均不进入框架运行期的传递依赖。
 
 ## 为什么不走 junit-like（自研测试框架）
 

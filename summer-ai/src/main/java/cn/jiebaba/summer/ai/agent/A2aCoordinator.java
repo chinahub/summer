@@ -31,7 +31,7 @@ import java.util.logging.Logger;
  *   <li>恢复 {@link #recoverInbound}/{@link #pollPeer}：入域重启后重执行未完成任务；
  *       出域凭契约向对方轮询——回调丢失不丢结果（契约即责任凭证）。</li>
  * </ul>
- * 纯 JDK（HttpClient + 虚拟线程），不依赖 summer-web/summer-boot，可脱离容器单独使用。
+ * 纯 JDK（HttpClient + 虚拟线程），不依赖 Web 层能力，可脱离容器单独使用（仅需 summer-boot 的 core 基础）。
  */
 public class A2aCoordinator {
 

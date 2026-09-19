@@ -4,7 +4,7 @@ Summer 内置 CORS（跨源资源共享）支持，纯 JDK 实现，零第三方
 
 ## 设计要点
 
-- **过滤器实现**：`CorsFilter` 实现 summer-web 的 `Filter` 接口，在 `RequestDispatcher` 的前置过滤器链中执行，先于安全过滤器，使预检请求不触发认证。
+- **过滤器实现**：`CorsFilter` 实现 summer-boot 的 `Filter` 接口，在 `RequestDispatcher` 的前置过滤器链中执行，先于安全过滤器，使预检请求不触发认证。
 - **预检短路**：对 OPTIONS 预检请求（携带 `Origin` 与 `Access-Control-Request-Method`）直接返回 204 与预检响应头，不进入路由。
 - **实际请求补头**：对通过预检的实际请求补充 `Access-Control-Allow-Origin` 等响应头后继续分派。
 - **来源匹配**：支持精确来源、通配 `*`、以及 `allowed-origin-patterns` 通配模式（如 `https://*.example.com`）。

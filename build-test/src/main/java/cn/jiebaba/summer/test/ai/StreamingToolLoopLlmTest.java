@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * 流式工具调用循环的真实 LLM 冒烟测试。
  * <p>LLM 凭据实时读取自 PostgreSQL 的 public.ai_provider_info 表（name/baseurl/api_key 列），
- * 复用 summer-sample 的 summer.datasource.* 配置连接数据库，经 summer-data 的 SqlExecutor + RowMapper 查询。
+ * 复用 summer-sample 的 summer.datasource.* 配置连接数据库，经 summer-boot（data 层）的 SqlExecutor + RowMapper 查询。
  * 表无 model 列时按 name 解析厂商默认模型（如 deepseek -> deepseek-chat）。
  * <p>用加法工具验证端到端：流式累积 tool_calls 增量 -> 执行工具 -> 续接流式给出最终答案。
  * 当数据源未配置、DB 不可达、表无可用记录或厂商未识别时通过 {@link Assumptions#assumeTrue} 跳过。

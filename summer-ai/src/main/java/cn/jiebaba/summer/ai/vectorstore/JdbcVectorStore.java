@@ -20,7 +20,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
- * 基于 PostgreSQL + pgvector 的持久化向量库，复用 summer-data 的 {@link SqlExecutor} 执行 SQL
+ * 基于 PostgreSQL + pgvector 的持久化向量库，复用 summer-boot（data 层）的 {@link SqlExecutor} 执行 SQL
  * （连接/事务/参数绑定/日志统一由其管理），向量经 {@link VectorTypeHandler} 与 pgvector 文本协议互转。
  * 语义与 {@link cn.jiebaba.summer.ai.vectorstore.InMemoryVectorStore} 一致：余弦相似度
  * （1 - cosine_distance）排序、阈值过滤、topK 截断。适合生产级 RAG：语料持久化、重启不丢失、可跨进程共享。

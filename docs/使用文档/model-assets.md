@@ -2,7 +2,7 @@
 
 > summer 的本地 AI 能力（OCR、Embedding）基于 ONNX Runtime 推理，所需原生库与模型文件作为部署期外部资产按路径加载（类比 JDBC 驱动），不打包进 JAR。本页集中给出各项资产的获取来源与目录组织建议。
 
-summer 通过 JDK 25 的 Foreign Function & Memory API（`java.lang.foreign`）直连 onnxruntime 原生库，无需 JNI 胶水、无需引入 onnxruntime 的 Java 绑定包。`OnnxEngine`（位于 summer-core，供 summer-ai 与 summer-office 共享）请求 onnxruntime C API 的 `ORT_API_VERSION=20`（1.16 引入）；onnxruntime 的 `OrtApi` 结构体仅追加新函数、不重排既有字段，且 `GetApi(version)` 向后兼容，因此 1.16 至最新 1.27.x 的运行时均可加载。
+summer 通过 JDK 25 的 Foreign Function & Memory API（`java.lang.foreign`）直连 onnxruntime 原生库，无需 JNI 胶水、无需引入 onnxruntime 的 Java 绑定包。`OnnxEngine`（位于 summer-boot 的 `cn.jiebaba.summer.core.onnx`，供 summer-ai 与 summer-support 的 OCR 共享）请求 onnxruntime C API 的 `ORT_API_VERSION=20`（1.16 引入）；onnxruntime 的 `OrtApi` 结构体仅追加新函数、不重排既有字段，且 `GetApi(version)` 向后兼容，因此 1.16 至最新 1.27.x 的运行时均可加载。
 
 ## 资产总览
 

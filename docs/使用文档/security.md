@@ -1,6 +1,6 @@
 # Summer Security
 
-Summer 提供了一套参考 Spring Security 的安全模块 summer-security，纯 JDK 实现（零第三方依赖），支持 JWT 无状态认证、URL 级 + 方法级授权、BCrypt 密码编码。
+Summer 提供了一套参考 Spring Security 的安全模块 summer-boot，纯 JDK 实现（零第三方依赖），支持 JWT 无状态认证、URL 级 + 方法级授权、BCrypt 密码编码。
 
 ## 快速开始
 
@@ -226,7 +226,7 @@ BCryptPasswordEncoder 生成 $2a$cost$salt+hash 格式，与 Spring Security 和
 ```
 请求 → SummerWebServer
          → RequestDispatcher
-              → SecurityFilterChain (summer-security)
+              → SecurityFilterChain (summer-boot)
                    → JwtLoginFilter     (POST /login → 颁发 token)
                    → JwtAuthenticationFilter (解析 Bearer token → SecurityContext)
                    → AuthorizationFilter (URL 级规则匹配)

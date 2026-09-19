@@ -1,6 +1,6 @@
 # SSE（服务端事件推送）
 
-> summer-web 内置 Server-Sent Events 支持：handler 返回 `SseEmitter` 即可向浏览器（`EventSource`）
+> summer-boot 内置 Server-Sent Events 支持：handler 返回 `SseEmitter` 即可向浏览器（`EventSource`）
 > 或任意 HTTP 客户端逐事件推送数据；响应采用 `Transfer-Encoding: chunked` 分块编码并保持
 > keep-alive 连接复用。典型场景：LLM 流式输出转发、实时行情、任务进度推送。
 

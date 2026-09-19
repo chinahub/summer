@@ -1,4 +1,4 @@
-# WebSocket（summer-web）
+# WebSocket（summer-boot）
 
 基于 `ServerSocketChannel`（阻塞）+ 虚拟线程实现的纯 JDK WebSocket 服务端，遵循 RFC 6455，零第三方依赖。握手复用 HTTP 服务器，握手后同一 TCP 连接转为全双工帧通信。
 

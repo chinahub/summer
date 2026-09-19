@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Excel 测试（FastExcel 使用方式）：以“写出 -> 读回”回路验证 summer-office 的 Excel 门面。
+ * Excel 测试（FastExcel 使用方式）：以“写出 -> 读回”回路验证 summer-boot office 层的 Excel 门面。
  * 覆盖 FastExcel 典型场景：表头 + 数据行的 doWrite/doReadSync、无表头读取、按 sheet 索引读取、
  * ReadListener 式逐行流式读、大数据量流式写，以及非法格式的快速失败。
  */

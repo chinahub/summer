@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>cn.jiebaba.summer</groupId>
+        <artifactId>summer-parent</artifactId>
+        <version>4.0</version>
+    </parent>
+    <artifactId>summer-support</artifactId>
+    <name>summer-support</name>
+    <description>summer 支持模块：OCR 文字识别（DB 文本检测 + 方向分类 + CRNN 识别流水线，纯 JDK 图像处理，FFM 调用 onnxruntime 原生库推理）。依赖 summer-boot，由 SummerApplication 按 classpath 探测激活。</description>
+    <dependencies>
+        <dependency>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-boot</artifactId>
+            <version>${summer.version}</version>
+        </dependency>
+    </dependencies>
+</project>

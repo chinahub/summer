@@ -19,7 +19,7 @@ git log --oneline -5
 - **编码规范**：UTF-8 无 BOM、LF 行尾、行尾无多余空格
 - **注释规范**：超 20 行方法必须有中文 JavaDoc 注释；注释使用中文
 - **命名规范**：类名 PascalCase、方法名 camelCase、包名全小写
-- **零依赖原则**：summer-core/summer-web/summer-data/summer-security/summer-ai 禁止引入新的第三方依赖
+- **零依赖原则**：summer-boot（含原 core/web/data/security/office）/summer-ai/summer-support 禁止引入新的第三方依赖
 - **架构一致性**：新代码是否遵循模块职责划分（core→web→data→security→ai→office→boot 依赖链）
 - **异常处理**：是否正确处理异常，避免吞异常
 - **线程安全**：虚拟线程环境下的并发安全

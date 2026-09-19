@@ -1,4 +1,4 @@
-# AOP 面向切面（summer-core）
+# AOP 面向切面（summer-boot）
 
 基于 JDK 动态代理与手写字节码子类代理 + 拦截器链实现的最小 AOP，零第三方依赖。对被代理 Bean 的方法调用织入通知（advice），支持 `@Around/@Before/@After/@AfterReturning/@AfterThrowing`。
 

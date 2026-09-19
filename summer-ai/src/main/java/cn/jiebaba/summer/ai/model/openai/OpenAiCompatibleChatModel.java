@@ -36,7 +36,7 @@ import java.util.stream.Stream;
 
 /**
  * OpenAI 兼容协议的 ChatModel 实现，纯 JDK HttpURLConnection（阻塞式，无 selector），
- * 零第三方依赖，与 summer-web 同样规避受限沙箱的 loopback 管道问题。
+ * 零第三方依赖，与框架 web 层同样规避受限沙箱的 loopback 管道问题。
  * 覆盖 DeepSeek、GLM（智谱 OpenAI 兼容端点）、MiniMax 等国内厂商：
  * 仅 base-url 与模型名不同，请求、响应与 SSE 流式协议一致。
  * 支持多模态内容（图片/语音）、Function Calling 工具调用与思维链解析。

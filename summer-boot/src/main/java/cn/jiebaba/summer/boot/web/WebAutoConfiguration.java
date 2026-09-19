@@ -11,7 +11,7 @@ import cn.jiebaba.summer.web.filter.Filter;
 import cn.jiebaba.summer.web.multipart.MultipartFileArgumentResolver;
 
 /**
- * summer-web 的自动配置。注册 multipart 参数解析器，使
+ * Web 层自动配置。注册 multipart 参数解析器，使
  * {@code @RequestPart}/{@code MultipartFile} 参数能够依据解析后的
  * multipart/form-data 请求体进行解析；并注册 CORS 过滤器，使跨域请求
  * 在路由分派之前得到处理。各 Bean 均带 {@code @ConditionalOnMissingBean}

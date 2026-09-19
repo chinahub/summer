@@ -1,8 +1,8 @@
-# Summer OCR（summer-office OCR）
+# Summer OCR（summer-support OCR）
 
-> summer-office OCR -- 基于 JDK 25 Foreign Function & Memory API（`java.lang.foreign`）直连 ONNX Runtime、纯 Java 移植 RapidAI/rapidocr 的 PP-OCR 流水线，零第三方 Java 依赖。
+> summer-support OCR -- 基于 JDK 25 Foreign Function & Memory API（`java.lang.foreign`）直连 ONNX Runtime、纯 Java 移植 RapidAI/rapidocr 的 PP-OCR 流水线，零第三方 Java 依赖。
 
-summer-office 在 `cn.jiebaba.summer.office.ocr` 包下提供 OCR 能力：检测（DB）→ 方向分类 → 识别（CRNN+CTC）全流水线均用纯 JDK（`javax.imageio` + 手写像素/几何运算）实现，仅通过 FFM 调用本地 `onnxruntime` 共享库完成神经网络推理。无需 JNI 胶水代码、无需引入 onnxruntime 的 Java 绑定包，原生库即唯一运行期外部依赖（类比 JDBC 驱动）。
+summer-support 在 `cn.jiebaba.summer.support.ocr` 包下提供 OCR 能力：检测（DB）→ 方向分类 → 识别（CRNN+CTC）全流水线均用纯 JDK（`javax.imageio` + 手写像素/几何运算）实现，仅通过 FFM 调用本地 `onnxruntime` 共享库完成神经网络推理。无需 JNI 胶水代码、无需引入 onnxruntime 的 Java 绑定包，原生库即唯一运行期外部依赖（类比 JDBC 驱动）。
 
 ## 设计动机
 
@@ -12,7 +12,7 @@ summer-office 在 `cn.jiebaba.summer.office.ocr` 包下提供 OCR 能力：检�
 
 - 直接 `SymbolLookup.libraryLookup` 加载 `onnxruntime.dll`/`libonnxruntime.so`，按 `OrtApi` 结构体字段序号读取函数指针包装为 `MethodHandle`；
 - det/cls/rec 的预处理与后处理（缩放、归一化、DB 二值化、连通域、最小外接矩形、透视矫正、CTC 解码）全部纯 Java 移植自 [RapidAI/rapidocr](https://github.com/RapidAI/rapidocr)（Python）；
-- 因此 **不引入任何 Maven 依赖**，`summer-office/pom.xml` 无需改动；onnxruntime 原生库与模型文件作为部署期资产按路径加载。
+- 因此 OCR 能力**不引入任何额外 Maven 依赖**（`summer-support` 仅依赖 `summer-boot`）；onnxruntime 原生库与模型文件作为部署期资产按路径加载。
 
 ## 快速开始
 
@@ -31,9 +31,9 @@ OCR 需要三类资产（均为部署期文件，不打包进 JAR）：
 PP-OCRv6 为默认推荐版本：检测/识别模型支持中、英、日、韩等多语言统一识别（字符表约 18708 个，内嵌于模型元数据），无需单独字典文件；分类复用 v4 的 `ch_ppocr_mobile_v2.0_cls`（v6 无独立 cls 模型）：
 
 ```java
-import cn.jiebaba.summer.office.ocr.Ocr;
-import cn.jiebaba.summer.office.ocr.OcrConfig;
-import cn.jiebaba.summer.office.ocr.OcrResult;
+import cn.jiebaba.summer.support.ocr.Ocr;
+import cn.jiebaba.summer.support.ocr.OcrConfig;
+import cn.jiebaba.summer.support.ocr.OcrResult;
 
 OcrConfig config = OcrConfig.builder()
         .libPath("C:/ocr/onnxruntime.dll")                                  // onnxruntime 原生库
@@ -60,7 +60,7 @@ try (Ocr ocr = Ocr.create(config)) {
 
 ### 3. 在 summer-boot 中自动装配
 
-`summer-boot` 以 `optional` 引入 `summer-office`；当 `summer.ocr.lib-path` 等配置齐全时自动装配 `Ocr` Bean（`@Lazy`，注入时才初始化引擎，未用不影响启动）：
+引入 `summer-support` 模块即可（其依赖 summer-boot）；当 `summer.ocr.lib-path` 等配置齐全时自动装配 `Ocr` Bean（`@Lazy`，注入时才初始化引擎，未用不影响启动）：
 
 ```yaml
 summer:
@@ -138,7 +138,7 @@ RapidOcr-Java 自带 **PP-OCRv3 与 v4** 模型；PaddleOCR 后续发布了 **v5
 
 ## 实现说明
 
-- `OnnxEngine` -- 位于 summer-core 的共享 ONNX 推理引擎（FFM 绑定 onnxruntime C API，`OrtGetApiBase`->`GetApi`->`OrtApi` 函数指针表），字段序号对应 `ORT_API_VERSION=20`（1.16~1.20 兼容）；支持 FLOAT/FLOAT16/INT64 张量与多输入推理，供 OCR 与本地 Embedding 共用。`Model.getCustomMetadata(key)` 读取 ONNX 自定义元数据，用于获取 PP-OCRv4/v6 识别模型内嵌的 `character` 字典。
+- `OnnxEngine` -- 位于 summer-boot（`cn.jiebaba.summer.core.onnx`）的共享 ONNX 推理引擎（FFM 绑定 onnxruntime C API，`OrtGetApiBase`->`GetApi`->`OrtApi` 函数指针表），字段序号对应 `ORT_API_VERSION=20`（1.16~1.20 兼容）；支持 FLOAT/FLOAT16/INT64 张量与多输入推理，供 OCR 与本地 Embedding 共用。`Model.getCustomMetadata(key)` 读取 ONNX 自定义元数据，用于获取 PP-OCRv4/v6 识别模型内嵌的 `character` 字典。
 - `ImageUtil` -- 纯 JDK 图像解码（`ImageIO`）、双线性缩放、透视矫正（单应矩阵 + 反向采样）、旋转、归一化。
 - `Geometry` -- 凸包（单调链）、最小外接矩形（旋转卡壳）、多边形外扩（miter 偏移近似 Clipper unclip）。
 - `DbPostProcess` -- DB 后处理：阈值化、膨胀、8 连通域、最小外接矩形、框内概率均值评分、外扩、过滤排序。

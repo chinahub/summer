@@ -1,9 +1,9 @@
 package cn.jiebaba.summer.test.office;
 
-import cn.jiebaba.summer.office.ocr.Ocr;
-import cn.jiebaba.summer.office.ocr.OcrConfig;
-import cn.jiebaba.summer.office.ocr.OcrItem;
-import cn.jiebaba.summer.office.ocr.OcrResult;
+import cn.jiebaba.summer.support.ocr.Ocr;
+import cn.jiebaba.summer.support.ocr.OcrConfig;
+import cn.jiebaba.summer.support.ocr.OcrItem;
+import cn.jiebaba.summer.support.ocr.OcrResult;
 
 import javax.imageio.ImageIO;
 import java.awt.Color;

@@ -1,4 +1,4 @@
-# 参数校验（summer-web）
+# 参数校验（summer-boot）
 
 手写 Bean Validation 最小子集，零第三方依赖。在控制器方法参数上标注 `@Valid` 触发递归校验，失败返回 `400` + 违规列表。
 

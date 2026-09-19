@@ -42,7 +42,7 @@ summer 的控制台日志默认把 `INFO`、`DEBUG`、`WARN` 等普通日志输�
 
 ## SQL 日志
 
-summer-data 的 SQL 执行日志复用框架日志级别配置，和 Spring Boot/MyBatis 的使用习惯一致：把 `SqlExecutor` 的 logger 调到 `DEBUG` 即可打印 SQL、参数、影响行数/查询总数和耗时。
+summer-boot 的 SQL 执行日志复用框架日志级别配置，和 Spring Boot/MyBatis 的使用习惯一致：把 `SqlExecutor` 的 logger 调到 `DEBUG` 即可打印 SQL、参数、影响行数/查询总数和耗时。
 
 ```yaml
 logging:

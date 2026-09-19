@@ -21,10 +21,7 @@ import cn.jiebaba.summer.boot.event.ApplicationFailedEvent;
 import cn.jiebaba.summer.boot.event.ApplicationReadyEvent;
 import cn.jiebaba.summer.boot.security.SecurityAutoConfiguration;
 import cn.jiebaba.summer.boot.web.WebAutoConfiguration;
-import cn.jiebaba.summer.boot.ai.AiAutoConfiguration;
-import cn.jiebaba.summer.boot.ai.A2aAutoConfiguration;
 import cn.jiebaba.summer.boot.office.OfficeAutoConfiguration;
-import cn.jiebaba.summer.boot.ocr.OcrAutoConfiguration;
 import cn.jiebaba.summer.boot.data.MapperRegistrar;
 import cn.jiebaba.summer.core.context.BeanDefinition;
 import cn.jiebaba.summer.web.support.WebRouteRegistrar;
@@ -173,22 +170,21 @@ public final class SummerApplication {
         configs.addAll(loadSpiConfigurations());
         // 可选模块 summer-ai：仅当其在 classpath 时注册自动配置。仿 spring-boot 的
         // @ConditionalOnClass，但用存在性探测代替 ASM 读注解，零字节码第三方库依赖；
-        // summer-ai 不在时 AiAutoConfiguration 永不被加载，故不会 NoClassDefFoundError。
+        // summer-ai 不在时其自动配置类永不被加载，故不会 NoClassDefFoundError。
+        // 注：AiAutoConfiguration 随 summer-ai 模块发布（包名仍为 cn.jiebaba.summer.boot.ai），
+        // 这里用反射注册以避免 summer-boot 对 summer-ai 的编译期依赖（否则两模块循环依赖）。
         if (isClassPresent("cn.jiebaba.summer.ai.chat.ChatModel")) {
-            configs.add(AiAutoConfiguration.class);
+            addOptionalConfig(configs, "cn.jiebaba.summer.boot.ai.AiAutoConfiguration");
         }
         // 可选模块 summer-ai A2A 跨实例协作：仅当其在 classpath 时注册自动配置
         //（summer.ai.a2a.enabled=true 才实际装配 bean，见 A2aAutoConfiguration 上的条件注解）。
         if (isClassPresent("cn.jiebaba.summer.ai.agent.A2aCoordinator")) {
-            configs.add(A2aAutoConfiguration.class);
+            addOptionalConfig(configs, "cn.jiebaba.summer.boot.ai.A2aAutoConfiguration");
         }
-        // 可选模块 summer-office：仅当其在 classpath 时注册自动配置。
-        if (isClassPresent("cn.jiebaba.summer.office.Office")) {
-            configs.add(OfficeAutoConfiguration.class);
-        }
-        // 可选模块 summer-office OCR：仅当 OCR 类在 classpath 时注册自动配置
-        if (isClassPresent("cn.jiebaba.summer.office.ocr.Ocr")) {
-            configs.add(OcrAutoConfiguration.class);
+        // summer-support OCR：仅当 OCR 类在 classpath 时，反射注册其自动配置
+        //（summer-boot 不依赖 summer-support，避免循环依赖）。
+        if (isClassPresent("cn.jiebaba.summer.support.ocr.Ocr")) {
+            addOptionalConfig(configs, "cn.jiebaba.summer.support.ocr.OcrAutoConfiguration");
         }
         for (Class<?> config : configs) {
             BeanDefinition def = new BeanDefinition(
@@ -198,7 +194,20 @@ public final class SummerApplication {
     }
 
     private static final java.util.List<Class<?>> AUTO_CONFIG_CLASSES =
-            java.util.List.of(DataAutoConfiguration.class, SecurityAutoConfiguration.class, WebAutoConfiguration.class);
+            java.util.List.of(DataAutoConfiguration.class, SecurityAutoConfiguration.class,
+                    WebAutoConfiguration.class, OfficeAutoConfiguration.class);
+
+    /**
+     * 反射加载可选模块的自动配置类并加入注册列表：类不在 classpath（可选依赖未引入）时跳过。
+     * 用于 summer-ai / summer-support 等 summer-boot 不能编译期依赖的模块。
+     */
+    private static void addOptionalConfig(List<Class<?>> configs, String className) {
+        try {
+            configs.add(Class.forName(className, false, SummerApplication.class.getClassLoader()));
+        } catch (Throwable e) {
+            LOG.fine("Skipped optional auto-configuration (class not found): " + className);
+        }
+    }
 
     /** 探测类是否在 classpath（不初始化），用于可选自动配置的条件激活。 */
     private static boolean isClassPresent(String name) {

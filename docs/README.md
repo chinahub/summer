@@ -79,7 +79,7 @@
 | 位置 | 用途 | 加载时机 |
 | --- | --- | --- |
 | [AGENTS.md](../AGENTS.md) | 项目宪法：构建命令、模块速览、编码规范 | 每次会话 |
-| [各模块 AGENTS.md](../summer-core/AGENTS.md) | 模块专属约定 | 仅当触碰该模块时 |
+| [各模块 AGENTS.md](../summer-boot/AGENTS.md) | 模块专属约定（summer-boot / summer-support / summer-ai 等） | 仅当触碰该模块时 |
 | [.claude/skills/](../.claude/skills/) | 工作流：代码审查、发布、部署 | 调用时加载 |
 | [.claude/rules/](../.claude/rules/) | 路径限定规则：Java 编码、配置文件、模块依赖 | 仅当触碰匹配文件时 |
 
@@ -89,18 +89,17 @@
 
 ```
 summer-parent (pom)
-├── summer-core            IoC/DI/扫描/配置 + 日志 + AOP + 定时任务
-├── summer-web             嵌入式 HTTP 服务器(ServerSocketChannel+虚拟线程,NIMA;TLS/chunked)/路由/JSON/绑定/异常/校验/WebSocket
-├── summer-data            ORM：BaseMapper/Wrapper/分页/IService/事务/多方言/多数据源，纯 JDBC，零第三方依赖
-├── summer-security        安全模块：JWT 无状态认证、BCrypt、URL/方法级授权，纯 JDK，零第三方依赖
-├── summer-ai              大模型对话抽象：ChatModel/ChatClient，OpenAI 兼容，同步与 SSE 流式，纯 JDK
-├── summer-office          文档处理：解析与生成 xlsx/docx/pdf/xml/csv/md，纯 JDK 实现 csv/md/xml，xlsx/docx/pdf 按 classpath 探测激活（POI/PDFBox）
-├── summer-boot            SummerApplication.run() 启动器/自动配置/数据源/Mapper装配/关闭钩子
+├── summer-boot            启动器 + 核心运行时（原 core/web/data/security/office 已并入）：SummerApplication.run()/自动配置/IoC/AOP/日志/嵌入式HTTP(NIMA)/ORM/事务/JWT 安全/xlsx/docx/pdf/csv/md/xml 文档读写，关闭钩子
+├── summer-support         OCR 文字识别：DB 检测 + 方向分类 + CRNN 识别流水线（FFM 直连 onnxruntime 原生库），依赖 summer-boot
+├── summer-ai              大模型对话抽象：ChatModel/ChatClient，OpenAI 兼容，同步与 SSE 流式，纯 JDK；AI 自动配置（cn.jiebaba.summer.boot.ai 包）随本模块发布，依赖 summer-boot
 ├── summer-boot-loader     可执行 jar 启动器 JarLauncher（java -jar 入口），由插件内置打包
 ├── summer-pack-maven-plugin  mvn package 自动产出 BOOT-INF 可执行 jar
 ├── summer-sample          示例应用（Application + controller/service/repository/aspect）
 └── build-test              集中式测试：AOP 单测/集成测试 + sample 冒烟测试
 ```
+
+> summer-boot 不编译期依赖 summer-ai / summer-support（避免循环依赖），二者由 SummerApplication
+> 按 classpath 探测（`isClassPresent`）+ `Class.forName` 反射注册自动配置。
 
 ## 一句话定位
 
