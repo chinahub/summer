@@ -24,6 +24,7 @@
         <junit.jupiter.version>5.12.2</junit.jupiter.version>
     </properties>
     <modules>
+        <module>summer-core</module>
         <module>summer-support</module>
         <module>summer-ai</module>
         <module>summer-boot</module>

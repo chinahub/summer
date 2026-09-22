@@ -11,7 +11,7 @@ summer 是基于 JDK 25 内置库、虚拟线程构建的类 Spring Boot 轻量�
 - **版本**：4.0
 - **许可**：Apache 2.0
 - **JDK**：25（`maven.compiler.release=25`）
-- **构建**：Maven，多模块（parent POM，7 个子模块；原 core/web/data/security/office 已并入 summer-boot）
+- **构建**：Maven，多模块（parent POM，8 个子模块；web/data/security/office 已并入 summer-boot，`cn.jiebaba.summer.core.*` 独立为 summer-core）
 
 ## 构建命令
 
@@ -36,15 +36,16 @@ mvn clean deploy -P release
 
 | 模块 | 职责 | 关键内容 |
 | --- | --- | --- |
-| summer-boot | 启动器 + 自动配置 + 核心运行时（整合原 core/web/data/security/office） | SummerApplication.run(), 各模块 AutoConfiguration, Mapper 注册, ApplicationContext, AOP(字节码代理), JUL 日志, SLF4J 绑定, 嵌入式 HTTP(NIMA), 路由/校验/WebSocket, BaseMapper/Wrapper/分页, 多方言, @DS/@DSTransactional, JWT 无状态认证 + BCrypt + 授权, xlsx/docx/pdf/csv/md/xml 文档读写, 工具集 |
-| summer-support | OCR 文字识别（原 summer-office 的 OCR 独立而成） | cn.jiebaba.summer.support.ocr: Ocr/OcrConfig/OcrResult + DB/CRNN 流水线, OcrAutoConfiguration |
+| summer-core | 核心运行时（`cn.jiebaba.summer.core.*` 独立成模块，boot 与 support 的共同底层） | ApplicationContext/IoC 容器, 类扫描, AOP(自研字节码代理), JUL 日志 + SLF4J 绑定, 定时任务, 环境配置(env), 自研 JSON(json + util.JsonUtil), 框架注解, core.test 测试微框架, ONNX 引擎(onnx), SummerException 基础异常 |
+| summer-boot | 启动器 + 自动配置（依赖 summer-core；整合原 web/data/security/office） | SummerApplication.run(), 各模块 AutoConfiguration, Mapper 注册, 嵌入式 HTTP(NIMA), 路由/校验/WebSocket, BaseMapper/Wrapper/分页, 多方言, @DS/@DSTransactional, JWT 无状态认证 + BCrypt + 授权, xlsx/docx/pdf/csv/md/xml 文档读写 |
+| summer-support | OCR 文字识别（原 summer-office 的 OCR 独立而成，依赖 summer-core） | cn.jiebaba.summer.support.ocr: Ocr/OcrConfig/OcrResult + DB/CRNN 流水线, OcrAutoConfiguration |
 | summer-ai | 大模型对话抽象 + RAG + 向量存储 + A2A 跨实例协作 | ChatClient, OpenAI 兼容, SSE 流式, 工具调用, embedding, 重试/熔断, agent(A2A 委派/契约/恢复), AI 自动配置（cn.jiebaba.summer.boot.ai 包随本模块发布） |
 | summer-boot-loader | 可执行 jar 启动器 | JarLauncher（`java -jar` 入口） |
 | summer-pack-maven-plugin | 打包插件 | 产出 BOOT-INF 可执行 jar |
 | summer-sample | 示例应用 | controller/service/repository/aspect 示例 |
 | build-test | 集中式测试 | AOP 单测/集成测试 + sample 冒烟测试 |
 
-> 模块依赖方向：summer-support → summer-boot ← summer-ai；summer-sample/build-test 依赖上述模块。
+> 模块依赖方向：summer-support → summer-core ← summer-boot；summer-ai → summer-boot；summer-sample/build-test 依赖上述模块。
 > summer-boot 不编译期依赖 summer-ai/summer-support（避免循环依赖），二者由 SummerApplication
 > 按 classpath 探测（isClassPresent + Class.forName 反射）注册自动配置。
 

@@ -89,8 +89,9 @@
 
 ```
 summer-parent (pom)
-├── summer-boot            启动器 + 核心运行时（原 core/web/data/security/office 已并入）：SummerApplication.run()/自动配置/IoC/AOP/日志/嵌入式HTTP(NIMA)/ORM/事务/JWT 安全/xlsx/docx/pdf/csv/md/xml 文档读写，关闭钩子
-├── summer-support         OCR 文字识别：DB 检测 + 方向分类 + CRNN 识别流水线（FFM 直连 onnxruntime 原生库），依赖 summer-boot
+├── summer-core              核心运行时（cn.jiebaba.summer.core）：IoC/AOP/日志/扫描/定时/配置环境/JSON/工具集/ONNX 引擎/测试微框架
+├── summer-boot            启动器 + 自动配置（依赖 summer-core）：SummerApplication.run()/自动配置/嵌入式HTTP(NIMA)/ORM/事务/JWT 安全/xlsx/docx/pdf/csv/md/xml 文档读写，关闭钩子
+├── summer-support         OCR 文字识别：DB 检测 + 方向分类 + CRNN 识别流水线（FFM 直连 onnxruntime 原生库），依赖 summer-core
 ├── summer-ai              大模型对话抽象：ChatModel/ChatClient，OpenAI 兼容，同步与 SSE 流式，纯 JDK；AI 自动配置（cn.jiebaba.summer.boot.ai 包）随本模块发布，依赖 summer-boot
 ├── summer-boot-loader     可执行 jar 启动器 JarLauncher（java -jar 入口），由插件内置打包
 ├── summer-pack-maven-plugin  mvn package 自动产出 BOOT-INF 可执行 jar
@@ -100,6 +101,7 @@ summer-parent (pom)
 
 > summer-boot 不编译期依赖 summer-ai / summer-support（避免循环依赖），二者由 SummerApplication
 > 按 classpath 探测（`isClassPresent`）+ `Class.forName` 反射注册自动配置。
+> summer-support 仅依赖 summer-core（不依赖 summer-boot），OCR 为可选模块。
 
 ## 一句话定位
 

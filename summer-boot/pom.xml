@@ -10,19 +10,14 @@
     </parent>
     <artifactId>summer-boot</artifactId>
     <name>summer-boot</name>
-    <description>summer application bootstrap and core runtime: SummerApplication.run(), auto-configuration, IoC/AOP/logging/scheduling (原 summer-core）、嵌入式 HTTP/web（原 summer-web）、ORM/事务/多数据源（原 summer-data）、JWT 安全（原 summer-security）、文档读写（原 summer-office，OCR 移至 summer-support）。</description>
+    <description>summer application bootstrap and auto-configuration: SummerApplication.run(), auto-configuration, 嵌入式 HTTP/web（原 summer-web）、ORM/事务/多数据源（原 summer-data）、JWT 安全（原 summer-security）、文档读写（原 summer-office，OCR 移至 summer-support）。核心运行时（IoC/AOP/日志/扫描/定时/env/json/util/onnx/test，包名 cn.jiebaba.summer.core 不变）已拆至 summer-core 模块，本模块经 Maven 依赖传递获得。</description>
     <dependencies>
-        <!-- SLF4J API：仅用于 SLF4J→JUL 绑定适配，optional 不传递给使用者，保持运行时零第三方依赖 -->
+        <!-- 核心运行时：IoC/AOP/日志/扫描/定时/env/json/util/onnx/test 均在 summer-core；
+             SLF4J API 与 JUnit API 的 optional 依赖已随对应类（logging.slf4j/test 包）迁至 summer-core -->
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <!-- JUnit 5 整合层（@SummerTest/SummerExtension）：optional 不传递给使用者，保持运行时零第三方依赖 -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <optional>true</optional>
+            <groupId>cn.jiebaba.summer</groupId>
+            <artifactId>summer-core</artifactId>
+            <version>${summer.version}</version>
         </dependency>
     </dependencies>
 </project>

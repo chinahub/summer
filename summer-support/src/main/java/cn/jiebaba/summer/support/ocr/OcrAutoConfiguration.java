@@ -7,7 +7,7 @@ import cn.jiebaba.summer.core.env.Environment;
 
 /**
  * summer-support OCR 自动配置：按 summer.ocr.* 装配 {@link Ocr}。
- * <p>本类位于 summer-support（依赖 summer-boot）；运行期由 SummerApplication
+ * <p>本类位于 summer-support（依赖 summer-core）；运行期由 SummerApplication
  * 在探测到 summer-support 的 OCR 类在 classpath 后才注册加载。{@link Ocr} 以 {@code @Lazy} 注册，
  * 仅在注入时才初始化原生引擎与模型，未配置且未被注入时不会影响启动。
  */

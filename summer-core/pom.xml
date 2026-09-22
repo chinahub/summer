@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>cn.jiebaba.summer</groupId>
+        <artifactId>summer-parent</artifactId>
+        <version>4.0</version>
+    </parent>
+    <artifactId>summer-core</artifactId>
+    <name>summer-core</name>
+    <description>summer 核心模块：IoC 容器（context）、类扫描（scanner）、AOP（aop + 自研字节码引擎）、JUL 日志 + SLF4J 绑定（logging）、定时任务（scheduling）、环境配置（env）、自研 JSON（json）、工具集（util）、框架注解（annotation）、测试微框架（test）、ONNX 引擎（onnx）。summer-boot 与 summer-support 的共同底层，零第三方运行时依赖。</description>
+    <dependencies>
+        <!-- SLF4J API：仅用于 SLF4J→JUL 绑定适配，optional 不传递给使用者，保持运行时零第三方依赖 -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <!-- JUnit 5 整合层（@SummerTest/SummerExtension）：optional 不传递给使用者，保持运行时零第三方依赖 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>

@@ -10,11 +10,11 @@
     </parent>
     <artifactId>summer-support</artifactId>
     <name>summer-support</name>
-    <description>summer 支持模块：OCR 文字识别（DB 文本检测 + 方向分类 + CRNN 识别流水线，纯 JDK 图像处理，FFM 调用 onnxruntime 原生库推理）。依赖 summer-boot，由 SummerApplication 按 classpath 探测激活。</description>
+    <description>summer 支持模块：OCR 文字识别（DB 文本检测 + 方向分类 + CRNN 识别流水线，纯 JDK 图像处理，FFM 调用 onnxruntime 原生库推理）。依赖 summer-core（onnx 引擎与注解/环境），由 SummerApplication 按 classpath 探测激活，summer-boot 不反向依赖本模块。</description>
     <dependencies>
         <dependency>
             <groupId>cn.jiebaba.summer</groupId>
-            <artifactId>summer-boot</artifactId>
+            <artifactId>summer-core</artifactId>
             <version>${summer.version}</version>
         </dependency>
     </dependencies>

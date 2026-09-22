@@ -16,5 +16,5 @@ paths: ["**.java"]
 - 既有英文注释需翻译为中文
 
 ## 依赖原则
-- summer-boot（含原 core/web/data/security/office）/summer-ai/summer-support 禁止引入第三方依赖
+- summer-core（`cn.jiebaba.summer.core.*` 包）/summer-boot/summer-ai/summer-support 禁止引入第三方依赖
 - 新增依赖需在父 POM 的 `<dependencyManagement>` 中声明版本

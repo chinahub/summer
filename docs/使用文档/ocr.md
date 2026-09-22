@@ -12,7 +12,7 @@ summer-support 在 `cn.jiebaba.summer.support.ocr` 包下提供 OCR 能力：检
 
 - 直接 `SymbolLookup.libraryLookup` 加载 `onnxruntime.dll`/`libonnxruntime.so`，按 `OrtApi` 结构体字段序号读取函数指针包装为 `MethodHandle`；
 - det/cls/rec 的预处理与后处理（缩放、归一化、DB 二值化、连通域、最小外接矩形、透视矫正、CTC 解码）全部纯 Java 移植自 [RapidAI/rapidocr](https://github.com/RapidAI/rapidocr)（Python）；
-- 因此 OCR 能力**不引入任何额外 Maven 依赖**（`summer-support` 仅依赖 `summer-boot`）；onnxruntime 原生库与模型文件作为部署期资产按路径加载。
+- 因此 OCR 能力**不引入任何额外 Maven 依赖**（`summer-support` 仅依赖 `summer-core`）；onnxruntime 原生库与模型文件作为部署期资产按路径加载。
 
 ## 快速开始
 
@@ -60,7 +60,7 @@ try (Ocr ocr = Ocr.create(config)) {
 
 ### 3. 在 summer-boot 中自动装配
 
-引入 `summer-support` 模块即可（其依赖 summer-boot）；当 `summer.ocr.lib-path` 等配置齐全时自动装配 `Ocr` Bean（`@Lazy`，注入时才初始化引擎，未用不影响启动）：
+引入 `summer-support` 模块即可（其依赖 summer-core；由 summer-boot 按 classpath 探测反射注册自动配置）；当 `summer.ocr.lib-path` 等配置齐全时自动装配 `Ocr` Bean（`@Lazy`，注入时才初始化引擎，未用不影响启动）：
 
 ```yaml
 summer:

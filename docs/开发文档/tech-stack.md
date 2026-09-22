@@ -29,10 +29,10 @@
 - 反射、注解处理、字节码读取均用 JDK 内置 API；
 - 组件扫描直接读类路径的 `.class`/`.jar` 文件；
 - 唯一运行期外部依赖是 **JDBC 驱动**（由使用者自备，如 `postgresql`、`mysql-connector-j`）。
-- SLF4J 绑定为**可选**：`summer-boot`（原 summer-core）以 `optional` 引入 `slf4j-api`，仅当使用方显式引入时才由 SLF4J `ServiceLoader` 激活，框架自身运行期仍是零第三方依赖。
+- SLF4J 绑定为**可选**：`summer-core` 以 `optional` 引入 `slf4j-api`，仅当使用方显式引入时才由 SLF4J `ServiceLoader` 激活，框架自身运行期仍是零第三方依赖。
 - **summer-ai** 同样零第三方依赖：仅依赖 summer-boot（用其 core/data 能力）；其自动配置类随本模块发布，由 summer-boot 启动时按 classpath 探测反射激活（详见 [AI 对话](../使用文档/ai.md)）。
 - **summer-office** 已并入 summer-boot：xlsx/docx/pdf 均为自研实现（SAX/ZipOutputStream/StAX/直接生成 PDF 对象结构），零第三方依赖；OCR 独立为 summer-support 模块
-- **测试侧 JUnit 5 不进运行期**：`summer-boot` 仅以 `optional` 引入 `junit-jupiter-api`（供 `@SummerTest`/`SummerExtension` 整合层编译）；`junit-jupiter`、`junit-platform-launcher` 只在 summer-sample（test scope）与 build-test（不发布模块）中使用，均不进入框架运行期的传递依赖。
+- **测试侧 JUnit 5 不进运行期**：`summer-core` 仅以 `optional` 引入 `junit-jupiter-api`（供 `@SummerTest`/`SummerExtension` 整合层编译）；`junit-jupiter`、`junit-platform-launcher` 只在 summer-sample（test scope）与 build-test（不发布模块）中使用，均不进入框架运行期的传递依赖。
 
 ## 为什么不走 junit-like（自研测试框架）
 
