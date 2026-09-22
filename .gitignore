@@ -22,3 +22,5 @@ build-test/*.class
 build-test/*.class
 # SSH keys (do not commit)
 .ssh/
+# Mimosa 插件本地状态
+.mimosa/
