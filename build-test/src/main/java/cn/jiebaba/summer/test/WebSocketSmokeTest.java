@@ -17,12 +17,18 @@ import java.nio.charset.StandardCharsets;
 public class WebSocketSmokeTest {
 
     private static int passed = 0;
+    private static int failed = 0;
 
     /**
      * WebSocket 冒烟测试入口：启动应用，完成握手后验证 @OnOpen 消息、文本 echo、
-     * 以及 ping/pong 保活，结束时关闭 Web 服务与上下文。
+     * 以及 ping/pong 保活，结束时关闭 Web 服务与上下文；存在失败时以非零码退出。
      */
     public static void main(String[] args) throws Exception {
+        // 使用临时端口，避免与 8080 上的其他服务冲突
+        System.setProperty("server.port", "0");
+        // sample 的 application.yml 中 AI 配置默认注释；填充占位值仅为通过 chatModel 自动装配，本测试不调用 AI
+        System.setProperty("summer.ai.provider", "deepseek");
+        System.setProperty("summer.ai.api-key", "dummy-not-used");
         SummerApplication app = SummerApplication.run(Application.class, args);
         int port = app.webServer().port();
         Thread.sleep(500);
@@ -65,7 +71,8 @@ public class WebSocketSmokeTest {
             app.context().close();
         }
         System.out.println();
-        System.out.println("WebSocket smoke test: " + passed + " assertions passed");
+        System.out.println("WebSocket smoke test: " + passed + " passed, " + failed + " failed");
+        if (failed > 0) System.exit(1);
     }
 
     static String readResponse(InputStream raw) throws Exception {
@@ -166,7 +173,7 @@ public class WebSocketSmokeTest {
     static void expect(String label, Object expected, Object actual) {
         boolean ok = java.util.Objects.equals(expected, actual);
         if (ok) { passed++; }
-        else { System.out.println("  FAIL " + label + ": expected=" + expected + " actual=" + actual); }
+        else { failed++; System.out.println("  FAIL " + label + ": expected=" + expected + " actual=" + actual); }
     }
 
     static final class ByteArrayOutputStream2 extends java.io.ByteArrayOutputStream {

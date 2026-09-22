@@ -10,9 +10,13 @@ import java.nio.charset.StandardCharsets;
 
 /** 进程内冒烟测试：启动应用并通过回环地址遍历每个路由。 */
 public class SmokeTest {
+
+    private static int passed = 0;
+    private static int failed = 0;
+
     /**
      * 冒烟测试入口：启动应用，通过回环地址对全部路由（GET/POST/PUT/DELETE 等）
-     * 发起请求，结束后关闭 Web 服务与上下文。
+     * 发起请求并断言状态码，结束后关闭 Web 服务与上下文；存在失败时以非零码退出。
      */
     public static void main(String[] args) throws Exception {
         // 使用临时端口，避免与 8080 上的其他服务冲突
@@ -24,28 +28,31 @@ public class SmokeTest {
         int port = app.webServer().port();
         Thread.sleep(400);
         try {
-            test(port, "GET", "/", null);
-            test(port, "GET", "/?name=summer", null);
-            test(port, "GET", "/hello/looming", null);
-            test(port, "GET", "/users", null);
-            test(port, "GET", "/users/1", null);
-            test(port, "GET", "/users/999", null);
-            test(port, "POST", "/users", "{\"name\":\"alice\",\"age\":30}");
-            test(port, "PUT", "/users/2", "{\"name\":\"alice2\",\"age\":31}");
-            test(port, "DELETE", "/users/2", null);
-            test(port, "GET", "/users/greeting", null);
-            test(port, "GET", "/no-such-route", null);
+            test(port, "GET", "/", null, 200);
+            test(port, "GET", "/?name=summer", null, 200);
+            test(port, "GET", "/hello/looming", null, 200);
+            test(port, "GET", "/users", null, 200);
+            test(port, "GET", "/users/1", null, 200);
+            test(port, "GET", "/users/999", null, 400);
+            test(port, "POST", "/users", "{\"name\":\"alice\",\"age\":30}", 201);
+            test(port, "PUT", "/users/2", "{\"name\":\"alice2\",\"age\":31}", 200);
+            test(port, "DELETE", "/users/2", null, 200);
+            test(port, "GET", "/users/greeting", null, 200);
+            test(port, "GET", "/no-such-route", null, 404);
         } finally {
             app.webServer().stop();
             app.context().close();
         }
+        System.out.println();
+        System.out.println("Smoke test: " + passed + " passed, " + failed + " failed");
+        if (failed > 0) System.exit(1);
     }
 
     /**
-     * 向指定端口发起一次 HTTP 请求：组装请求行、头部与请求体，读取完整响应并
-     * 打印状态行与响应正文。
+     * 向指定端口发起一次 HTTP 请求：组装请求行、头部与请求体，读取完整响应，
+     * 断言状态码与期望一致并打印状态行与响应正文。
      */
-    static void test(int port, String method, String path, String body) throws Exception {
+    static void test(int port, String method, String path, String body, int expectedStatus) throws Exception {
         try (Socket s = new Socket("127.0.0.1", port)) {
             s.setSoTimeout(5000);
             OutputStream out = s.getOutputStream();
@@ -65,6 +72,13 @@ public class SmokeTest {
             String statusLine = resp.substring(0, resp.indexOf("\r\n"));
             int idx = resp.indexOf("\r\n\r\n");
             String respBody = idx >= 0 ? resp.substring(idx + 4) : "";
+            int status = Integer.parseInt(statusLine.split(" ")[1]);
+            if (status == expectedStatus) {
+                passed++;
+            } else {
+                failed++;
+                System.out.println("  FAIL [" + method + " " + path + "] expected " + expectedStatus + " got " + status);
+            }
             System.out.println("[" + method + " " + path + "] " + statusLine);
             System.out.println(respBody);
             System.out.println("----");

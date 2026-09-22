@@ -11,7 +11,7 @@ import java.util.logging.Logger;
 public class LoggingAspect {
     private static final Logger LOG = Logger.getLogger(LoggingAspect.class.getName());
 
-    @Around("execution(* io.summer.sample.repository..*.*(..))")
+    @Around("execution(* cn.jiebaba.summer.sample.repository..*.*(..))")
     public Object logAround(ProceedingJoinPoint jp) throws Throwable {
         long start = System.currentTimeMillis();
         Object result = jp.proceed();
@@ -19,7 +19,7 @@ public class LoggingAspect {
         return result;
     }
 
-    @AfterReturning("execution(* io.summer.sample.repository..*.save(..))")
+    @AfterReturning("execution(* cn.jiebaba.summer.sample.repository..*.save(..))")
     public void afterSave(ProceedingJoinPoint jp) {
         LOG.info("save completed on " + jp.getSignature());
     }

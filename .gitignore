@@ -24,3 +24,5 @@ build-test/*.class
 .ssh/
 # Mimosa 插件本地状态
 .mimosa/
+# ZCode 工具本地状态
+.zcode/

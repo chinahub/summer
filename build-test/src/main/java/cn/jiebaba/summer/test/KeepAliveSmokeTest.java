@@ -15,12 +15,18 @@ import java.nio.charset.StandardCharsets;
 public class KeepAliveSmokeTest {
 
     private static int passed = 0;
+    private static int failed = 0;
 
     /**
      * keep-alive 冒烟测试入口：启动应用，在单条 TCP 连接上依次发送 keep-alive
-     * 与 close 请求，验证连接复用与服务端正确关闭。
+     * 与 close 请求，验证连接复用与服务端正确关闭；存在失败时以非零码退出。
      */
     public static void main(String[] args) throws Exception {
+        // 使用临时端口，避免与 8080 上的其他服务冲突
+        System.setProperty("server.port", "0");
+        // sample 的 application.yml 中 AI 配置默认注释；填充占位值仅为通过 chatModel 自动装配，本测试不调用 AI
+        System.setProperty("summer.ai.provider", "deepseek");
+        System.setProperty("summer.ai.api-key", "dummy-not-used");
         SummerApplication app = SummerApplication.run(Application.class, args);
         int port = app.webServer().port();
         Thread.sleep(500);
@@ -56,7 +62,8 @@ public class KeepAliveSmokeTest {
             app.context().close();
         }
         System.out.println();
-        System.out.println("Keep-alive smoke test: " + passed + " assertions passed");
+        System.out.println("Keep-alive smoke test: " + passed + " passed, " + failed + " failed");
+        if (failed > 0) System.exit(1);
     }
 
     static void sendRequest(OutputStream out, String method, String path, String body) throws Exception {
@@ -108,6 +115,6 @@ public class KeepAliveSmokeTest {
     static void expect(String label, Object expected, Object actual) {
         boolean ok = java.util.Objects.equals(expected, actual);
         if (ok) { passed++; }
-        else { System.out.println("  FAIL " + label + ": expected=" + expected + " actual=" + actual); }
+        else { failed++; System.out.println("  FAIL " + label + ": expected=" + expected + " actual=" + actual); }
     }
 }

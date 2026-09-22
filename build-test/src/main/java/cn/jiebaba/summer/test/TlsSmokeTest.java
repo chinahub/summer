@@ -22,10 +22,12 @@ import java.security.cert.X509Certificate;
 public class TlsSmokeTest {
 
     private static int passed = 0;
+    private static int failed = 0;
 
     /**
      * TLS 冒烟测试入口：生成自签名密钥库，启动启用 SSL 的应用，
-     * 在单条 TLS 连接上依次发送 keep-alive 与 close 请求，验证 TLS 握手与连接复用。
+     * 在单条 TLS 连接上依次发送 keep-alive 与 close 请求，验证 TLS 握手与连接复用；
+     * 存在失败时以非零码退出。
      */
     public static void main(String[] args) throws Exception {
         // 生成自签名密钥库
@@ -38,6 +40,9 @@ public class TlsSmokeTest {
         System.setProperty("server.ssl.keystore", keystore.toString());
         System.setProperty("server.ssl.keystorepassword", "summerpw");
         System.setProperty("server.ssl.keystoretype", "PKCS12");
+        // sample 的 application.yml 中 AI 配置默认注释；填充占位值仅为通过 chatModel 自动装配，本测试不调用 AI
+        System.setProperty("summer.ai.provider", "deepseek");
+        System.setProperty("summer.ai.api-key", "dummy-not-used");
 
         SummerApplication app = SummerApplication.run(Application.class, args);
         int port = app.webServer().port();
@@ -80,7 +85,8 @@ public class TlsSmokeTest {
             app.context().close();
         }
         System.out.println();
-        System.out.println("TLS smoke test: " + passed + " assertions passed");
+        System.out.println("TLS smoke test: " + passed + " passed, " + failed + " failed");
+        if (failed > 0) System.exit(1);
     }
 
     /** 调用 keytool 生成自签名 PKCS12 密钥库（每次重新生成以保证干净状态）。 */
@@ -156,6 +162,6 @@ public class TlsSmokeTest {
     static void expect(String label, Object expected, Object actual) {
         boolean ok = java.util.Objects.equals(expected, actual);
         if (ok) { passed++; }
-        else { System.out.println("  FAIL " + label + ": expected=" + expected + " actual=" + actual); }
+        else { failed++; System.out.println("  FAIL " + label + ": expected=" + expected + " actual=" + actual); }
     }
 }

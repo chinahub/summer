@@ -29,6 +29,9 @@ public class MultiChainSmokeTest {
         System.setProperty("server.port", "0");
         System.setProperty("summer.security.enabled", "true");
         System.setProperty("summer.security.jwt.secret", "multi-chain-test-jwt-secret-32-bytes!");
+        // summer-ai 在 build-test classpath 上会被 classpath 探测注册；填充占位值仅为通过 chatModel 自动装配，本测试不调用 AI
+        System.setProperty("summer.ai.provider", "deepseek");
+        System.setProperty("summer.ai.api-key", "dummy-not-used");
         SummerApplication app = SummerApplication.run(MultiChainTestApp.class, args);
         int port = app.webServer().port();
         Thread.sleep(400);
