@@ -2,10 +2,12 @@ package cn.jiebaba.summer.test.typehandler;
 
 import cn.jiebaba.summer.data.annotation.TableField;
 import cn.jiebaba.summer.data.dialect.Dialect;
+import cn.jiebaba.summer.data.dialect.H2Dialect;
 import cn.jiebaba.summer.data.dialect.MySqlDialect;
 import cn.jiebaba.summer.data.dialect.OracleDialect;
 import cn.jiebaba.summer.data.dialect.PostgreSqlDialect;
 import cn.jiebaba.summer.data.dialect.SqlServerDialect;
+import cn.jiebaba.summer.data.dialect.SqliteDialect;
 import cn.jiebaba.summer.data.metadata.MetadataParser;
 import cn.jiebaba.summer.data.metadata.TableFieldInfo;
 import cn.jiebaba.summer.data.metadata.TableInfo;
@@ -119,8 +121,12 @@ public class JsonTypeHandlerTest {
         Assertions.assertTrue(Dialect.fromUrl("jdbc:mariadb://localhost/db") instanceof MySqlDialect);
         Assertions.assertTrue(Dialect.fromUrl("jdbc:oracle:thin:@//host:1521/db") instanceof OracleDialect);
         Assertions.assertTrue(Dialect.fromUrl("jdbc:sqlserver://host:1433;databaseName=db") instanceof SqlServerDialect);
-        Assertions.assertTrue(Dialect.fromUrl("jdbc:sqlite:test.db") instanceof MySqlDialect,
-                "sqlite URL should map to MySqlDialect (LIMIT 语法一致)");
+        Assertions.assertTrue(Dialect.fromUrl("jdbc:sqlite:test.db") instanceof SqliteDialect,
+                "sqlite URL should map to SqliteDialect (分页与 MySQL 一致，upsert 语法不同)");
+        Assertions.assertTrue(Dialect.fromUrl("jdbc:h2:mem:test") instanceof H2Dialect,
+                "h2 URL should map to H2Dialect (Regular 模式不支持 MySQL 专有语法)");
+        Assertions.assertTrue(Dialect.fromUrl("jdbc:h2:mem:test;MODE=MySQL") instanceof H2Dialect,
+                "h2 URL should map to H2Dialect regardless of MODE (MERGE KEY 全模式通用)");
     }
 
     @Test
@@ -131,8 +137,10 @@ public class JsonTypeHandlerTest {
         Assertions.assertTrue(Dialect.fromDriver("org.mariadb.jdbc.Driver") instanceof MySqlDialect);
         Assertions.assertTrue(Dialect.fromDriver("oracle.jdbc.OracleDriver") instanceof OracleDialect);
         Assertions.assertTrue(Dialect.fromDriver("com.microsoft.sqlserver.jdbc.SQLServerDriver") instanceof SqlServerDialect);
-        Assertions.assertTrue(Dialect.fromDriver("org.sqlite.JDBC") instanceof MySqlDialect,
-                "sqlite driver should map to MySqlDialect");
+        Assertions.assertTrue(Dialect.fromDriver("org.sqlite.JDBC") instanceof SqliteDialect,
+                "sqlite driver should map to SqliteDialect");
+        Assertions.assertTrue(Dialect.fromDriver("org.h2.Driver") instanceof H2Dialect,
+                "h2 driver should map to H2Dialect (不复用 MySqlDialect：Regular 模式反引号与 ON DUPLICATE KEY 均不可用)");
         Assertions.assertNull(Dialect.fromDriver(""), "empty driver should map to null");
         Assertions.assertNull(Dialect.fromDriver(null), "null driver should map to null");
     }

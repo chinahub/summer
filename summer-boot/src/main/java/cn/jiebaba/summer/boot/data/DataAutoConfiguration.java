@@ -1,6 +1,7 @@
 package cn.jiebaba.summer.boot.data;
 
 import cn.jiebaba.summer.core.annotation.Bean;
+import cn.jiebaba.summer.core.annotation.ConditionalOnMissingBean;
 import cn.jiebaba.summer.core.annotation.Configuration;
 import cn.jiebaba.summer.core.env.Environment;
 import cn.jiebaba.summer.data.datasource.DsInterceptor;
@@ -10,6 +11,8 @@ import cn.jiebaba.summer.data.datasource.DynamicDataSource;
 import cn.jiebaba.summer.data.mapper.MapperProxyFactory;
 import cn.jiebaba.summer.data.mapper.MapperSupport;
 import cn.jiebaba.summer.data.metadata.TableInfo;
+import cn.jiebaba.summer.data.migration.DatabaseMigration;
+import cn.jiebaba.summer.data.migration.SchemaMigrator;
 import cn.jiebaba.summer.data.dialect.Dialect;
 import cn.jiebaba.summer.data.support.DataProperties;
 import cn.jiebaba.summer.data.support.DataSourceFactory;
@@ -66,6 +69,23 @@ public class DataAutoConfiguration {
     @Bean
     public TransactionManager transactionManager(DataSource dataSource) {
         return new TransactionManager(dataSource);
+    }
+
+    /**
+     * 版本化 schema 迁移执行器：收集容器内全部 {@link DatabaseMigration} Bean，
+     * 按版本号升序执行未应用者并记入迁移历史表。在 Bean 创建期（容器 refresh 阶段）
+     * 执行，先于 Web 服务启动与 ApplicationRunner；无迁移 Bean 时零开销（不建历史表）。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SchemaMigrator schemaMigrator(SqlExecutor executor, TransactionManager tm,
+                                         cn.jiebaba.summer.core.context.ApplicationContext context) {
+        SchemaMigrator migrator = new SchemaMigrator(executor, tm, SchemaMigrator.DEFAULT_HISTORY_TABLE);
+        Map<String, DatabaseMigration> migrations = context.getBeansOfType(DatabaseMigration.class);
+        if (!migrations.isEmpty()) {
+            migrator.migrate(migrations.values());
+        }
+        return migrator;
     }
 
     @Bean

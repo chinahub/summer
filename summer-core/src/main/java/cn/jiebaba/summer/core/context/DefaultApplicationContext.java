@@ -261,7 +261,7 @@ public class DefaultApplicationContext implements ApplicationContext {
     }
 
     /** 事件监听器注册项：Bean 名、监听方法与监听的事件类型（null 表示监听全部事件）。 */
-    private record ListenerEntry(String beanName, Method method, Class<?> eventType) {}
+    private record ListenerEntry(String beanName, Method method, Class<?> eventType, boolean async) {}
 
     private final List<ListenerEntry> eventListeners = new CopyOnWriteArrayList<>();
 
@@ -270,11 +270,28 @@ public class DefaultApplicationContext implements ApplicationContext {
         if (event == null) return;
         for (ListenerEntry entry : eventListeners) {
             if (entry.eventType() != null && !entry.eventType().isInstance(event)) continue;
-            Object target = getBean(entry.beanName());
-            ReflectionUtils.makeAccessible(entry.method());
-            Object[] args = entry.method().getParameterCount() > 0 ? new Object[]{event} : new Object[0];
-            ReflectionUtils.invokeMethod(entry.method(), target, args);
+            if (entry.async()) {
+                // 异步监听：独立虚拟线程执行 + 异常隔离（不向发布方传播，仅记录日志）
+                Thread.ofVirtual().name("event-listener").start(() -> {
+                    try {
+                        invokeListener(entry, event);
+                    } catch (Throwable t) {
+                        LOG.log(java.util.logging.Level.WARNING, "异步事件监听器执行失败: "
+                                + entry.beanName() + "." + entry.method().getName(), t);
+                    }
+                });
+            } else {
+                invokeListener(entry, event);
+            }
         }
+    }
+
+    /** 同步调用单个监听器（参数个数为 0 或 1）；异常向发布方传播。 */
+    private void invokeListener(ListenerEntry entry, Object event) {
+        Object target = getBean(entry.beanName());
+        ReflectionUtils.makeAccessible(entry.method());
+        Object[] args = entry.method().getParameterCount() > 0 ? new Object[]{event} : new Object[0];
+        ReflectionUtils.invokeMethod(entry.method(), target, args);
     }
 
     /**
@@ -300,11 +317,11 @@ public class DefaultApplicationContext implements ApplicationContext {
                 String beanName = def.getName();
                 if (listener.value().length > 0) {
                     for (Class<?> eventType : listener.value()) {
-                        eventListeners.add(new ListenerEntry(beanName, method, eventType));
+                        eventListeners.add(new ListenerEntry(beanName, method, eventType, listener.async()));
                     }
                 } else {
                     Class<?> eventType = paramCount == 1 ? method.getParameterTypes()[0] : null;
-                    eventListeners.add(new ListenerEntry(beanName, method, eventType));
+                    eventListeners.add(new ListenerEntry(beanName, method, eventType, listener.async()));
                 }
             }
         }

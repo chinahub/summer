@@ -75,6 +75,20 @@ public interface Dialect {
     /** 该数据库用于存储 JSON 的原生列类型（如 "jsonb"、"json"、"CLOB"）。 */
     default String jsonColumnType() { return "json"; }
 
+    /**
+     * 生成"存在则更新、不存在则插入"完整语句（upsert）：以 {@code conflictColumns}
+     * 判定冲突（通常为主键），占位符顺序与 {@code insertColumns} 一致（由调用方按该顺序绑定值）。
+     *
+     * @param table           表名（原始名，方言内部自行转义）
+     * @param insertColumns   插入列（原始名，含冲突列）
+     * @param conflictColumns 冲突判定列（原始名，通常为主键）
+     * @param updateColumns   冲突时更新的列（原始名，不含冲突列；为空则冲突时不做任何更新）
+     * @return 完整 SQL（含 {@code ?} 占位符）
+     */
+    default String upsert(String table, List<String> insertColumns, List<String> conflictColumns, List<String> updateColumns) {
+        throw new UnsupportedOperationException(name() + " 方言暂不支持 upsert");
+    }
+
     /** 将 JSON 文本值绑定到原生 JSON 列。 */
     default void setJsonParameter(PreparedStatement ps, int index, String json) throws SQLException {
         ps.setObject(index, json, Types.OTHER);
@@ -90,7 +104,9 @@ public interface Dialect {
         if (driverClassName == null || driverClassName.isBlank()) return null;
         String d = driverClassName.toLowerCase();
         if (d.contains("postgresql")) return new PostgreSqlDialect();
-        if (d.contains("mysql") || d.contains("mariadb") || d.contains("h2") || d.contains("sqlite")) return new MySqlDialect();
+        if (d.contains("sqlite")) return new SqliteDialect();
+        if (d.contains("mysql") || d.contains("mariadb")) return new MySqlDialect();
+        if (d.contains("h2")) return new H2Dialect();
         if (d.contains("oracle")) return new OracleDialect();
         if (d.contains("sqlserver")) return new SqlServerDialect();
         LOG.warning("Unknown driver class '" + driverClassName + "', falling back to PostgreSQL dialect");
@@ -110,7 +126,8 @@ public interface Dialect {
         String lower = url.toLowerCase();
         if (lower.startsWith("jdbc:postgresql:")) return new PostgreSqlDialect();
         if (lower.startsWith("jdbc:mysql:") || lower.startsWith("jdbc:mariadb:")) return new MySqlDialect();
-        if (lower.startsWith("jdbc:sqlite:")) return new MySqlDialect();
+        if (lower.startsWith("jdbc:h2:")) return new H2Dialect();
+        if (lower.startsWith("jdbc:sqlite:")) return new SqliteDialect();
         if (lower.startsWith("jdbc:oracle:")) return new OracleDialect();
         if (lower.startsWith("jdbc:sqlserver:")) return new SqlServerDialect();
         LOG.warning("Unknown JDBC URL '" + url + "', falling back to PostgreSQL dialect");
@@ -120,7 +137,9 @@ public interface Dialect {
     static Dialect of(String name) {
         if (name == null) return new PostgreSqlDialect();
         return switch (name.toLowerCase()) {
-            case "mysql", "mariadb", "h2", "sqlite" -> new MySqlDialect();
+            case "mysql", "mariadb" -> new MySqlDialect();
+            case "h2" -> new H2Dialect();
+            case "sqlite" -> new SqliteDialect();
             case "postgres", "postgresql", "pg" -> new PostgreSqlDialect();
             case "oracle" -> new OracleDialect();
             case "sqlserver", "mssql" -> new SqlServerDialect();

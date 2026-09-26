@@ -17,8 +17,10 @@ import cn.jiebaba.summer.web.http.MediaType;
 import cn.jiebaba.summer.web.http.WebRequest;
 import cn.jiebaba.summer.web.http.WebResponse;
 import cn.jiebaba.summer.core.json.Json;
+import cn.jiebaba.summer.web.resource.StaticResourceHandler;
 import cn.jiebaba.summer.web.routing.RouteMatch;
 import cn.jiebaba.summer.web.routing.Router;
+import cn.jiebaba.summer.web.sse.SseComment;
 import cn.jiebaba.summer.web.sse.SseEmitter;
 import cn.jiebaba.summer.web.sse.SseEvent;
 import cn.jiebaba.summer.web.support.ExceptionHandlerRegistry;
@@ -44,6 +46,12 @@ public final class RequestDispatcher {
     private final List<Filter> securityFilters;
     private final FilterChainSelector filterChainSelector;
     private final HandlerMethodAccessChecker accessChecker;
+    private volatile StaticResourceHandler staticHandler;
+
+    /** 设置静态资源处理器：路由未命中时回退静态资源（未设置则保持 404）。 */
+    public void setStaticResourceHandler(StaticResourceHandler staticHandler) {
+        this.staticHandler = staticHandler;
+    }
 
     /** 向后兼容的构造器：不含安全过滤器与访问检查器。 */
     public RequestDispatcher(Router router, HandlerMethodInvoker invoker, MessageConverter converter,
@@ -96,6 +104,11 @@ public final class RequestDispatcher {
         String path = stripContext(request.path());
         Optional<RouteMatch> match = router.match(request.method(), path);
         if (match.isEmpty()) {
+            // 路由优先、静态回退：未命中的 GET 尝试静态资源（命中即响应，未命中走 404）
+            StaticResourceHandler statics = this.staticHandler;
+            if (statics != null && statics.tryServe(request.method(), path, response)) {
+                return;
+            }
             writeNoRoute(response, request.method(), path);
             return;
         }
@@ -117,7 +130,8 @@ public final class RequestDispatcher {
 
     /**
      * 写出处理器返回值：处理 @ResponseStatus、null（204）、异步 CompletionStage、
-     * WebResponse 直返，以及 @ResponseBody/字符串/字节数组等情形的响应体序列化。
+     * WebResponse 直返、SseEmitter/Stream&lt;SseEvent&gt; 事件流，
+     * 以及 @ResponseBody/字符串/字节数组等情形的响应体序列化。
      */
     private void writeResult(RouteMatch route, Object result, WebResponse response) {
         ResponseStatus status = route.mapping().handlerMethod().getAnnotation(ResponseStatus.class);
@@ -146,6 +160,10 @@ public final class RequestDispatcher {
         }
         if (result instanceof SseEmitter emitter) {
             writeSse(emitter, response);
+            return;
+        }
+        if (result instanceof java.util.stream.Stream<?> stream) {
+            writeSseStream(stream, response);
             return;
         }
         if (responseBody) {
@@ -195,13 +213,37 @@ public final class RequestDispatcher {
             Thread.currentThread().interrupt();
             response.keepAlive(false);
         } finally {
+            // 断开/超时同样标记完成，避免广播方向已死连接的队列无限堆积
+            emitter.complete();
             emitter.fireCompletion();
         }
     }
 
-    /** 混合编码：SseEvent 完整帧；String 原样 data（多行拆分）；其他对象 JSON 序列化作 data。 */
+    /**
+     * 驱动 {@code Stream<SseEvent>} 事件流（拉式）：逐帧按混合编码 chunked 写出，流耗尽后收尾；
+     * 客户端断开（写失败）时关闭流并标记连接不复用。元素编码规则同 {@link #encodeSseFrame}。
+     */
+    private void writeSseStream(java.util.stream.Stream<?> stream, WebResponse response) {
+        response.header("Cache-Control", "no-cache");
+        response.header("X-Accel-Buffering", "no");
+        response.contentType("text/event-stream");
+        try (stream) {
+            response.commitChunked();
+            java.util.Iterator<?> it = stream.iterator();
+            while (it.hasNext()) {
+                response.writeChunk(encodeSseFrame(it.next()));
+            }
+            response.finishChunked();
+        } catch (IOException e) {
+            response.keepAlive(false);
+            LOG.log(Level.FINE, "SSE stream write failed, connection closed", e);
+        }
+    }
+
+    /** 混合编码：SseEvent 完整帧；SseComment 注释帧；String 原样 data（多行拆分）；其他对象 JSON 序列化作 data。 */
     private byte[] encodeSseFrame(Object item) {
         if (item instanceof SseEvent event) return event.encode();
+        if (item instanceof SseComment comment) return comment.encode();
         String data = item instanceof String s
                 ? s
                 : new String(converter.write(item, "application/json"), StandardCharsets.UTF_8);

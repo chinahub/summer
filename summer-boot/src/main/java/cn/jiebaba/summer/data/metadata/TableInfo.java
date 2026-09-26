@@ -17,6 +17,7 @@ public class TableInfo {
     private IdType idType = IdType.ASSIGN_ID;
     private boolean hasLogicDelete;
     private TableFieldInfo logicDeleteField;
+    private TableFieldInfo versionField;
 
     public Class<?> entityType() { return entityType; }
     public void entityType(Class<?> entityType) { this.entityType = entityType; }
@@ -34,6 +35,8 @@ public class TableInfo {
     public void hasLogicDelete(boolean hasLogicDelete) { this.hasLogicDelete = hasLogicDelete; }
     public TableFieldInfo logicDeleteField() { return logicDeleteField; }
     public void logicDeleteField(TableFieldInfo logicDeleteField) { this.logicDeleteField = logicDeleteField; }
+    public TableFieldInfo versionField() { return versionField; }
+    public void versionField(TableFieldInfo versionField) { this.versionField = versionField; }
 
     public String qualifiedTableName() {
         if (schema == null || schema.isEmpty()) return tableName;
@@ -60,7 +63,7 @@ public class TableInfo {
     public List<TableFieldInfo> updateFields() {
         List<TableFieldInfo> result = new ArrayList<>();
         for (TableFieldInfo f : fields) {
-            if (f.updatable() && !f.isId() && !f.isLogicDelete()) result.add(f);
+            if (f.updatable() && !f.isId() && !f.isLogicDelete() && f != versionField) result.add(f);
         }
         return result;
     }

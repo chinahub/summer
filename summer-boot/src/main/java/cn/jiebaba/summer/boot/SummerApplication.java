@@ -28,6 +28,7 @@ import cn.jiebaba.summer.web.support.WebRouteRegistrar;
 import cn.jiebaba.summer.web.bind.HandlerMethodAccessChecker;
 import cn.jiebaba.summer.web.filter.Filter;
 import cn.jiebaba.summer.web.filter.FilterChainSelector;
+import cn.jiebaba.summer.web.resource.StaticResourceHandler;
 import java.util.List;
 import cn.jiebaba.summer.security.authentication.AuthenticationManager;
 import cn.jiebaba.summer.security.jwt.JwtDecoder;
@@ -106,6 +107,10 @@ public final class SummerApplication {
             WebSocketRegistry wsRegistry = new WebSocketRegistry();
             wsRegistry.scan(context);
             server.setWebSocketRegistry(wsRegistry);
+            StaticResourceHandler statics = resolveStaticHandler(context);
+            if (statics != null) {
+                server.setStaticResourceHandler(statics);
+            }
             server.start();
 
             ScheduledTaskRegistrar scheduler = new ScheduledTaskRegistrar();
@@ -425,6 +430,15 @@ public final class SummerApplication {
     private static HandlerMethodAccessChecker resolveAccessChecker(ApplicationContext context) {
         try {
             return context.getBean(HandlerMethodAccessChecker.class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** 解析静态资源处理器 Bean（未注册时返回 null：不启用静态资源回退）。 */
+    private static StaticResourceHandler resolveStaticHandler(ApplicationContext context) {
+        try {
+            return context.getBean(StaticResourceHandler.class);
         } catch (Exception e) {
             return null;
         }

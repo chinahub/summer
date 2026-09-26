@@ -170,16 +170,22 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> {
 | 驱动类名（包含） | 方言 | 分页方式 | JSON 列类型 |
 | --- | --- | --- | --- |
 | `postgresql` | PostgreSqlDialect | `LIMIT ? OFFSET ?` | `jsonb`（`PGobject`） |
-| `mysql` / `mariadb` / `h2` | MySqlDialect | `LIMIT ? OFFSET ?` | `json`（`setString`） |
+| `mysql` / `mariadb` | MySqlDialect | `LIMIT ? OFFSET ?` | `json`（`setString`） |
+| `h2` | H2Dialect | `LIMIT ? OFFSET ?` | `json`（`setString`） |
+| `sqlite` | SqliteDialect | `LIMIT ? OFFSET ?` | `text`（`setString`） |
 | `oracle` | OracleDialect | `OFFSET ? FETCH NEXT ? ROWS ONLY` | `CLOB`（`setString`） |
 | `sqlserver` | SqlServerDialect | `OFFSET ? FETCH NEXT ? ROWS ONLY` | `nvarchar(max)`（`setString`） |
 | 未识别 | PostgreSqlDialect（打 WARNING） | `LIMIT ? OFFSET ?` | 默认 |
+
+> H2 不复用 MySqlDialect：反引号转义与 `ON DUPLICATE KEY UPDATE` 仅在 MySQL 兼容模式
+> （URL 追加 `;MODE=MySQL`）下可用，默认 Regular 模式会报语法错误。H2Dialect 用标准双引号
+> 转义 + H2 原生 `MERGE INTO ... KEY(...)` upsert（所有兼容模式通用），两种模式下均可直接使用。
 
 `Dialect.appendPagination(sql, offset, size, params)` 按各方言正确处理参数顺序；`jsonColumnType()`/`setJsonParameter()`/`getJsonResult()` 让 JSON 字段按方言绑定原生列类型（见下文 TypeHandler）。`SqlBuilder` 持有 dialect 字段，`DataAutoConfiguration` 通过 `Dialect.detect(driver, url)` 注册 `Dialect` bean。
 
 ### 标识符按需转义
 
-`Dialect.quote(identifier)` **按需转义**：命中保留字（如 `order`/`level`/`user`/`row`）、含非法字符或以非字母/下划线开头的标识符才加引号；普通列名/表名保持裸名（保留 Oracle 等数据库未加引号时的大小写隐式解析行为）。各方言引号语法：MySQL 反引号 `` ` ``、PostgreSQL 双引号 `"`、Oracle 双引号且统一转大写（`level` → `"LEVEL"`，与隐式存储一致）、SQL Server 方括号 `[ ]`。`SqlBuilder` 生成的全部 INSERT/UPDATE/DELETE/SELECT 已接入该转义。Oracle 真机验证（23ai）：`LEVEL` 为保留字，裸建列报 ORA-03050，转义后 `"LEVEL"` 正常读写。
+`Dialect.quote(identifier)` **按需转义**：命中保留字（如 `order`/`level`/`user`/`row`）、含非法字符或以非字母/下划线开头的标识符才加引号；普通列名/表名保持裸名（保留 Oracle 等数据库未加引号时的大小写隐式解析行为）。各方言引号语法：MySQL 反引号 `` ` ``、PostgreSQL/H2 双引号 `"`（H2 Regular 模式不支持反引号）、Oracle 双引号且统一转大写（`level` → `"LEVEL"`，与隐式存储一致）、SQL Server 方括号 `[ ]`。`SqlBuilder` 生成的全部 INSERT/UPDATE/DELETE/SELECT 已接入该转义。Oracle 真机验证（23ai）：`LEVEL` 为保留字，裸建列报 ORA-03050，转义后 `"LEVEL"` 正常读写。
 
 ### Oracle / SQL Server 适配说明
 
@@ -285,7 +291,7 @@ summer:
 | `keepalive-query` | `SELECT 1`（Oracle 未显式配置时自动 `SELECT 1 FROM DUAL`） | 探活 SQL |
 | `leak-detection-threshold` | 0（关闭） | 连接持有超过此阈值时打 WARN 日志（含借出调用栈） |
 
-**嵌入式数据库提示**：SQLite、H2 等单写者（file 模式）数据库，连接池 >1 时并发写会报 `database is locked`。建议将 `pool-size: 1`（同时 `minimum-idle: 1`）以规避；SQLite 方言已内置映射（复用 MySQL 方言，`LIMIT ? OFFSET ?` 分页语法一致）。
+**嵌入式数据库提示**：SQLite、H2 等单写者（file 模式）数据库，连接池 >1 时并发写会报 `database is locked`。建议将 `pool-size: 1`（同时 `minimum-idle: 1`）以规避；SQLite/H2 已各自独立方言（`LIMIT ? OFFSET ?` 分页语法一致，upsert 分别用 `ON CONFLICT` / `MERGE INTO ... KEY`，与兼容模式无关）。
 
 - 内置轻量连接池（HikariCP 风格：`BlockingQueue` + 动态代理 `Connection`，`close()` 归还），虚拟线程友好；
 - 池上限 `pool-size`、下限 `minimum-idle`：按需懒创建至上限、空闲回收至下限；后台线程维持下限，**池被回收后能自愈补建**，不会抽干到零需重启；
@@ -337,6 +343,24 @@ public final class FinalOrderService {
 3. `MapperRegistrar` 扫描 `BaseMapper` 子接口，注册代理 bean。
 
 未配置数据源时自动跳过，不影响 Web 应用启动。
+
+## 批量 / upsert / 乐观锁 / 事务传播 / 迁移（4.0 增强）
+
+- **`insertBatch(List<T>)`**：单语句多行 VALUES 批量插入；AUTO 自增主键自动降级逐条 insert。
+- **`upsert(T)`**：按主键"存在则更新、不存在则插入"，六方言支持（MySQL `ON DUPLICATE KEY UPDATE`、
+  PG/SQLite `ON CONFLICT ... DO UPDATE`、H2 `MERGE INTO ... KEY(...)`、Oracle/SQL Server `MERGE`）；
+  需显式主键，空值字段不插不更新。
+  SQLite/H2 自 `SqliteDialect`/`H2Dialect` 独立成方言（upsert 语法与 MySQL 不同，且 H2 的
+  `ON DUPLICATE KEY UPDATE` 仅 MySQL 兼容模式可用）。
+- **`@Version` 乐观锁**（`cn.jiebaba.summer.data.annotation.Version`）：updateById 生成
+  `SET ..., version = version + 1 WHERE id = ? AND version = ?`，冲突抛 `OptimisticLockException`，
+  成功后实体版本号自增；insert 空版本自动初始化为 1。
+- **事务传播**：`@Transactional(propagation = Propagation.REQUIRES_NEW)` 挂起外层、独立提交/回滚；
+  默认 `REQUIRED`（加入或开启）。
+- **版本化迁移**：`DatabaseMigration` Bean + `SchemaMigrator`（`summer_schema_history` 记账、
+  启动期按版本升序执行、幂等、失败中止启动），替代 DDL 内联/自造迁移。
+
+用法示例与细节见 [4.0 增强速览](whats-new-4.0.md) §4。
 
 ## 验证
 

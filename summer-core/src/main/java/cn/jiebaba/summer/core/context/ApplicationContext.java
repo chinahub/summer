@@ -19,9 +19,10 @@ public interface ApplicationContext {
     boolean isRunning();
 
     /**
-     * 向全部匹配的 {@code @EventListener} 监听器同步发布事件：按监听器声明或参数推断的
+     * 向全部匹配的 {@code @EventListener} 监听器发布事件：按监听器声明或参数推断的
      * 事件类型做可赋值匹配（支持子类），监听器 Bean 在首次收到事件时惰性创建。
-     * 监听器抛出的异常会向调用方传播（与 Spring 语义一致）。
+     * 默认同步调用监听器，抛出的异常会向调用方传播（与 Spring 语义一致）；
+     * {@code @EventListener(async = true)} 的监听器在独立虚拟线程异步执行（异常隔离）。
      */
     void publishEvent(Object event);
 

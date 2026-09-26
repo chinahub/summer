@@ -8,6 +8,7 @@ import cn.jiebaba.summer.data.page.IPage;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.List;
 
 /**
  * 创建一个 JDK 动态代理，实现用户的 {@link BaseMapper} 子接口，
@@ -43,6 +44,8 @@ public final class MapperProxyFactory {
     private static <T> Object invoke(MapperSupport<T> support, Method method, Object[] args) throws Throwable {
         return switch (method.getName()) {
             case "insert" -> support.insert((T) args[0]);
+            case "insertBatch" -> support.insertBatch((List<T>) args[0]);
+            case "upsert" -> support.upsert((T) args[0]);
             case "deleteById" -> support.deleteById(args[0]);
             case "updateById" -> support.updateById((T) args[0]);
             case "selectById" -> support.selectById(args[0]);

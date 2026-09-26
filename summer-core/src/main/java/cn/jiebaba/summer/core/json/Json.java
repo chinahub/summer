@@ -26,9 +26,42 @@ import java.nio.charset.StandardCharsets;
  * 仅用 JDK 实现的极简 JSON 序列化器与解析器。
  * 支持 record、JavaBean（getter/字段）、Map、集合、数组、
  * 基本类型、枚举、字符串及常用 java.time 类型。
+ * <p>长整型序列化策略见 {@link LongAsString}：默认 {@code AUTO}——超出 JS 安全整数
+ * （±2^53-1）的 Long/BigInteger 自动序列化为字符串，避免浏览器端 JSON.parse 静默丢精度；
+ * 解析端（bind/JsonUtil 访问器）对字符串形式数字做精确解析，与之对称。
  */
 public final class Json {
     private Json() {}
+
+    // ---- 长整型序列化策略 ----------------------------------------------
+
+    /**
+     * 长整型（Long/BigInteger）序列化策略。
+     * <ul>
+     *   <li>{@link #AUTO}（默认）：仅超出 JS 安全整数范围（±2^53-1）的值序列化为字符串，
+     *       其余保持 JSON 数字——浏览器端拿到的 id 不再被静默截断；</li>
+     *   <li>{@link #ALWAYS}：所有 Long/BigInteger 一律序列化为字符串（全字符串 id 约定）；</li>
+     *   <li>{@link #NEVER}：一律 JSON 数字（历史行为）。</li>
+     * </ul>
+     * Integer/Short/Byte/Double/Float 不受本策略影响（本身在安全范围内）。
+     */
+    public enum LongAsString { AUTO, ALWAYS, NEVER }
+
+    /** JS Number 安全整数上限（2^53-1） */
+    private static final long JS_SAFE_MAX = 9007199254740991L;
+
+    private static volatile LongAsString longAsString = LongAsString.AUTO;
+
+    /** 设置长整型序列化策略（全局生效，建议应用启动期设置一次）。 */
+    public static void setLongAsString(LongAsString mode) {
+        if (mode == null) throw new IllegalArgumentException("策略不能为空");
+        longAsString = mode;
+    }
+
+    /** 当前长整型序列化策略。 */
+    public static LongAsString longAsString() {
+        return longAsString;
+    }
 
     // ---- 序列化 --------------------------------------------------------
 
@@ -106,6 +139,13 @@ public final class Json {
     }
 
     private static void writeNumber(StringBuilder sb, Number n) {
+        if (n instanceof Long || n instanceof java.math.BigInteger) {
+            LongAsString mode = longAsString;
+            if (mode == LongAsString.ALWAYS || (mode == LongAsString.AUTO && !isJsSafeLong(n))) {
+                writeString(sb, n.toString());
+                return;
+            }
+        }
         double d = n.doubleValue();
         if (Double.isNaN(d) || Double.isInfinite(d)) {
             sb.append("null");
@@ -118,6 +158,15 @@ public final class Json {
         } else {
             sb.append(n.toString());
         }
+    }
+
+    /** 判断长整型数值是否在 JS 安全整数范围（±2^53-1）内。 */
+    private static boolean isJsSafeLong(Number n) {
+        if (n instanceof java.math.BigInteger bi) {
+            return bi.bitLength() <= 53;
+        }
+        long v = n.longValue();
+        return v >= -JS_SAFE_MAX && v <= JS_SAFE_MAX;
     }
 
     private static void writeArray(StringBuilder sb, Object array, int depth, boolean pretty) {
@@ -538,7 +587,7 @@ public final class Json {
         if (c == '"') {
             String s = r.nextString();
             if (rawType == char.class || rawType == Character.class) return s.isEmpty() ? '\0' : s.charAt(0);
-            if (isNumeric(rawType)) return coerceNumber(Double.valueOf(s), rawType);
+            if (isNumeric(rawType)) return coerceNumber(parseNumber(s), rawType);
             if (rawType == boolean.class || rawType == Boolean.class) return Boolean.parseBoolean(s);
             if (isTemporal(rawType)) return parseTemporal(rawType, s);
             return s;
@@ -690,7 +739,7 @@ public final class Json {
             return bindToCollection(list, rawType, genericType);
         }
         if (value instanceof String s && isNumeric(rawType)) {
-            return coerceNumber(Double.valueOf(s), rawType);
+            return coerceNumber(parseNumber(s), rawType);
         }
         if (value instanceof String s && (rawType == boolean.class || rawType == Boolean.class)) {
             return Boolean.parseBoolean(s);
@@ -798,33 +847,84 @@ public final class Json {
      * @throws IllegalArgumentException 当窄化转换超出目标类型范围时抛出
      */
     private static Object coerceNumber(Number num, Class<?> type) {
+        if (type == double.class || type == Double.class) return num.doubleValue();
+        if (type == float.class || type == Float.class) return num.floatValue();
+        long v = toLongChecked(num);
+        if (type == long.class || type == Long.class) return v;
         // 窄化转换必须校验范围；否则绑定到 Integer 字段时，超过 Integer.MAX_VALUE 的 Long 型 id
         // 会被静默截断（见 #2）。
         if (type == int.class || type == Integer.class) {
-            long v = num.longValue();
             if (v < Integer.MIN_VALUE || v > Integer.MAX_VALUE) {
                 throw new IllegalArgumentException("Number " + v + " out of int range");
             }
             return (int) v;
         }
-        if (type == long.class || type == Long.class) return num.longValue();
         if (type == short.class || type == Short.class) {
-            long v = num.longValue();
             if (v < Short.MIN_VALUE || v > Short.MAX_VALUE) {
                 throw new IllegalArgumentException("Number " + v + " out of short range");
             }
             return (short) v;
         }
         if (type == byte.class || type == Byte.class) {
-            long v = num.longValue();
             if (v < Byte.MIN_VALUE || v > Byte.MAX_VALUE) {
                 throw new IllegalArgumentException("Number " + v + " out of byte range");
             }
             return (byte) v;
         }
-        if (type == double.class || type == Double.class) return num.doubleValue();
-        if (type == float.class || type == Float.class) return num.floatValue();
         return num;
+    }
+
+    /**
+     * 精确取 long 值：BigInteger/BigDecimal 先做 long 范围校验再取值（其 longValue() 超界时
+     * 静默回绕），Double/Float 沿用截断语义但校验在 long 范围内（防饱和截断）。
+     *
+     * @param num 原始数字
+     * @return 对应的 long 值
+     * @throws IllegalArgumentException 超出 long 表示范围时抛出
+     */
+    private static long toLongChecked(Number num) {
+        if (num instanceof java.math.BigInteger bi) {
+            if (bi.bitLength() > 63) {
+                throw new IllegalArgumentException("Number " + bi + " out of long range");
+            }
+            return bi.longValue();
+        }
+        if (num instanceof java.math.BigDecimal bd) {
+            java.math.BigInteger bi = bd.toBigInteger();
+            if (bi.bitLength() > 63) {
+                throw new IllegalArgumentException("Number " + bd + " out of long range");
+            }
+            return bi.longValue();
+        }
+        if (num instanceof Double || num instanceof Float) {
+            double d = num.doubleValue();
+            if (!Double.isFinite(d) || d < Long.MIN_VALUE || d > Long.MAX_VALUE) {
+                throw new IllegalArgumentException("Number " + num + " out of long range");
+            }
+        }
+        return num.longValue();
+    }
+
+    /**
+     * 将字符串形式的数字精确解析为 Long 或 BigDecimal（不经过 double 中转，
+     * 修复 19 位雪花 id 从 JSON 字符串绑定到 Long 字段时的精度丢失）。
+     *
+     * @param s 数字文本（允许首尾空白）
+     * @return 解析得到的数字
+     * @throws IllegalArgumentException 不是合法数字时抛出
+     */
+    public static Number parseNumber(String s) {
+        String t = s.trim();
+        try {
+            return Long.parseLong(t);
+        } catch (NumberFormatException ignored) {
+            // 非 long 字面量（小数/超 long 范围），回退 BigDecimal 精确解析
+        }
+        try {
+            return new java.math.BigDecimal(t);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("非法数字: " + s);
+        }
     }
 
     private static Object defaultValue(Class<?> type) {

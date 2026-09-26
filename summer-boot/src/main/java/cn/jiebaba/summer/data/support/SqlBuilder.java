@@ -53,8 +53,77 @@ public final class SqlBuilder {
         return new Sql(sql, params);
     }
 
+    /**
+     * 批量插入：单语句多行 VALUES。列集合取"任一实体非空"的字段并集——全部为空的字段
+     * 整列省略（由数据库默认值兜底），个别行为空的字段显式写 NULL。AUTO 自增主键列
+     * 不参与（单语句多行无法跨方言回填自增 id，由 MapperSupport 降级逐条 insert）。
+     */
+    public Sql insertBatch(List<?> entities) {
+        List<TableFieldInfo> candidates = new ArrayList<>();
+        for (TableFieldInfo f : table.insertFields()) {
+            if (table.idField() == f && table.idType() == IdType.AUTO) continue;
+            candidates.add(f);
+        }
+        List<TableFieldInfo> columns = new ArrayList<>();
+        for (TableFieldInfo f : candidates) {
+            for (Object entity : entities) {
+                if (f.getValue(entity) != null) {
+                    columns.add(f);
+                    break;
+                }
+            }
+        }
+        if (columns.isEmpty()) {
+            throw new IllegalArgumentException("批量插入的实体没有任何非空字段: " + table.entityType().getName());
+        }
+        StringBuilder sql = new StringBuilder("INSERT INTO ").append(tbl())
+                .append(" (");
+        for (int i = 0; i < columns.size(); i++) {
+            if (i > 0) sql.append(", ");
+            sql.append(col(columns.get(i).column()));
+        }
+        sql.append(") VALUES ");
+        List<Object> params = new ArrayList<>();
+        for (int i = 0; i < entities.size(); i++) {
+            if (i > 0) sql.append(", ");
+            sql.append('(').append(placeholders(columns.size())).append(')');
+            for (TableFieldInfo f : columns) {
+                Object value = f.getValue(entities.get(i));
+                params.add(value == null ? null : wrap(f, value));
+            }
+        }
+        return new Sql(sql.toString(), params);
+    }
+
+    /**
+     * upsert（存在则更新、不存在则插入）：以主键判定冲突，语句由方言生成；
+     * 空值字段既不插入也不更新（与 {@link #insert} 的空值跳过语义一致）。
+     * {@code @Version} 版本列不参与自动管理（由调用方自行给值）。
+     */
+    public Sql upsert(Object entity) {
+        if (table.idField() == null) throw new IllegalStateException("Entity has no id field: " + table.entityType());
+        List<TableFieldInfo> fields = table.insertFields();
+        List<String> insertColumns = new ArrayList<>();
+        List<String> updateColumns = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
+        for (TableFieldInfo f : fields) {
+            Object value = f.getValue(entity);
+            if (value == null) continue;
+            insertColumns.add(f.column());
+            params.add(wrap(f, value));
+            if (f != table.idField()) updateColumns.add(f.column());
+        }
+        if (insertColumns.isEmpty()) {
+            throw new IllegalArgumentException("upsert 的实体没有任何非空字段: " + table.entityType().getName());
+        }
+        String sql = dialect.upsert(table.qualifiedTableName(), insertColumns,
+                List.of(table.idField().column()), updateColumns);
+        return new Sql(sql, params);
+    }
+
     public Sql updateById(Object entity) {
         if (table.idField() == null) throw new IllegalStateException("Entity has no id field: " + table.entityType());
+        TableFieldInfo versionField = table.versionField();
         List<TableFieldInfo> fields = table.updateFields();
         List<String> sets = new ArrayList<>();
         List<Object> params = new ArrayList<>();
@@ -63,6 +132,22 @@ public final class SqlBuilder {
             if (value == null) continue;
             sets.add(col(f.column()) + " = ?");
             params.add(wrap(f, value));
+        }
+        if (versionField != null) {
+            // 乐观锁：SET ..., version = version + 1 WHERE id = ? AND version = ?
+            Object current = versionField.getValue(entity);
+            if (current == null) {
+                throw new IllegalStateException(
+                        "乐观锁更新要求版本号非空（请先查询再更新）: " + table.entityType().getName());
+            }
+            sets.add(col(versionField.column()) + " = " + col(versionField.column()) + " + 1");
+            params.add(table.idField().getValue(entity));
+            params.add(wrap(versionField, current));
+            String sql = "UPDATE " + tbl()
+                    + (sets.isEmpty() ? "" : " SET " + String.join(", ", sets))
+                    + " WHERE " + col(table.idField().column()) + " = ?"
+                    + " AND " + col(versionField.column()) + " = ?";
+            return new Sql(sql, params);
         }
         params.add(table.idField().getValue(entity));
         String sql = "UPDATE " + tbl()

@@ -98,6 +98,33 @@ public SseEmitter stream(@RequestParam("q") String question) {
 }
 ```
 
+## SseHub 广播中枢（一对多推送）
+
+单个 `SseEmitter` 只服务一个连接；"状态变更 → 全局通知"类场景用 `SseHub`（自动装配 Bean），
+它兜住三件事：**自动事件 id 与断线补发**（`Last-Event-ID` 重连后补发其后的帧，通知不丢）、
+**心跳注释帧保活**（默认 15s，防代理空闲断连）、**死连接自动清理**。
+
+```java
+@RestController
+class NotifyController {
+    private final SseHub hub; // 注入（应用可用同类型 Bean 自定义替换）
+
+    @GetMapping("/api/events")
+    SseEmitter subscribe(@RequestHeader(value = "Last-Event-ID", required = false) String lastId) {
+        return hub.subscribe(new SseEmitter(0), lastId); // 直接返回 emitter
+    }
+
+    void onStateChanged(String payload) {
+        hub.broadcast(payload, "pipeline"); // 送达全部订阅者，自动分配递增事件 id
+    }
+}
+```
+
+- `new SseHub(replayCapacity, heartbeatMillis)`：补发缓冲容量（默认 256，0 关闭补发）、心跳间隔（默认 15000ms，0 关闭）
+- handler 直接返回 `Stream<SseEvent>` 也可开启事件流（拉式逐帧写出，不缓冲整个流）；元素按混合编码规则发送
+- `SseComment` 注释帧（`: text`，不派发到 EventSource）可手工发送；`SseHub` 心跳即用它
+- `hub.unsubscribe(emitter)` 退订；`hub.close()` 关闭中枢（容器关闭时自动调用）
+
 ## 注意事项
 
 - `send` 应在 handler 返回之前或之后任意线程调用；完成后（complete/completeWithError）再调用会抛异常

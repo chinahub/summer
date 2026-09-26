@@ -19,11 +19,16 @@ import cn.jiebaba.summer.ai.retry.ResilientChatModel;
 import cn.jiebaba.summer.ai.retry.RetryPolicy;
 import cn.jiebaba.summer.ai.tools.ToolCallback;
 import cn.jiebaba.summer.ai.tools.ToolCallingChatModel;
+import cn.jiebaba.summer.ai.usage.InMemoryUsageMeter;
+import cn.jiebaba.summer.ai.usage.UsageMeter;
 import cn.jiebaba.summer.ai.vectorstore.InMemoryVectorStore;
 import cn.jiebaba.summer.ai.vectorstore.VectorStore;
 import cn.jiebaba.summer.boot.ai.logging.JdbcAiCallLogger;
+import cn.jiebaba.summer.boot.ai.usage.JdbcUsageMeter;
 import cn.jiebaba.summer.ai.vectorstore.JdbcVectorStore;
 import cn.jiebaba.summer.core.annotation.Bean;
+import cn.jiebaba.summer.core.annotation.ConditionalOnMissingBean;
+import cn.jiebaba.summer.core.annotation.ConditionalOnProperty;
 import cn.jiebaba.summer.core.annotation.Configuration;
 import cn.jiebaba.summer.core.annotation.Lazy;
 import cn.jiebaba.summer.core.context.ApplicationContext;
@@ -45,9 +50,13 @@ import java.util.Map;
  * <p>本类位于 summer-boot，编译期引用 summer-ai（optional），运行期由 SummerApplication
  * 在探测到 summer-ai 在 classpath 后才注册加载；summer-ai 不在则本类永不被加载。
  * <p>EmbeddingModel/VectorStore/ChatMemory/RagClient 以 {@code @Lazy} 注册：仅在注入时才初始化，
- * 未启用对应配置而强行注入时会抛出明确异常，不影响未使用这些能力的应用启动。
+ * 未启用对应配置而强行注入时会抛出明确异常，不影响未使用这些能力的应用启动。ChatModel/ChatClient
+ * 同为懒装配：模型完全由应用按需动态提供（如按数字员工实例热绑定）而无需静态配置时，可不配置
+ * summer.ai.*，启动不受影响；仅在真正注入 ChatModel/ChatClient 时才要求配置或已有动态注册的模型。
+ * 显式设置 {@code summer.ai.enabled=false} 可整体关闭本自动配置（连注册都不发生）。
  */
 @Configuration
+@ConditionalOnProperty(name = "summer.ai.enabled", matchIfMissing = true)
 public class AiAutoConfiguration {
 
     @Bean
@@ -57,7 +66,8 @@ public class AiAutoConfiguration {
 
     /**
      * 装配多模型注册表：为每个命名实例（summer.ai.models.&lt;id&gt;.*）创建独立的 ChatModel。
-     * 实例需 provider 与 api-key 齐全，否则启动快速失败并提示缺失项。
+     * 实例需 provider 与 api-key 齐全，否则启动快速失败并提示缺失项；未配置命名实例时注册表为空，
+     * 不影响启动——运行期可用 {@link AiModelRegistry#register} 动态注册（如按员工实例绑定模型）。
      */
     @Bean
     public AiModelRegistry aiModelRegistry(AiProperties aiProperties) {
@@ -81,10 +91,12 @@ public class AiAutoConfiguration {
 
     /**
      * 装配主 ChatModel（OpenAI 兼容，覆盖 DeepSeek/GLM/MiniMax/Kimi）；未配置主模型时回退为
-     * 注册表默认实例（第一个命名实例），保证 getBean(ChatModel) 恒可用；两者皆缺则快速失败。
-     * 按需叠加弹性策略与工具调用循环。
+     * 注册表默认实例（第一个命名实例），保证 getBean(ChatModel) 恒可用；两者皆缺则抛出明确异常。
+     * 按需叠加弹性策略与工具调用循环。懒装配：仅在注入 ChatModel/ChatClient 时才实例化——
+     * 模型全部由应用运行期动态提供时无需任何 summer.ai.* 静态配置，缺配置不再阻塞应用启动。
      */
     @Bean
+    @Lazy
     public ChatModel chatModel(AiProperties aiProperties, AiModelRegistry aiModelRegistry, ApplicationContext context) {
         if (!aiProperties.isConfigured()) {
             if (!aiModelRegistry.isEmpty()) {
@@ -93,7 +105,9 @@ public class AiAutoConfiguration {
             throw new IllegalStateException(
                     "summer-ai 已在 classpath 但未正确配置：请设置 summer.ai.provider"
                             + "(deepseek|glm|minimax|kimi) 与 summer.ai.api-key，"
-                            + "或配置命名实例 summer.ai.models.<id>.*。");
+                            + "或配置命名实例 summer.ai.models.<id>.*，"
+                            + "或运行期通过 AiModelRegistry.register(id, model) 动态注册模型；"
+                            + "若本应用完全不用 AI，可设置 summer.ai.enabled=false 关闭自动装配。");
         }
         ChatModel model = new OpenAiCompatibleChatModel(
                 aiProperties.getBaseUrl(),
@@ -131,9 +145,28 @@ public class AiAutoConfiguration {
         return model;
     }
 
+    /** 装配 ChatClient 门面（懒装配，语义同 {@link #chatModel}）。 */
     @Bean
+    @Lazy
     public ChatClient chatClient(ChatModel chatModel) {
         return ChatClient.create(chatModel);
+    }
+
+    /**
+     * 装配维度化用量计量 {@link UsageMeter}（按 tags 记录/聚合 token 消耗，
+     * 供按员工实例/阶段/角色等维度出报表）：有 SqlExecutor 时持久化到
+     * {@link JdbcUsageMeter}（表名 {@code summer.ai.usage.table}，默认 ai_usage，惰性建表），
+     * 否则退化为内存实现；应用自定义 UsageMeter Bean 时退避。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public UsageMeter usageMeter(Environment env, ApplicationContext context) {
+        try {
+            SqlExecutor sqlExecutor = context.getBean(SqlExecutor.class);
+            return new JdbcUsageMeter(sqlExecutor, env.getProperty("summer.ai.usage.table", "ai_usage"));
+        } catch (RuntimeException e) {
+            return new InMemoryUsageMeter();
+        }
     }
 
     /**

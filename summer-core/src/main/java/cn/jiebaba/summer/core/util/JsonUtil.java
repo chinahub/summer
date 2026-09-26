@@ -31,6 +31,16 @@ public final class JsonUtil {
         return Json.toPretty(value);
     }
 
+    /** 设置长整型（Long/BigInteger）序列化策略，见 {@link Json.LongAsString}（全局生效）。 */
+    public static void setLongAsString(Json.LongAsString mode) {
+        Json.setLongAsString(mode);
+    }
+
+    /** 当前长整型序列化策略。 */
+    public static Json.LongAsString longAsString() {
+        return Json.longAsString();
+    }
+
     /** 将字符串以 JSON 转义形式包裹双引号返回。 */
     public static String quote(String value) {
         return Json.quote(value);
@@ -122,14 +132,28 @@ public final class JsonUtil {
         return value;
     }
 
+    /**
+     * 将 JSON 值转为 Number：null 返回 null，数值原样返回，字符串形式数字精确解析
+     * （Long 优先、其次 BigDecimal，不经过 double 中转），空串/空白返回 null。
+     */
+    private static Number toNumber(Object v) {
+        if (v == null) return null;
+        if (v instanceof Number n) return n;
+        if (v instanceof String s) {
+            if (s.trim().isEmpty()) return null;
+            return cn.jiebaba.summer.core.json.Json.parseNumber(s);
+        }
+        throw new IllegalArgumentException("不是数字: " + v);
+    }
+
     /** 以 {@link LinkedHashMap} 支撑、带类型访问器的 JSON 对象（hutool 风格）。 */
     public static class JSONObject extends LinkedHashMap<String, Object> {
         private static final long serialVersionUID = 1L;
 
         public String getStr(String key) { Object v = get(key); return v == null ? null : v.toString(); }
-        public Integer getInt(String key) { Object v = get(key); return v == null ? null : ((Number) v).intValue(); }
-        public Long getLong(String key) { Object v = get(key); return v == null ? null : ((Number) v).longValue(); }
-        public Double getDouble(String key) { Object v = get(key); return v == null ? null : ((Number) v).doubleValue(); }
+        public Integer getInt(String key) { Number n = toNumber(get(key)); return n == null ? null : n.intValue(); }
+        public Long getLong(String key) { Number n = toNumber(get(key)); return n == null ? null : n.longValue(); }
+        public Double getDouble(String key) { Number n = toNumber(get(key)); return n == null ? null : n.doubleValue(); }
         public Boolean getBool(String key) { Object v = get(key); return v == null ? null : Boolean.valueOf(v.toString()); }
         public JSONObject getJSONObject(String key) { Object v = get(key); return v instanceof JSONObject jo ? jo : null; }
         public JSONArray getJSONArray(String key) { Object v = get(key); return v instanceof JSONArray ja ? ja : null; }
@@ -145,8 +169,8 @@ public final class JsonUtil {
         private static final long serialVersionUID = 1L;
 
         public String getStr(int index) { Object v = get(index); return v == null ? null : v.toString(); }
-        public Integer getInt(int index) { Object v = get(index); return v == null ? null : ((Number) v).intValue(); }
-        public Long getLong(int index) { Object v = get(index); return v == null ? null : ((Number) v).longValue(); }
+        public Integer getInt(int index) { Number n = toNumber(get(index)); return n == null ? null : n.intValue(); }
+        public Long getLong(int index) { Number n = toNumber(get(index)); return n == null ? null : n.longValue(); }
         public JSONObject getJSONObject(int index) { Object v = get(index); return v instanceof JSONObject jo ? jo : null; }
         public JSONArray getJSONArray(int index) { Object v = get(index); return v instanceof JSONArray ja ? ja : null; }
         public <T> List<T> toList(Class<T> elementType) {

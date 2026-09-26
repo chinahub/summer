@@ -16,4 +16,6 @@ public @interface Transactional {
     /** 对这些异常类型不回滚。 */
     Class<? extends Throwable>[] noRollbackFor() default {};
     boolean readOnly() default false;
+    /** 传播行为：默认加入/开启（REQUIRED）；REQUIRES_NEW 挂起外层并开启独立事务。 */
+    Propagation propagation() default Propagation.REQUIRED;
 }

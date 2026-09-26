@@ -13,6 +13,7 @@ import cn.jiebaba.summer.web.http.MediaType;
 import cn.jiebaba.summer.web.http.RawHttpRequest;
 import cn.jiebaba.summer.web.http.WebRequest;
 import cn.jiebaba.summer.web.http.WebResponse;
+import cn.jiebaba.summer.web.resource.StaticResourceHandler;
 import cn.jiebaba.summer.web.routing.Router;
 import cn.jiebaba.summer.web.support.ExceptionHandlerRegistry;
 import cn.jiebaba.summer.web.websocket.WebSocketHandshake;
@@ -69,6 +70,8 @@ public final class SummerWebServer {
     private final MessageConverter converter;
     private final ApplicationContext context;
     private WebSocketRegistry webSocketRegistry;
+
+    private StaticResourceHandler staticResourceHandler;
     private List<Filter> securityFilters = List.of();
     private FilterChainSelector filterChainSelector;
     private HandlerMethodAccessChecker accessChecker;
@@ -141,6 +144,9 @@ public final class SummerWebServer {
         HandlerMethodInvoker invoker = new HandlerMethodInvoker(context, converter);
         RequestDispatcher dispatcher = new RequestDispatcher(router, invoker, converter, exceptions,
                 properties.contextPath(), securityFilters, filterChainSelector, accessChecker);
+        if (staticResourceHandler != null) {
+            dispatcher.setStaticResourceHandler(staticResourceHandler);
+        }
 
         acceptThread = Thread.ofPlatform().name("summer-accept").daemon(false).start(() -> acceptLoop(dispatcher));
 
@@ -463,6 +469,11 @@ public final class SummerWebServer {
 
     public void setWebSocketRegistry(WebSocketRegistry registry) {
         this.webSocketRegistry = registry;
+    }
+
+    /** 设置静态资源处理器：路由未命中时回退静态资源。 */
+    public void setStaticResourceHandler(StaticResourceHandler handler) {
+        this.staticResourceHandler = handler;
     }
 
     public WebSocketRegistry webSocketRegistry() { return webSocketRegistry; }

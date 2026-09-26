@@ -60,6 +60,12 @@
             <artifactId>mssql-jdbc</artifactId>
             <version>12.8.2.jre11</version>
         </dependency>
+        <!-- H2 内存库（H2DialectIntegrationTest）：Regular 模式验证 H2Dialect 的 MERGE upsert -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>2.3.232</version>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>

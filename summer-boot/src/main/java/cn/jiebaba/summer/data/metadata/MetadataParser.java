@@ -5,6 +5,7 @@ import cn.jiebaba.summer.data.annotation.TableField;
 import cn.jiebaba.summer.data.annotation.TableId;
 import cn.jiebaba.summer.data.annotation.TableLogic;
 import cn.jiebaba.summer.data.annotation.TableName;
+import cn.jiebaba.summer.data.annotation.Version;
 import cn.jiebaba.summer.data.support.TypeHandler;
 
 import java.lang.reflect.Field;
@@ -57,6 +58,7 @@ public final class MetadataParser {
 
             TableId tableId = field.getAnnotation(TableId.class);
             TableLogic logic = field.getAnnotation(TableLogic.class);
+            Version version = field.getAnnotation(Version.class);
             boolean isId = tableId != null;
             boolean insertable = tf == null || !"NEVER".equals(tf.insertStrategy());
             boolean updatable = tf == null || !"NEVER".equals(tf.updateStrategy());
@@ -78,6 +80,14 @@ public final class MetadataParser {
             if (logic != null) {
                 info.hasLogicDelete(true);
                 info.logicDeleteField(fi);
+            }
+            if (version != null) {
+                Class<?> t = field.getType();
+                if (t != int.class && t != Integer.class && t != long.class && t != Long.class) {
+                    throw new IllegalArgumentException("@Version 字段仅支持 int/Integer/long/Long: "
+                            + entityType.getName() + "." + field.getName());
+                }
+                info.versionField(fi);
             }
         }
 

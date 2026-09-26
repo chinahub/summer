@@ -44,7 +44,7 @@
 - [x] 连接池泄漏检测（后台虚拟线程扫描 + WARN 日志 + 借出栈）
 
 ### P1 — 常用能力
-- [ ] 异步控制器（`CompletableFuture` 返回，虚拟线程下 `join()` 方案，~5 行）
+- [x] 异步控制器（`CompletableFuture`/`CompletionStage` 返回，虚拟线程下 `join()` 方案，RequestDispatcher.writeResult 已支持）
 - [x] 连接池空闲保活 + 最大生存期回收
 - [x] 连接池鲁棒性增强（HikariCP 风格：max-lifetime ±2.5% 抖动、minimum-idle 保活补建、借出懒创建自愈、keepalive 探活；修复 #14 抽干事故）
 - [ ] 切点表达式扩展（`@annotation`、`bean()`、`within` 等）
@@ -54,7 +54,7 @@
 - [x] HTTP keep-alive（连接复用 + idle 超时中断 + maxRequestsPerConnection 上限，`Connection: keep-alive`）
 - [x] chunked transfer-encoding（请求体 `Transfer-Encoding: chunked` 解码：chunk-size 行 + 扩展 + trailer）
 - [x] 多数据源（@DS/@Master/@Slave + @DSTransactional 跨源事务）
-- [ ] 静态资源（当前定位微服务框架，暂不实现）
+- [x] 静态资源：路由优先、静态回退（GET 未命中路由时查 `summer.web.static.*` 目录，目录穿越防护 + 欢迎页），控制台前端随 jar 一体化交付，见 [4.0 增强速览](../使用文档/whats-new-4.0.md)
 
 ### 不实现
 - 引入 ASM/ByteBuddy 等字节码第三方库（违反零第三方依赖原则；子类代理已用纯 JDK 手写字节码实现）
@@ -78,6 +78,8 @@
 - [x] `DateUtil`（参考 hutool DateUtil）：基于 `java.time` 的格式化/解析/偏移/区间/边界/字段提取，`Date`↔`LocalDateTime` 互转
 - [x] `JsonUtil`（参考 hutool JSONUtil）：纯 JDK 序列化/解析/类型绑定，含 `JSONObject`/`JSONArray`，支持 record/Bean/Map/集合/枚举/`Optional`/`java.time`
 - [x] `JsonUtil` 大整数精确解析修复：无类型 `parse` 整数字面量读为 `Long`（实测原实现读为 Double，19 位雪花 id 经 `getLong` 丢精度），超出 long 范围降级 `BigInteger`；浮点仍为 `Double`
+- [x] `Json` 字符串→数字精确绑定修复：`bind`/`toBean` 把字符串形式数字绑定到 Long 字段时经 `Double.valueOf` 中转丢精度（19 位雪花 id 实测尾数错乱），改为 `Long.parseLong` 优先、`BigDecimal` 兜底的精确解析；`JsonUtil.getLong/getInt/getDouble` 同步兼容字符串形式数字
+- [x] `Json.LongAsString` 长整型序列化策略：默认 `AUTO`（超出 JS 安全整数 ±2^53-1 的 Long/BigInteger 自动序列化为字符串，避免浏览器端 `JSON.parse` 静默丢精度），可选 `ALWAYS`/`NEVER`；解析端对称兼容字符串数字
 - [x] `SecurityUtil`（参考 hutool SecureUtil）：MD5/SHA 摘要、HMAC、AES/DES 对称、RSA 非对称+签名验签、Base64/Hex、UUID
 - [x] `SummerUtil`：IoC 容器静态门面，`getBean`/`registerBean`/`unregisterBean`（触发销毁回调）
 - [x] IoC 容器扩展：`ApplicationContext` 新增 `registerBean`/`unregisterBean`，`SummerApplication.run()` 自动绑定上下文
@@ -89,9 +91,9 @@
 ### 后续扩展
 - [ ] **服务层方法级安全（暂缓）**：控制器层鉴权已覆盖大多数场景，服务层方法安全仅用于纵深防御，ROI 偏低故暂不实现。若需实现，首选拦截器路线（新增安全 `MethodInterceptor` + `ProxyAdvisor`，镜像 `TransactionInterceptor`），经 `JoinPoint.getMethod()` 直接读取目标方法 `@PreAuthorize`，无需增强 `SubclassProxyFactory` 复制字节码注解；仅当需对代理对象自身方法做反射时才需补注解复制
 - [x] JWT refresh token
-- [ ] 多 SecurityFilterChain（多链匹配）
+- [x] 多 SecurityFilterChain（多链匹配：`FilterChainSelector` 按请求选择过滤器序列，MultiChainSmokeTest 覆盖）
 - [x] CORS 过滤器：summer-web 新增 `CorsFilter`，`summer.web.cors.*` 配置（来源/方法/请求头/凭证/缓存时长），预检短路 + 跨域响应头，自动装配且先于安全过滤器执行
-- [ ] CSRF 过滤器
+- [x] CSRF 过滤器（`security/web/csrf/CsrfFilter`，CsrfFilterTest 覆盖）
 - [ ] OAuth2 / OIDC 集成
 
 ## 第八阶段：大模型对话（AI）✅
@@ -290,3 +292,17 @@ POI 对 XLS（BIFF8 二进制）的流式读取由 `org.apache.poi.hssf.eventuse
 - [x] PDF 中文支持：嵌入 TTF（含 TTC 集合字体）+ Type0/CIDFontType2/FontDescriptor/FontFile2/ToUnicode 全结构，字形 id 十六进制编码；全字体嵌入（子集化留作后续体积优化）
 - [x] DOCX 表格/图片/样式写入（`DocxWriter` 构建器：段落/标题/表格（边框+表头）/图片（EMU），`Run` 加粗/斜体/下划线/字号/颜色，styles.xml Heading1-6）
 - [x] Markdown -> HTML 转换（纯 JDK `MdHtml`，CommonMark 子集 + GFM 删除线，零第三方依赖）
+
+## 4.0 增强：SDLC 编排类应用支撑 ✅（2026-09）
+
+> 以「数字员工 SDLC 流水线编排器」为参照做架构评审后的成批增强，用法见 [4.0 增强速览](../使用文档/whats-new-4.0.md)。
+
+- [x] JSON 长整型精确绑定修复（字符串→Long 经 Double 中转丢精度）+ `Json.LongAsString` 前端安全序列化策略（默认 AUTO：超 ±2^53-1 自动字符串化）
+- [x] SSE 广播中枢 `SseHub`：自动事件 id + `Last-Event-ID` 断线补发 + 心跳注释帧 + 死连接清理；handler 直接返回 `Stream<SseEvent>` 支持落地
+- [x] 异步事件 `@EventListener(async = true)`（虚拟线程 + 异常隔离）
+- [x] 数据层：`@Version` 乐观锁、`insertBatch` 批量插入、`upsert` 六方言（MySQL/PG/SQLite/H2/Oracle/SQL Server）、`@Transactional` 传播（REQUIRES_NEW）、`SqliteDialect`/`H2Dialect` 独立成方言（H2 不再复用 MySqlDialect：Regular 模式反引号与 `ON DUPLICATE KEY UPDATE` 均不可用，改双引号 + `MERGE INTO ... KEY`）
+- [x] 版本化迁移 `DatabaseMigration` + `SchemaMigrator`（summer_schema_history 记账、幂等、失败中止启动）
+- [x] summer-ai 装配解耦（ChatModel/ChatClient 懒装配、缺配置不再拒启、`summer.ai.enabled=false` 总开关）+ `AiModelRegistry` 运行期注册/多级回落 + 维度化用量计量 `UsageMeter`
+- [x] 静态资源服务（路由优先、静态回退，控制台随 jar 交付）
+- [ ] A2A 双轨收口（summer-ai `ai.agent` 与应用自研 `a2a` 语义并存，收口方向待专项评审，见 4.0 增强速览 §8）
+- [ ] 多实例部署支撑（IdGenerator worker 位、@Scheduled 分布式锁、SSE 跨实例桥接；当前定稿单实例 java -jar，见 4.0 增强速览 §7）

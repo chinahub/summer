@@ -39,8 +39,20 @@ public final class TransactionManager {
      * @param readOnly 是否只读事务（对应 {@code @Transactional(readOnly = true)}）
      */
     public boolean begin(boolean readOnly) {
+        return begin(readOnly, false);
+    }
+
+    /**
+     * 按传播行为开启事务；绑定了新连接（即由本调用方管理提交/回滚）时返回 true。
+     * REQUIRED：有活动事务则加入（返回 false）；REQUIRES_NEW：无论有无活动事务都开启
+     * 独立新事务（压入新连接，挂起的外层连接在栈中保留，本事务结束后自动恢复）。
+     *
+     * @param readOnly     是否只读事务
+     * @param requiresNew  是否 REQUIRES_NEW 传播（开启独立新事务）
+     */
+    public boolean begin(boolean readOnly, boolean requiresNew) {
         Deque<Connection> stack = HOLDER.get();
-        if (!stack.isEmpty()) {
+        if (!requiresNew && !stack.isEmpty()) {
             return false; // 加入已有事务
         }
         try {

@@ -84,10 +84,20 @@ public class AiModelRegistryTest {
     }
 
     @Test
-    @DisplayName("主模型与命名实例均未配置时启动快速失败")
-    void nothingConfiguredFailsFast() {
-        Assertions.assertThrows(RuntimeException.class, () -> contextWith(),
-                "未配置任何模型必须快速失败");
+    @DisplayName("主模型与命名实例均未配置：启动不失败（懒装配），真正取用时才报错")
+    void nothingConfiguredStartsButChatModelFails() {
+        DefaultApplicationContext context = contextWith();
+        Assertions.assertTrue(context.getBean(AiModelRegistry.class).isEmpty(),
+                "未配置时注册表为空但不影响启动");
+        RuntimeException e = Assertions.assertThrows(RuntimeException.class,
+                () -> context.getBean(ChatModel.class),
+                "真正取用 ChatModel 时应报出配置缺失的明确错误");
+        StringBuilder messages = new StringBuilder();
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            messages.append(t.getMessage()).append('\n');
+        }
+        Assertions.assertTrue(messages.toString().contains("summer.ai"),
+                "错误信息应指向 summer.ai 配置/动态注册/关闭方式，实际：" + messages);
     }
 
     @Test

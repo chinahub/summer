@@ -135,6 +135,24 @@ server:
 ```
 开启后同一 TCP 连接可处理多个请求，减少握手开销。客户端发送 Connection: close 或达到最大请求数后关闭。
 
+## 静态资源与 AI 装配（4.0 新增配置）
+
+```yaml
+summer:
+  web:
+    static:
+      enabled: true          # 静态资源回退开关（默认 true，未打包静态资源时零影响）
+      locations: classpath:/static,classpath:/public,file:./dist   # 资源根目录（按顺序查找）
+      welcome: index.html    # 欢迎页（映射 /）
+  ai:
+    enabled: true            # false 则整体关闭 summer-ai 自动装配（连 Bean 都不注册）
+    usage:
+      table: ai_usage        # 用量计量表名（JdbcUsageMeter 惰性建表）
+```
+
+要点：`ChatModel`/`ChatClient` 为懒装配——缺 `summer.ai.*` 配置不再拒启（真正注入时才要求配置或
+已有 `AiModelRegistry` 动态注册的模型）。详见 [4.0 增强速览](whats-new-4.0.md)。
+
 环境变量自动映射为松弛属性：`SERVER_PORT` → `server.port`；系统属性优先级最高。`@Value("${app.greeting}")` 可注入并解析 `${key:default}` 占位符。
 
 ## 注解速查

@@ -15,6 +15,27 @@ public final class PostgreSqlDialect implements Dialect {
     }
     @Override public String escapeQuote(String identifier) { return "\"" + identifier + "\""; }
     @Override public String jsonColumnType() { return "jsonb"; }
+
+    /** PostgreSQL upsert：{@code ON CONFLICT (pk) DO UPDATE SET ...}（无更新列时 DO NOTHING）。 */
+    @Override
+    public String upsert(String table, List<String> insertColumns, List<String> conflictColumns, List<String> updateColumns) {
+        StringBuilder sb = new StringBuilder("INSERT INTO ").append(quote(table))
+                .append(" (").append(DialectSql.quotedJoin(insertColumns, this)).append(") VALUES (")
+                .append(DialectSql.placeholders(insertColumns.size())).append(")")
+                .append(" ON CONFLICT (").append(DialectSql.quotedJoin(conflictColumns, this)).append(")");
+        if (updateColumns.isEmpty()) {
+            sb.append(" DO NOTHING");
+        } else {
+            sb.append(" DO UPDATE SET ");
+            for (int i = 0; i < updateColumns.size(); i++) {
+                if (i > 0) sb.append(", ");
+                String c = updateColumns.get(i);
+                sb.append(quote(c)).append(" = excluded.").append(quote(c));
+            }
+        }
+        return sb.toString();
+    }
+
     @Override public void setJsonParameter(PreparedStatement ps, int index, String json) throws SQLException {
         ps.setObject(index, pgObject("jsonb", json));
     }

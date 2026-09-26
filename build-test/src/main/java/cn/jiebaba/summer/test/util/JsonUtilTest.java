@@ -134,7 +134,7 @@ public class JsonUtilTest {
         Assertions.assertEquals(1875798709925576711L, ((Number) JsonUtil.parse("1875798709925576711")).longValue());
     }
 
-    /** 超出 long 范围的整数字面量以 BigInteger 保留精确值，且序列化回写不变形。 */
+    /** 超出 long 范围的整数字面量以 BigInteger 保留精确值；AUTO 策略下超 JS 安全整数序列化为字符串（可精确回读）。 */
     @Test
     public void beyondLongParsedAsBigInteger() {
         String json = "{\"id\":123456789012345678901234567890}";
@@ -142,16 +142,15 @@ public class JsonUtilTest {
         Object raw = obj.get("id");
         Assertions.assertTrue(raw instanceof java.math.BigInteger, "超范围整数应为 BigInteger，实际: " + raw.getClass());
         Assertions.assertEquals("123456789012345678901234567890", obj.getStr("id"));
-        Assertions.assertEquals("{\"id\":123456789012345678901234567890}", JsonUtil.toJsonStr(obj));
+        Assertions.assertEquals("{\"id\":\"123456789012345678901234567890\"}", JsonUtil.toJsonStr(obj));
     }
 
-    /** typed 绑定路径的 long 字段不受无类型解析改动影响（流式读取本就精确）。 */
+    /** typed 绑定路径的 long 字段不受无类型解析改动影响（流式读取本就精确）；AUTO 策略下大数序列化为字符串。 */
     @Test
     public void typedLongBindingStillExact() {
         record Holder(long id) {}
         Holder h = JsonUtil.toBean("{\"id\":1875798709925576711}", Holder.class);
         Assertions.assertEquals(1875798709925576711L, h.id());
-        Assertions.assertEquals("1875798709925576711", JsonUtil.toJsonStr(new Holder(1875798709925576711L))
-                .substring("{\"id\":".length(), "{\"id\":".length() + 19));
+        Assertions.assertEquals("{\"id\":\"1875798709925576711\"}", JsonUtil.toJsonStr(new Holder(1875798709925576711L)));
     }
 }
