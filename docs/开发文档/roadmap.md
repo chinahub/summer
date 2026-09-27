@@ -123,11 +123,12 @@
 - [x] 流式 token 用量（`stream_options.include_usage=true`，末帧 `usage` 解析填入 `ChatResponse.metadata`，工具循环 `emit` 透传）
 - [x] 向量库元数据过滤（`SearchRequest` 增 `filter` 键值对等值匹配；pgvector 走 `metadata::jsonb @> ?::jsonb`，内存走谓词）
 - [x] AI 调用日志 / 观测性（`LoggingChatModel` 装饰器记录每次 LLM 调用的模型/token/耗时/成败/提问摘要；`summer.ai.logging.enabled` 开关 + `ai_call_log` 表，`JdbcAiCallLogger` 复用 `SqlExecutor` 惰性建表）
-- [x] A2A 跨实例 Agent 协作（`cn.jiebaba.summer.ai.agent`：AgentTask/AgentExecutor SPI、持久契约 ContractStore/FileContractStore、A2aCoordinator 出域委派+入域接域+双向恢复、A2aGateway 防环网关；summer-boot `A2aAutoConfiguration` 按 `summer.ai.a2a.*` opt-in 装配并注册 /ai/a2a/** 端点；见 [AI 文档](../使用文档/ai.md)）
+- [x] 进程内多 agent 协作（`cn.jiebaba.summer.ai.agent`：AgentTask/AgentExecutor SPI、AgentOrchestrator 按技能路由 + 同步/异步/并行编排 + ScopedValue 协作链防环/限深 + AgentPolicy 超时策略；`AgentAutoConfiguration` 随 summer-ai 发布、默认装配（`summer.ai.enabled=false` 整体关闭）；见 [AI 文档](../使用文档/ai.md)）
 
 ### 待开发（summer-ai）
 - [ ] DB 驱动厂商凭据（生产级）：`AiAutoConfiguration` 支持从 `ai_provider_info` 表实时读取 provider/baseurl/api-key（当前仅冒烟测试实现，未接入自动配置）
 - [ ] 示例 AI 端点：summer-sample 增加 `/ai/**` 控制器（对话/流式/RAG/工具调用示例），目前 `summer.ai.*` 段为注释状态
+- [ ] 进程内群组协作（消息总线/wake 语义，按需触发）：多 agent 自由讨论/动态分工场景出现时，在 AgentExecutor/AgentOrchestrator 之上加"每会话 append-only 消息日志（单调 seq）+ mention/wake 触发 + Run 记录"层，`AgentTask.conversationId` 已预留；模型参考 QoderWake 取证分析与四象限协同方案（见 agent-pipeline 工作区 `docs/技术方案/`），需求出现前不实现
 
 
 ## 第九阶段：文档处理（Office）✅
@@ -304,5 +305,5 @@ POI 对 XLS（BIFF8 二进制）的流式读取由 `org.apache.poi.hssf.eventuse
 - [x] 版本化迁移 `DatabaseMigration` + `SchemaMigrator`（summer_schema_history 记账、幂等、失败中止启动）
 - [x] summer-ai 装配解耦（ChatModel/ChatClient 懒装配、缺配置不再拒启、`summer.ai.enabled=false` 总开关）+ `AiModelRegistry` 运行期注册/多级回落 + 维度化用量计量 `UsageMeter`
 - [x] 静态资源服务（路由优先、静态回退，控制台随 jar 交付）
-- [ ] A2A 双轨收口（summer-ai `ai.agent` 与应用自研 `a2a` 语义并存，收口方向待专项评审，见 4.0 增强速览 §8）
+- [x] A2A 双轨收口：框架版跨进程 A2A（A2aCoordinator/ContractStore/DelegationPolicy/A2aGateway 及 /ai/a2a/** 端点）已从 summer-ai 移除，替换为单 JVM 进程内多 agent 编排（`AgentOrchestrator`/`AgentPolicy`/`AgentAutoConfiguration`）；跨进程语义归 agent-pipeline 应用侧，见 4.0 增强速览 §8
 - [ ] 多实例部署支撑（IdGenerator worker 位、@Scheduled 分布式锁、SSE 跨实例桥接；当前定稿单实例 java -jar，见 4.0 增强速览 §7）

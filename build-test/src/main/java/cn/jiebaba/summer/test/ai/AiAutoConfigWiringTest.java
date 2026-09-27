@@ -24,7 +24,7 @@ import java.util.Set;
 public class AiAutoConfigWiringTest {
 
     /** 程序化注册 AiAutoConfiguration（对齐 SummerApplication 的注册方式；不扫描框架包
-     * cn.jiebaba.summer.boot.ai——包内还含 A2a 端点组件，会受其开关状态干扰）。 */
+     * cn.jiebaba.summer.boot.ai——包内还含 Agent 编排自动配置，避免相互干扰）。 */
     private static DefaultApplicationContext aiContext(Environment env) {
         DefaultApplicationContext ctx = new DefaultApplicationContext(
                 null, env, Set.of("cn.jiebaba.summer.nonexistent"));

@@ -6,7 +6,7 @@
     <parent>
         <groupId>cn.jiebaba.summer</groupId>
         <artifactId>summer-parent</artifactId>
-        <version>4.0</version>
+        <version>4.1.0</version>
     </parent>
     <artifactId>summer-sample</artifactId>
     <name>summer-sample</name>
@@ -47,7 +47,7 @@
             <plugin>
                 <groupId>cn.jiebaba.summer</groupId>
                 <artifactId>summer-pack-maven-plugin</artifactId>
-                <version>4.0</version>
+                <version>4.1.0</version>
                 <executions>
                     <execution>
                         <goals><goal>repackage</goal></goals>

@@ -181,10 +181,9 @@ public final class SummerApplication {
         if (isClassPresent("cn.jiebaba.summer.ai.chat.ChatModel")) {
             addOptionalConfig(configs, "cn.jiebaba.summer.boot.ai.AiAutoConfiguration");
         }
-        // 可选模块 summer-ai A2A 跨实例协作：仅当其在 classpath 时注册自动配置
-        //（summer.ai.a2a.enabled=true 才实际装配 bean，见 A2aAutoConfiguration 上的条件注解）。
-        if (isClassPresent("cn.jiebaba.summer.ai.agent.A2aCoordinator")) {
-            addOptionalConfig(configs, "cn.jiebaba.summer.boot.ai.A2aAutoConfiguration");
+        // 可选模块 summer-ai 进程内 agent 编排：仅当其在 classpath 时注册自动配置
+        if (isClassPresent("cn.jiebaba.summer.ai.agent.AgentOrchestrator")) {
+            addOptionalConfig(configs, "cn.jiebaba.summer.boot.ai.AgentAutoConfiguration");
         }
         // summer-support OCR：仅当 OCR 类在 classpath 时，反射注册其自动配置
         //（summer-boot 不依赖 summer-support，避免循环依赖）。

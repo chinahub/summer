@@ -16,7 +16,7 @@
 | build-test | 356 | 0 | 1 | 跳过项为 StreamingToolLoopLlmTest（见「未覆盖项」） |
 | summer-sample | 16 | 0 | 0 | office 风格对照 3 类（FastExcel/iText/POI） |
 
-覆盖面：IoC 容器/循环依赖、AOP 双代理 + 自研字节码、条件注解、env/profile/YAML、自研 JSON、定时任务/Cron、SLF4J→JUL 绑定、Web 参数绑定/chunked/gzip/CORS/SSE/multipart、ORM wrapper/事务/类型处理器/方言转义、JWT/BCrypt/CSRF/多安全链、AI 协议/工具调用/记忆/RAG/弹性/A2A/JDBC 向量库与调用日志（真 PG）。
+覆盖面：IoC 容器/循环依赖、AOP 双代理 + 自研字节码、条件注解、env/profile/YAML、自研 JSON、定时任务/Cron、SLF4J→JUL 绑定、Web 参数绑定/chunked/gzip/CORS/SSE/multipart、ORM wrapper/事务/类型处理器/方言转义、JWT/BCrypt/CSRF/多安全链、AI 协议/工具调用/记忆/RAG/弹性/进程内多 agent 编排（AgentOrchestrator 路由/超时/防环）/JDBC 向量库与调用日志（真 PG）。
 
 ## 二、main() 冒烟测试（手工逐类运行）
 

@@ -175,9 +175,11 @@ summer:
 定稿。若将来多副本部署：IdGenerator 需补 worker 位、定时任务需分布式锁、SSE 广播需跨实例
 桥接（另立议题）。
 
-## 8. A2A 双轨备查（本期未收口）
+## 8. 多 agent 协作收口决策（本期已定稿）
 
-summer-ai 的 `ai.agent` A2A（A2aCoordinator/ContractStore/DelegationPolicy + 自动装配）与
-agent-pipeline 应用自研 `a2a` 包（HttpClient + 文件契约 + 回调表/轮询双通道）语义并存、
-互不引用。收口方向（框架吸收应用语义 / 应用迁移到框架版 / 各自定位）待专项评审；
-在此之前两者独立演进，勿混用。
+summer-ai 曾内置跨进程 A2A（A2aCoordinator/ContractStore/DelegationPolicy + `/ai/a2a/**`
+端点），与 agent-pipeline 应用自研 `a2a` 包语义并存。本期收口决策：**框架版跨进程 A2A
+已移除**，summer-ai 聚焦单 JVM 进程内多 agent 协作——`AgentOrchestrator` 按技能名路由本地
+`AgentExecutor`（虚拟线程池同步/异步/并行编排），以 JDK 25 正式版 `ScopedValue` 携带协作链
+防环/限深，纯内存、零配置即可用；跨进程协作语义归 agent-pipeline 应用侧，框架不再内置。
+见 [AI 文档](ai.md)「进程内多 agent 协作」。

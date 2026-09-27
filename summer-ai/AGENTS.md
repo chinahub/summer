@@ -4,7 +4,7 @@
 
 ## 模块职责
 
-大模型对话抽象 + RAG + 工具调用 + 向量存储 + 重试/熔断。依赖 summer-boot（原 core/data 已并入）；AI 自动配置（`cn.jiebaba.summer.boot.ai` 包）随本模块发布，包名不变。纯 JDK HTTP 客户端实现。
+大模型对话抽象 + RAG + 工具调用 + 向量存储 + 重试/熔断 + 进程内多 agent 编排（`cn.jiebaba.summer.ai.agent`：AgentOrchestrator 按技能路由本地 AgentExecutor，ScopedValue 协作链防环/限深，虚拟线程池同步/异步/并行执行）。依赖 summer-boot（原 core/data 已并入）；AI 自动配置（`cn.jiebaba.summer.boot.ai` 包）随本模块发布，包名不变。纯 JDK HTTP 客户端实现。
 
 ## 关键包
 
@@ -21,6 +21,7 @@
 | `cn.jiebaba.summe.ai.retry` | 重试与熔断：ResilientChatModel/RetryPolicy/RateLimiter/CircuitBreaker |
 | `cn.jiebaba.summe.ai.document` | 文档处理：DocumentReader/TextSplitter/TokenTextSplitter/Document |
 | `cn.jiebaba.summe.ai.logging` | AI 调用日志：LoggingChatModel/AiCallLogger/AiCallLog |
+| `cn.jiebaba.summer.ai.agent` | 进程内多 agent 编排：AgentOrchestrator/AgentExecutor/AgentTask/AgentResult/AgentPolicy |
 
 ## 模块约定
 

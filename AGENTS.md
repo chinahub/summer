@@ -8,7 +8,7 @@
 summer 是基于 JDK 25 内置库、虚拟线程构建的类 Spring Boot 轻量级 Java 微服务框架。
 - **定位**：零 Servlet、尽量零第三方依赖，`java -jar` 直接运行
 - **包名**：`cn.jiebaba.summer`
-- **版本**：4.0
+- **版本**：4.1.0
 - **许可**：Apache 2.0
 - **JDK**：25（`maven.compiler.release=25`）
 - **构建**：Maven，多模块（parent POM，8 个子模块；web/data/security/office 已并入 summer-boot，`cn.jiebaba.summer.core.*` 独立为 summer-core）
@@ -39,7 +39,7 @@ mvn clean deploy -P release
 | summer-core | 核心运行时（`cn.jiebaba.summer.core.*` 独立成模块，boot 与 support 的共同底层） | ApplicationContext/IoC 容器, 类扫描, AOP(自研字节码代理), JUL 日志 + SLF4J 绑定, 定时任务, 环境配置(env), 自研 JSON(json + util.JsonUtil), 框架注解, core.test 测试微框架, ONNX 引擎(onnx), SummerException 基础异常 |
 | summer-boot | 启动器 + 自动配置（依赖 summer-core；整合原 web/data/security/office） | SummerApplication.run(), 各模块 AutoConfiguration, Mapper 注册, 嵌入式 HTTP(NIMA), 路由/校验/WebSocket, BaseMapper/Wrapper/分页, 多方言, @DS/@DSTransactional, JWT 无状态认证 + BCrypt + 授权, xlsx/docx/pdf/csv/md/xml 文档读写 |
 | summer-support | OCR 文字识别（原 summer-office 的 OCR 独立而成，依赖 summer-core） | cn.jiebaba.summer.support.ocr: Ocr/OcrConfig/OcrResult + DB/CRNN 流水线, OcrAutoConfiguration |
-| summer-ai | 大模型对话抽象 + RAG + 向量存储 + A2A 跨实例协作 | ChatClient, OpenAI 兼容, SSE 流式, 工具调用, embedding, 重试/熔断, agent(A2A 委派/契约/恢复), AI 自动配置（cn.jiebaba.summer.boot.ai 包随本模块发布） |
+| summer-ai | 大模型对话抽象 + RAG + 向量存储 + 进程内多 agent 协作 | ChatClient, OpenAI 兼容, SSE 流式, 工具调用, embedding, 重试/熔断, agent(进程内多 agent 编排 AgentOrchestrator), AI 自动配置（cn.jiebaba.summer.boot.ai 包随本模块发布） |
 | summer-boot-loader | 可执行 jar 启动器 | JarLauncher（`java -jar` 入口） |
 | summer-pack-maven-plugin | 打包插件 | 产出 BOOT-INF 可执行 jar |
 | summer-sample | 示例应用 | controller/service/repository/aspect 示例 |
