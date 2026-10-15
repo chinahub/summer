@@ -4,6 +4,7 @@ import cn.jiebaba.summer.core.env.Environment;
 import cn.jiebaba.summer.web.annotation.RequestPart;
 import cn.jiebaba.summer.web.bind.HandlerException;
 import cn.jiebaba.summer.web.bind.HandlerMethodArgumentResolver;
+import cn.jiebaba.summer.web.bind.HandlerMethodInvoker;
 import cn.jiebaba.summer.web.http.WebRequest;
 import cn.jiebaba.summer.web.http.WebResponse;
 import cn.jiebaba.summer.web.routing.RouteMatch;
@@ -94,7 +95,7 @@ public final class MultipartFileArgumentResolver implements HandlerMethodArgumen
             if (!rp.value().isEmpty()) return rp.value();
             if (!rp.name().isEmpty()) return rp.name();
         }
-        return parameter.getName();
+        return HandlerMethodInvoker.realParamName(parameter.getName(), parameter);
     }
 
     private static boolean required(Parameter parameter) {

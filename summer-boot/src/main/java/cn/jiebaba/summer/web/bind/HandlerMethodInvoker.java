@@ -107,8 +107,10 @@ public final class HandlerMethodInvoker {
             return new ParamSpec(Kind.REQUEST_BODY, param, genericType, null, null, body.required(), null, param.isAnnotationPresent(Valid.class));
         }
         if (isSimpleType(type)) {
-            return new ParamSpec(Kind.SIMPLE_QUERY, param, genericType, null, param.getName(), false, null, false);
+            return new ParamSpec(Kind.SIMPLE_QUERY, param, genericType, null,
+                    realParamName(param.getName(), param), false, null, false);
         }
+        // MODEL_ATTRIBUTE 按字段名绑定，参数名仅作 "前缀.字段名" 的回退键，合成名不影响主路径，不拦截
         return new ParamSpec(Kind.MODEL_ATTRIBUTE, param, genericType, null, param.getName(), false, null, param.isAnnotationPresent(Valid.class));
     }
 
@@ -235,7 +237,28 @@ public final class HandlerMethodInvoker {
     private static String nameOf(String value, String name, Parameter param) {
         if (value != null && !value.isEmpty()) return value;
         if (name != null && !name.isEmpty()) return name;
-        return param.getName();
+        return realParamName(param.getName(), param);
+    }
+
+    /** javac 合成参数名模式：未启用 -parameters 编译时，反射参数名退化为 arg0/arg1/…。 */
+    private static final java.util.regex.Pattern SYNTHETIC_PARAM_NAME = java.util.regex.Pattern.compile("arg\\d+");
+
+    /**
+     * 参数名守卫：识别合成参数名并快速失败。按名绑定的路径变量/查询参数/请求头在
+     * 应用编译时未启用 {@code -parameters} 的情况下会全部失配（典型症状为每请求报
+     * "Missing path variable: arg0"），此处改为首次构建绑定策略时抛出含修复指引的异常。
+     * 参数确实命名为 arg0 的极端情形，为注解显式指定名称即可绕开。
+     */
+    public static String realParamName(String name, Parameter param) {
+        if (name != null && SYNTHETIC_PARAM_NAME.matcher(name).matches()) {
+            var executable = param.getDeclaringExecutable();
+            throw new IllegalStateException("无法按参数名绑定，编译时未保留参数名："
+                    + executable.getDeclaringClass().getName() + "#" + executable.getName()
+                    + " 的参数名为合成名 \"" + name + "\"。请在应用的编译配置中启用 -parameters"
+                    + "（maven-compiler-plugin 设置 <parameters>true</parameters>），"
+                    + "或为该参数的注解显式指定名称。");
+        }
+        return name;
     }
 
     /** 参数绑定策略种类。 */

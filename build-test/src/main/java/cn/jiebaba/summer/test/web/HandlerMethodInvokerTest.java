@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Set;
@@ -221,5 +222,28 @@ public class HandlerMethodInvokerTest {
         java.lang.reflect.Field sf = cached.getClass().getDeclaredField("spreader");
         sf.setAccessible(true);
         Assertions.assertNotNull(sf.get(cached), "MethodHandle spreader should be built (not fallback) for " + name);
+    }
+
+    /** 合成参数名（应用未启用 -parameters 时的 arg0）应快速失败，异常含根因与两条修复路径。 */
+    @Test
+    void syntheticParamNameFailsFastWithGuidance() throws Exception {
+        Method m = SampleController.class.getMethod("get", Long.class);
+        Parameter p = m.getParameters()[0];
+        IllegalStateException ex = Assertions.assertThrows(IllegalStateException.class,
+                () -> HandlerMethodInvoker.realParamName("arg0", p),
+                "合成参数名应快速失败并给出修复指引");
+        Assertions.assertTrue(ex.getMessage().contains("-parameters"), "应提示启用 -parameters");
+        Assertions.assertTrue(ex.getMessage().contains("arg0"), "应含合成名本身");
+        Assertions.assertTrue(ex.getMessage().contains(m.getDeclaringClass().getName()),
+                "应定位到声明类与方法");
+        Assertions.assertTrue(ex.getMessage().contains("显式指定名称"), "应给出显式命名这一替代修复路径");
+    }
+
+    /** 真实参数名直通不拦截。 */
+    @Test
+    void realParamNamePassesThrough() throws Exception {
+        Method m = SampleController.class.getMethod("get", Long.class);
+        Parameter p = m.getParameters()[0];
+        Assertions.assertEquals("id", HandlerMethodInvoker.realParamName(p.getName(), p));
     }
 }

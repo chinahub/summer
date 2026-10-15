@@ -186,6 +186,10 @@ summer:
 | `@RestControllerAdvice` `@ExceptionHandler` | 全局异常处理 |
 | `@ResponseStatus` | 自定义响应状态码 |
 
+> **编译要求 `-parameters`**：`@PathVariable`/`@RequestParam`/`@RequestHeader` 不写显式名称时按反射参数名绑定，要求编译时保留参数名。框架根 POM 已配置 `<parameters>true</parameters>`；**应用自己的模块**若不继承 summer 根 POM，需在 `maven-compiler-plugin` 中同样设置，否则首请求即抛出"编译时未保留参数名"异常并给出修复指引（也可为注解显式指定名称绕开）。
+
+> **路由匹配语义**：路径按段匹配，`{var}` 仅支持整段变量（`/files/{name}.txt` 等段内模板不支持）；`*` 匹配单段，`/**` 尾部全捕获，裸 `/**` 匹配任意路径、作为特异性最低的兜底路由。URL 后缀无特殊含义（不做 `.json` 式后缀内容协商，内容协商用 `Accept` 头）；路由未命中时 GET 尝试静态资源，仍不命中返回 JSON 404（路径存在但方法不符返回 405）。
+
 跨域（CORS）通过 `summer.web.cors.*` 配置自动启用，详见 [CORS](cors.md)。
 
 ### 全局异常处理（summer-boot）
