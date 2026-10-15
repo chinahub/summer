@@ -834,7 +834,8 @@ public final class Json {
                 || type == short.class || type == Short.class
                 || type == byte.class || type == Byte.class
                 || type == double.class || type == Double.class
-                || type == float.class || type == Float.class;
+                || type == float.class || type == Float.class
+                || type == java.math.BigDecimal.class || type == java.math.BigInteger.class;
     }
 
     /**
@@ -849,6 +850,12 @@ public final class Json {
     private static Object coerceNumber(Number num, Class<?> type) {
         if (type == double.class || type == Double.class) return num.doubleValue();
         if (type == float.class || type == Float.class) return num.floatValue();
+        if (type == java.math.BigDecimal.class) {
+            return num instanceof java.math.BigDecimal bd ? bd : new java.math.BigDecimal(num.toString());
+        }
+        if (type == java.math.BigInteger.class) {
+            return num instanceof java.math.BigInteger bi ? bi : java.math.BigInteger.valueOf(toLongChecked(num));
+        }
         long v = toLongChecked(num);
         if (type == long.class || type == Long.class) return v;
         // 窄化转换必须校验范围；否则绑定到 Integer 字段时，超过 Integer.MAX_VALUE 的 Long 型 id

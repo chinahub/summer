@@ -361,6 +361,12 @@ public final class SqlExecutor {
             }
             if (value instanceof String str) return new BigDecimal(str);
         }
+        // 数值列（如 MySQL TINYINT(1)、H2 返回 Integer）转布尔：非 0 即 true。
+        // 不能走 Boolean.valueOf(String)——"1" 会被解析成 false。
+        if (targetType == boolean.class || targetType == Boolean.class) {
+            if (value instanceof Boolean b) return b;
+            if (value instanceof Number n) return n.longValue() != 0;
+        }
         String s = value.toString();
         if (targetType == String.class) return s;
         try {
