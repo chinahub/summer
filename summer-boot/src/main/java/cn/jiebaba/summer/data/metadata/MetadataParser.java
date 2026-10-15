@@ -49,14 +49,9 @@ public final class MetadataParser {
             TableField tf = field.getAnnotation(TableField.class);
             if (tf != null && !tf.exist()) continue;
 
-            String column;
-            if (tf != null && !tf.value().isEmpty()) {
-                column = tf.value();
-            } else {
-                column = NamingUtils.toSnakeCase(field.getName());
-            }
-
             TableId tableId = field.getAnnotation(TableId.class);
+            String column = resolveColumn(entityType, field, tf, tableId);
+
             TableLogic logic = field.getAnnotation(TableLogic.class);
             Version version = field.getAnnotation(Version.class);
             boolean isId = tableId != null;
@@ -96,6 +91,24 @@ public final class MetadataParser {
             info.idField(id);
         }
         return info;
+    }
+
+    /**
+     * 解析字段列名：{@code @TableId.value()} 优先级最高；两者都指定且不一致视为
+     * 配置矛盾直接抛错（fail-fast）；都未指定时回退字段名驼峰转蛇形。
+     */
+    private static String resolveColumn(Class<?> entityType, Field field, TableField tf, TableId tableId) {
+        String idColumn = tableId == null ? "" : tableId.value();
+        String fieldColumn = tf == null ? "" : tf.value();
+        if (!idColumn.isEmpty()) {
+            if (!fieldColumn.isEmpty() && !fieldColumn.equals(idColumn)) {
+                throw new IllegalArgumentException(
+                        "字段列名配置矛盾 " + entityType.getName() + "." + field.getName()
+                                + "：@TableId(\"" + idColumn + "\") 与 @TableField(\"" + fieldColumn + "\") 不一致");
+            }
+            return idColumn;
+        }
+        return fieldColumn.isEmpty() ? NamingUtils.toSnakeCase(field.getName()) : fieldColumn;
     }
 
     private static List<Field> collectFields(Class<?> type) {

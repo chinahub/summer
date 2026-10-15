@@ -11,7 +11,7 @@
 | 注解 | 作用 |
 | --- | --- |
 | `@TableName("product")` | 表名（默认驼峰转下划线） |
-| `@TableId(type = IdType.ASSIGN_ID)` | 主键，`IdType`：`AUTO`/`INPUT`/`ASSIGN_ID`/`ASSIGN_UUID` |
+| `@TableId("id_")` | 主键；首参指定主键列名（省略则驼峰转下划线），`type = IdType`：`AUTO`/`INPUT`/`ASSIGN_ID`/`ASSIGN_UUID`；与 `@TableField` 同时指定列名且不一致时解析报错 |
 | `@TableField("stock_qty")` | 字段映射；`exist=false` 排除非数据库字段；`typeHandler=JsonTypeHandler.class` 绑定 JSONB 列（见下文） |
 | `@TableLogic` | 逻辑删除字段（删除变 UPDATE，查询自动过滤） |
 

@@ -1,6 +1,7 @@
 package cn.jiebaba.summer.test.data;
 
 import cn.jiebaba.summer.data.annotation.IdType;
+import cn.jiebaba.summer.data.annotation.TableField;
 import cn.jiebaba.summer.data.annotation.TableId;
 import cn.jiebaba.summer.data.annotation.TableName;
 import cn.jiebaba.summer.data.annotation.Version;
@@ -12,6 +13,7 @@ import cn.jiebaba.summer.data.dialect.PostgreSqlDialect;
 import cn.jiebaba.summer.data.dialect.SqlServerDialect;
 import cn.jiebaba.summer.data.dialect.SqliteDialect;
 import cn.jiebaba.summer.data.metadata.MetadataParser;
+import cn.jiebaba.summer.data.metadata.TableInfo;
 import cn.jiebaba.summer.data.support.SqlBuilder;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
@@ -60,6 +62,30 @@ public class SqlBuilderEnhanceTest {
         private Long id;
         @Version
         private String version;
+    }
+
+    @TableName("underscore_task")
+    public static class UnderscoreTask {
+        @TableId("id_")
+        private Long id;
+        private String module;
+
+        public UnderscoreTask(Long id, String module) {
+            this.id = id;
+            this.module = module;
+        }
+    }
+
+    public static class ConflictColumnTask {
+        @TableId("id_")
+        @TableField("pk")
+        private Long id;
+    }
+
+    public static class AgreedColumnTask {
+        @TableId("id_")
+        @TableField("id_")
+        private Long id;
     }
 
     private static SqlBuilder builder(Class<?> entity, Dialect dialect) {
@@ -168,5 +194,33 @@ public class SqlBuilderEnhanceTest {
     void badVersionTypeRejected() {
         Assertions.assertThrows(IllegalArgumentException.class,
                 () -> MetadataParser.parse(BadVersionType.class));
+    }
+
+    @Test
+    @DisplayName("@TableId(\"id_\") 单独标注：主键列名生效，各语句不丢尾下划线")
+    void tableIdValueResolvesColumn() {
+        SqlBuilder sb = builder(UnderscoreTask.class, new PostgreSqlDialect());
+        Assertions.assertEquals("SELECT id_, module FROM underscore_task WHERE id_ = ?",
+                sb.selectById(7L).sql());
+        Assertions.assertEquals("INSERT INTO underscore_task (id_, module) VALUES (?, ?)",
+                sb.insert(new UnderscoreTask(7L, "api")).sql());
+        Assertions.assertEquals("UPDATE underscore_task SET module = ? WHERE id_ = ?",
+                sb.updateById(new UnderscoreTask(7L, "api")).sql());
+        Assertions.assertEquals("DELETE FROM underscore_task WHERE id_ = ?",
+                sb.deleteById(7L).sql());
+    }
+
+    @Test
+    @DisplayName("@TableId 与 @TableField 指定列名不一致：解析报错")
+    void conflictingIdAndFieldColumnRejected() {
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> MetadataParser.parse(ConflictColumnTask.class));
+    }
+
+    @Test
+    @DisplayName("@TableId 与 @TableField 列名一致：正常解析（兼容旧双标注法）")
+    void agreedIdAndFieldColumnAccepted() {
+        TableInfo info = MetadataParser.parse(AgreedColumnTask.class);
+        Assertions.assertEquals("id_", info.idField().column());
     }
 }
