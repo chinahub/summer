@@ -5,7 +5,8 @@ import java.util.Optional;
 
 /**
  * 将 URL 路径与模式匹配，例如 {@code /users/{id}/repos/{name}}。
- * 支持单段变量 {@code {var}}、单段通配符 {@code *} 以及末尾全捕获 {@code /**}。
+ * 支持单段变量 {@code {var}}、单段通配符 {@code *} 以及末尾全捕获 {@code /**}；
+ * 裸 {@code /**} 匹配任意路径（含根路径），特异性为 0，天然是最低优先级兜底。
  */
 public final class RoutePattern {
     private final String pattern;
@@ -15,9 +16,10 @@ public final class RoutePattern {
     public RoutePattern(String pattern) {
         this.pattern = normalize(pattern);
         String trimmed = this.pattern;
-        if (trimmed.endsWith("/**")) {
+        // normalize 已剥掉首斜杠，裸 "/**" 归一化后为 "**"，须单独判定，否则会被当作字面量段
+        if (trimmed.endsWith("/**") || trimmed.equals("**")) {
             this.catchAll = true;
-            trimmed = trimmed.substring(0, trimmed.length() - 3);
+            trimmed = trimmed.equals("**") ? "" : trimmed.substring(0, trimmed.length() - 3);
         } else {
             this.catchAll = false;
         }

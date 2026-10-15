@@ -91,4 +91,38 @@ public class RouterTrieTest {
         Assertions.assertTrue(m.isPresent(), "POST should match");
         Assertions.assertTrue(m.get().mapping() == post, "should return the POST route");
     }
+
+    /** 裸 /**（normalize 剥首斜杠后为 "**"）应识别为 catch-all：任意路径命中且不捕获变量。 */
+    @Test
+    void bareCatchAllMatchesEveryPath() {
+        RoutePattern p = new RoutePattern("/**");
+        Assertions.assertTrue(p.catchAll(), "bare /** should be recognized as catch-all");
+        for (String path : new String[]{"/", "/x", "/a/b", "/a/b/c/d"}) {
+            Optional<java.util.Map<String, String>> m = p.match(path);
+            Assertions.assertTrue(m.isPresent(), "bare /** should match " + path);
+            Assertions.assertTrue(m.get().isEmpty(), "bare /** should not capture variables for " + path);
+        }
+        Assertions.assertTrue(new RoutePattern("/**").specificity() == 0, "bare /** should have lowest specificity");
+    }
+
+    /** 裸 /** 作兜底：具体路由与变量路由优先，未命中才落到它；前缀树与线性实现一致。 */
+    @Test
+    void bareCatchAllActsAsLowestPriorityFallback() {
+        Router router = new Router();
+        RouteMapping fallback = route(HttpMethod.GET, "/**");
+        RouteMapping varRoute = route(HttpMethod.GET, "/users/{id}");
+        RouteMapping literal = route(HttpMethod.GET, "/users/me");
+        List.of(fallback, varRoute, literal).forEach(router::register);
+        router.sortBySpecificity();
+
+        Assertions.assertTrue(router.match(HttpMethod.GET, "/users/me").get().mapping() == literal,
+                "literal route should win over fallback");
+        Assertions.assertTrue(router.match(HttpMethod.GET, "/users/42").get().mapping() == varRoute,
+                "variable route should win over fallback");
+        Assertions.assertTrue(router.match(HttpMethod.GET, "/other/x").get().mapping() == fallback,
+                "unmatched paths should fall back to bare /**");
+        for (String path : new String[]{"/users/me", "/users/42", "/other/x", "/"}) {
+            assertSame(router, HttpMethod.GET, path);
+        }
+    }
 }
