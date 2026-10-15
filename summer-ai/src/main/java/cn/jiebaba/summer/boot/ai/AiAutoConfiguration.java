@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * summer-ai 自动配置：按 summer.ai.* 装配 ChatModel 与 ChatClient，并按 summer.ai.models.<id>.*
@@ -76,7 +77,7 @@ public class AiAutoConfiguration {
             if (!named.isConfigured()) {
                 throw new IllegalStateException(
                         "命名模型实例 \"" + named.getId() + "\" 配置不完整：请设置 summer.ai.models."
-                                + named.getId() + ".provider(deepseek|glm|minimax|kimi) 与 .api-key。");
+                                + named.getId() + ".provider(deepseek|glm|minimax|kimi|opencode-go) 与 .api-key。");
             }
             models.put(named.getId(), new OpenAiCompatibleChatModel(
                     named.getBaseUrl(),
@@ -84,7 +85,9 @@ public class AiAutoConfiguration {
                     named.getModel(),
                     Duration.ofSeconds(named.getTimeoutSeconds()),
                     named.getTemperature(),
-                    named.getMaxTokens()));
+                    named.getMaxTokens(),
+                    aiProperties.getClientName(),
+                    resolveSessionId(aiProperties)));
         }
         return new AiModelRegistry(models);
     }
@@ -104,7 +107,7 @@ public class AiAutoConfiguration {
             }
             throw new IllegalStateException(
                     "summer-ai 已在 classpath 但未正确配置：请设置 summer.ai.provider"
-                            + "(deepseek|glm|minimax|kimi) 与 summer.ai.api-key，"
+                            + "(deepseek|glm|minimax|kimi|opencode-go) 与 summer.ai.api-key，"
                             + "或配置命名实例 summer.ai.models.<id>.*，"
                             + "或运行期通过 AiModelRegistry.register(id, model) 动态注册模型；"
                             + "若本应用完全不用 AI，可设置 summer.ai.enabled=false 关闭自动装配。");
@@ -115,7 +118,9 @@ public class AiAutoConfiguration {
                 aiProperties.getModel(),
                 Duration.ofSeconds(aiProperties.getTimeoutSeconds()),
                 aiProperties.getTemperature(),
-                aiProperties.getMaxTokens());
+                aiProperties.getMaxTokens(),
+                aiProperties.getClientName(),
+                resolveSessionId(aiProperties));
         if (aiProperties.isLoggingEnabled()) {
             model = new LoggingChatModel(model, resolveAiCallLogger(context, aiProperties));
         }
@@ -249,6 +254,12 @@ public class AiAutoConfiguration {
                 ? new RetrievalAugmentationAdvisor(retriever)
                 : new RetrievalAugmentationAdvisor(retriever, instruction);
         return new RagClient(chatClient, advisor);
+    }
+
+    /** 解析会话 ID 供给器：配置 summer.ai.session-id 常量值时返回之，未配置返回 null（不发送会话头）。 */
+    private static Supplier<String> resolveSessionId(AiProperties aiProperties) {
+        String sessionId = aiProperties.getSessionId();
+        return sessionId == null || sessionId.isBlank() ? null : () -> sessionId;
     }
 
     /** 从上下文查找 SqlExecutor；缺失时抛出明确异常，提示配置 summer.datasource.*。 */

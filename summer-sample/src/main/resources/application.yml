@@ -49,7 +49,7 @@ summer:
   # summer-ai 已在 classpath：取消下列注释并填入 api-key 后启用 AI 示例（/ai/** 端点）。
   # 未配置 summer.ai.provider 与 summer.ai.api-key 时，启动会快速失败（属预期行为）。
   # ai:
-  #   provider: deepseek              # deepseek | glm | minimax | kimi
+  #   provider: deepseek              # deepseek | glm | minimax | kimi | opencode-go
   #   api-key: sk-your-api-key-here
   #   # model: deepseek-chat          # 可选，省略用厂商默认
   #   # base-url: https://api.deepseek.com

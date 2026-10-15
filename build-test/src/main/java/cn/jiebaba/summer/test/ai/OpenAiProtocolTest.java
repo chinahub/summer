@@ -13,10 +13,12 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 /**
- * OpenAiCompatibleChatModel 协议层测试：经反射直调私有 buildRequestBody/parseChunk，
- * 验证 JSON 模式（response_format 注入）与流式 token 用量（stream_options.include_usage + 末帧 usage 解析）。
+ * OpenAiCompatibleChatModel 协议层测试：经反射直调私有 buildRequestBody/parseChunk/buildHeaders，
+ * 验证 JSON 模式（response_format 注入）、流式 token 用量（stream_options.include_usage + 末帧 usage 解析）
+ * 与请求头（固定头 + 可选 User-Agent/x-opencode-session 会话头）。
  * 不发起网络调用，规避受限沙箱对回环连接的限制，确定性覆盖请求体构建与 SSE 帧解析。
  */
 public class OpenAiProtocolTest {
@@ -37,6 +39,15 @@ public class OpenAiProtocolTest {
         Method m = OpenAiCompatibleChatModel.class.getDeclaredMethod("parseChunk", String.class);
         m.setAccessible(true);
         return (ChatResponse) m.invoke(model, json);
+    }
+
+    /** 反射调用私有 buildHeaders(boolean)，返回请求头映射。 */
+    private Map<String, String> buildHeaders(OpenAiCompatibleChatModel target, boolean stream) throws Exception {
+        Method m = OpenAiCompatibleChatModel.class.getDeclaredMethod("buildHeaders", boolean.class);
+        m.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<String, String> headers = (Map<String, String>) m.invoke(target, stream);
+        return headers;
     }
 
     private Prompt prompt(ChatOptions opts) {
@@ -105,5 +116,39 @@ public class OpenAiProtocolTest {
         Assertions.assertEquals("Hi", r2.content());
         Assertions.assertNotNull(r2.metadata(), "含 usage 帧应解析出 metadata");
         Assertions.assertEquals(2L, r2.metadata().totalTokens(), "total_tokens 应为 2");
+    }
+
+    /** 未配置 clientName/sessionId 时只发固定头：无 User-Agent 与 x-opencode-session，Accept 按流式切换。 */
+    @Test
+    public void headersDefaultWithoutClientIdentity() throws Exception {
+        Map<String, String> headers = buildHeaders(model, false);
+        Assertions.assertEquals("Bearer sk-test", headers.get("Authorization"));
+        Assertions.assertEquals("application/json", headers.get("Content-Type"));
+        Assertions.assertEquals("application/json", headers.get("Accept"));
+        Assertions.assertFalse(headers.containsKey("User-Agent"), "未配置 clientName 不应发送 User-Agent");
+        Assertions.assertFalse(headers.containsKey("x-opencode-session"), "未配置 sessionId 不应发送会话头");
+        Assertions.assertEquals("text/event-stream", buildHeaders(model, true).get("Accept"));
+    }
+
+    /** 配置 clientName 与 sessionId 供给器时，应发送 User-Agent 与 x-opencode-session（OpenCode Go 会话要求）。 */
+    @Test
+    public void headersCarryClientNameAndSessionId() throws Exception {
+        OpenAiCompatibleChatModel withIdentity = new OpenAiCompatibleChatModel(
+                "https://opencode.ai/zen/go/v1", "sk-go", "glm-5.3-flash", Duration.ofSeconds(5), 0.7, 1024,
+                "summer-ai/1.0", () -> "conv-42");
+        Map<String, String> headers = buildHeaders(withIdentity, false);
+        Assertions.assertEquals("summer-ai/1.0", headers.get("User-Agent"));
+        Assertions.assertEquals("conv-42", headers.get("x-opencode-session"));
+    }
+
+    /** sessionId 供给器返回空白时不发送会话头（如按会话动态生成、当前无会话的场景）。 */
+    @Test
+    public void blankSessionIdNotSent() throws Exception {
+        OpenAiCompatibleChatModel blankSession = new OpenAiCompatibleChatModel(
+                "https://opencode.ai/zen/go/v1", "sk-go", "glm-5.3-flash", Duration.ofSeconds(5), 0.7, 1024,
+                "summer-ai/1.0", () -> "  ");
+        Map<String, String> headers = buildHeaders(blankSession, false);
+        Assertions.assertEquals("summer-ai/1.0", headers.get("User-Agent"));
+        Assertions.assertFalse(headers.containsKey("x-opencode-session"), "空白 sessionId 不应发送会话头");
     }
 }

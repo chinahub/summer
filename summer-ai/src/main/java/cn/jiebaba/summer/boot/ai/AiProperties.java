@@ -7,7 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * summer.ai.* 配置项绑定：厂商、密钥、模型、base-url、超时、采样参数与可选的弹性策略（重试/限流/熔断），
+ * summer.ai.* 配置项绑定：厂商、密钥、模型、base-url、客户端标识与会话头、超时、采样参数与可选的弹性策略（重试/限流/熔断），
  * 以及向量化、向量库（内存或 pgvector）、对话记忆与 RAG 检索增强的可选装配参数；
  * 另含命名模型实例（summer.ai.models.&lt;id&gt;.*，见 {@link NamedAiModel}）构成的多模型注册表。
  */
@@ -17,6 +17,8 @@ public class AiProperties {
     private final String apiKey;
     private final String model;
     private final String baseUrl;
+    private final String clientName;
+    private final String sessionId;
     private final int timeoutSeconds;
     private final double temperature;
     private final int maxTokens;
@@ -55,6 +57,7 @@ public class AiProperties {
     private final Map<String, NamedAiModel> models;
 
     private AiProperties(Provider provider, String apiKey, String model, String baseUrl,
+                         String clientName, String sessionId,
                          int timeoutSeconds, double temperature, int maxTokens,
                          int retryMaxAttempts, long retryInitialBackoffMillis, double retryMultiplier,
                          long retryMaxBackoffMillis, double rateLimitPermitsPerSecond,
@@ -72,6 +75,8 @@ public class AiProperties {
         this.apiKey = apiKey;
         this.model = model;
         this.baseUrl = baseUrl;
+        this.clientName = clientName;
+        this.sessionId = sessionId;
         this.timeoutSeconds = timeoutSeconds;
         this.temperature = temperature;
         this.maxTokens = maxTokens;
@@ -116,6 +121,8 @@ public class AiProperties {
         String apiKey = env.getProperty("summer.ai.api-key");
         String model = env.getProperty("summer.ai.model");
         String baseUrl = env.getProperty("summer.ai.base-url");
+        String clientName = env.getProperty("summer.ai.client-name");
+        String sessionId = env.getProperty("summer.ai.session-id");
         if (provider != null) {
             if (baseUrl == null || baseUrl.isBlank()) {
                 baseUrl = provider.getDefaultBaseUrl();
@@ -163,7 +170,8 @@ public class AiProperties {
         for (String id : NamedAiModel.ids(env)) {
             models.put(id, NamedAiModel.from(id, env));
         }
-        return new AiProperties(provider, apiKey, model, baseUrl, timeoutSeconds, temperature, maxTokens,
+        return new AiProperties(provider, apiKey, model, baseUrl, clientName, sessionId,
+                timeoutSeconds, temperature, maxTokens,
                 retryMaxAttempts, retryInitialBackoffMillis, retryMultiplier, retryMaxBackoffMillis,
                 rateLimitPermitsPerSecond, circuitBreakerFailureThreshold, circuitBreakerWaitMillis,
                 embeddingEnabled, embeddingModel, embeddingBaseUrl, embeddingApiKey,
@@ -251,6 +259,10 @@ public class AiProperties {
     public String getApiKey() { return apiKey; }
     public String getModel() { return model; }
     public String getBaseUrl() { return baseUrl; }
+    /** 客户端标识（User-Agent），可为 null。 */
+    public String getClientName() { return clientName; }
+    /** 会话 ID（x-opencode-session 头，常量值），可为 null。 */
+    public String getSessionId() { return sessionId; }
     public int getTimeoutSeconds() { return timeoutSeconds; }
     public double getTemperature() { return temperature; }
     public int getMaxTokens() { return maxTokens; }

@@ -4,7 +4,7 @@ import cn.jiebaba.summer.ai.model.Provider;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-/** Provider 厂商枚举解析的单元测试：名称不区分大小写匹配、未匹配返回 null、默认 base-url 与模型名正确。 */
+/** Provider 厂商枚举解析的单元测试：名称不区分大小写、忽略连字符/下划线分隔符匹配，未匹配返回 null，默认 base-url 与模型名正确。 */
 public class ProviderTest {
 
     @Test
@@ -24,6 +24,21 @@ public class ProviderTest {
     public void glmDefaults() {
         Assertions.assertEquals("https://open.bigmodel.cn/api/paas/v4", Provider.GLM.getDefaultBaseUrl());
         Assertions.assertEquals("glm-5.3-flash", Provider.GLM.getDefaultModel());
+    }
+
+    @Test
+    public void openCodeGoResolvesIgnoringSeparatorsAndCase() {
+        Assertions.assertEquals(Provider.OPENCODE_GO, Provider.from("opencode-go"));
+        Assertions.assertEquals(Provider.OPENCODE_GO, Provider.from("OpenCode-Go"));
+        Assertions.assertEquals(Provider.OPENCODE_GO, Provider.from("opencode_go"));
+        Assertions.assertEquals(Provider.OPENCODE_GO, Provider.from("OPENCODE_GO"));
+        Assertions.assertEquals(Provider.OPENCODE_GO, Provider.from(" opencode-go "));
+    }
+
+    @Test
+    public void openCodeGoDefaults() {
+        Assertions.assertEquals("https://opencode.ai/zen/go/v1", Provider.OPENCODE_GO.getDefaultBaseUrl());
+        Assertions.assertEquals("glm-5.3-flash", Provider.OPENCODE_GO.getDefaultModel());
     }
 
     @Test

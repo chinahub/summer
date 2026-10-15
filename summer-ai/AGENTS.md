@@ -25,8 +25,8 @@
 
 ## 模块约定
 
-- **纯 JDK HTTP**：使用 `java.net.http.HttpClient` 调用 API，不依赖 OkHttp 或 Apache HttpClient
-- **OpenAI 兼容**：`OpenAiCompatibleChatModel` 支持所有 OpenAI API 兼容的服务（DeepSeek/GLM/MiniMax 等）
+- **纯 JDK HTTP**：使用 `java.net.HttpURLConnection`（阻塞式）调用 API，不依赖 OkHttp 或 Apache HttpClient
+- **OpenAI 兼容**：`OpenAiCompatibleChatModel` 支持所有 OpenAI API 兼容的服务（DeepSeek/GLM/MiniMax/Kimi 等），含订阅制聚合服务 OpenCode Go（仅 `/chat/completions` 系模型；可选 `clientName`/`sessionId` 发送 User-Agent 与 `x-opencode-session` 头）
 - **流式**：支持 SSE 流式响应（`Server-Sent Events`）
 - **工具调用**：`ToolCallingChatModel` 包装 ChatModel，自动处理 function calling 循环
 - **重试**：`ResilientChatModel` 提供指数退避重试 + 限流 + 熔断

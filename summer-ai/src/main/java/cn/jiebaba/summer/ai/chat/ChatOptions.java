@@ -11,6 +11,7 @@ public class ChatOptions {
     private final List<ToolDefinition> tools;
     private final String toolChoice;
     private final String responseFormat;
+    private final String reasoningEffort;
 
     public ChatOptions(String model, Double temperature, Integer maxTokens) {
         this(model, temperature, maxTokens, List.of(), null);
@@ -23,12 +24,19 @@ public class ChatOptions {
 
     public ChatOptions(String model, Double temperature, Integer maxTokens,
                        List<ToolDefinition> tools, String toolChoice, String responseFormat) {
+        this(model, temperature, maxTokens, tools, toolChoice, responseFormat, null);
+    }
+
+    public ChatOptions(String model, Double temperature, Integer maxTokens,
+                       List<ToolDefinition> tools, String toolChoice, String responseFormat,
+                       String reasoningEffort) {
         this.model = model;
         this.temperature = temperature;
         this.maxTokens = maxTokens;
         this.tools = tools == null ? List.of() : List.copyOf(tools);
         this.toolChoice = toolChoice;
         this.responseFormat = responseFormat;
+        this.reasoningEffort = reasoningEffort;
     }
 
     public static Builder builder() {
@@ -60,6 +68,14 @@ public class ChatOptions {
         return responseFormat;
     }
 
+    /**
+     * 思考力度（GLM-5.3 系 reasoning_effort：low 轻量 / high 增强 / max 深度，服务端默认 max）；
+     * null 时不发送该参数，由服务端默认。思考与正文共享 max_tokens 预算，调低力度可显著省预算。
+     */
+    public String getReasoningEffort() {
+        return reasoningEffort;
+    }
+
     /** 链式构造器。 */
     public static class Builder {
         private String model;
@@ -68,6 +84,7 @@ public class ChatOptions {
         private List<ToolDefinition> tools = List.of();
         private String toolChoice;
         private String responseFormat;
+        private String reasoningEffort;
 
         public Builder model(String model) {
             this.model = model;
@@ -99,8 +116,14 @@ public class ChatOptions {
             return this;
         }
 
+        public Builder reasoningEffort(String reasoningEffort) {
+            this.reasoningEffort = reasoningEffort;
+            return this;
+        }
+
         public ChatOptions build() {
-            return new ChatOptions(model, temperature, maxTokens, tools, toolChoice, responseFormat);
+            return new ChatOptions(model, temperature, maxTokens, tools, toolChoice, responseFormat,
+                    reasoningEffort);
         }
     }
 }

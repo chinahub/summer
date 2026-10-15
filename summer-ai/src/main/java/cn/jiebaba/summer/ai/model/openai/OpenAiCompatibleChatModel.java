@@ -32,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 /**
@@ -40,6 +41,8 @@ import java.util.stream.Stream;
  * 覆盖 DeepSeek、GLM（智谱 OpenAI 兼容端点）、MiniMax 等国内厂商：
  * 仅 base-url 与模型名不同，请求、响应与 SSE 流式协议一致。
  * 支持多模态内容（图片/语音）、Function Calling 工具调用与思维链解析。
+ * 可选自定义 User-Agent 与 x-opencode-session 会话头（OpenCode Go 等服务
+ * 要求客户端自报身份并携带稳定会话 ID，用于路由优化与提示缓存）。
  */
 public class OpenAiCompatibleChatModel implements ChatModel {
 
@@ -49,15 +52,38 @@ public class OpenAiCompatibleChatModel implements ChatModel {
     private final Duration timeout;
     private final Double temperature;
     private final Integer maxTokens;
+    /** 思考力度（reasoning_effort，GLM-5.3 系 low/high/max）；null 时不发送，由服务端默认。 */
+    private final String reasoningEffort;
+    /** 自定义 User-Agent（客户端标识，如 summer-ai/1.0）；null/空白时不发送，保持 JDK 默认。 */
+    private final String clientName;
+    /** 会话 ID 供给器（每次请求求值，x-opencode-session 头）；null 或返回空白时不发送。 */
+    private final Supplier<String> sessionId;
 
     public OpenAiCompatibleChatModel(String baseUrl, String apiKey, String model,
                                      Duration timeout, Double temperature, Integer maxTokens) {
+        this(baseUrl, apiKey, model, timeout, temperature, maxTokens, null, null);
+    }
+
+    /** 全参构造：额外指定 User-Agent 与会话 ID 供给器（可为 null，不配置时行为与 6 参构造一致）。 */
+    public OpenAiCompatibleChatModel(String baseUrl, String apiKey, String model,
+                                     Duration timeout, Double temperature, Integer maxTokens,
+                                     String clientName, Supplier<String> sessionId) {
+        this(baseUrl, apiKey, model, timeout, temperature, maxTokens, null, clientName, sessionId);
+    }
+
+    /** 含思考力度的全参构造：reasoningEffort 为 null 时不发送该参数（服务端默认，GLM-5.3 为 max）。 */
+    public OpenAiCompatibleChatModel(String baseUrl, String apiKey, String model,
+                                     Duration timeout, Double temperature, Integer maxTokens,
+                                     String reasoningEffort, String clientName, Supplier<String> sessionId) {
         this.baseUrl = baseUrl;
         this.apiKey = apiKey;
         this.model = model;
         this.timeout = timeout;
         this.temperature = temperature;
         this.maxTokens = maxTokens;
+        this.reasoningEffort = reasoningEffort;
+        this.clientName = clientName;
+        this.sessionId = sessionId;
     }
 
     @Override
@@ -123,13 +149,34 @@ public class OpenAiCompatibleChatModel implements ChatModel {
         conn.setConnectTimeout((int) timeout.toMillis());
         conn.setReadTimeout((int) timeout.toMillis());
         conn.setDoOutput(true);
-        conn.setRequestProperty("Authorization", "Bearer " + apiKey);
-        conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("Accept", stream ? "text/event-stream" : "application/json");
+        for (Map.Entry<String, String> header : buildHeaders(stream).entrySet()) {
+            conn.setRequestProperty(header.getKey(), header.getValue());
+        }
         try (OutputStream os = conn.getOutputStream()) {
             os.write(body.getBytes(StandardCharsets.UTF_8));
         }
         return conn;
+    }
+
+    /**
+     * 组装请求头：Authorization/Content-Type/Accept 固定发送，
+     * User-Agent（clientName）与 x-opencode-session（sessionId 供给器求值）仅在配置时发送。
+     */
+    private Map<String, String> buildHeaders(boolean stream) {
+        Map<String, String> headers = new LinkedHashMap<>();
+        headers.put("Authorization", "Bearer " + apiKey);
+        headers.put("Content-Type", "application/json");
+        headers.put("Accept", stream ? "text/event-stream" : "application/json");
+        if (clientName != null && !clientName.isBlank()) {
+            headers.put("User-Agent", clientName.trim());
+        }
+        if (sessionId != null) {
+            String id = sessionId.get();
+            if (id != null && !id.isBlank()) {
+                headers.put("x-opencode-session", id.trim());
+            }
+        }
+        return headers;
     }
 
     /** 组装请求体 JSON：model、messages（含多模态/工具消息）、stream、temperature、max_tokens、tools、tool_choice。 */
@@ -151,6 +198,12 @@ public class OpenAiCompatibleChatModel implements ChatModel {
         Integer maxTok = options != null && options.getMaxTokens() != null ? options.getMaxTokens() : maxTokens;
         if (maxTok != null) {
             body.put("max_tokens", maxTok);
+        }
+        // 思考力度：单次选项优先于实例默认；与 max_tokens 共同治理思考挤占输出预算的问题
+        String effort = options != null && options.getReasoningEffort() != null
+                ? options.getReasoningEffort() : reasoningEffort;
+        if (effort != null && !effort.isBlank()) {
+            body.put("reasoning_effort", effort.trim());
         }
         if (options != null) {
             putTools(body, options);

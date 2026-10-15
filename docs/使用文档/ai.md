@@ -1,6 +1,6 @@
 # Summer AI（summer-ai）
 
-> summer-ai —— 纯 JDK 实现的国内大模型对话抽象，覆盖 DeepSeek、GLM（智谱）、MiniMax、Kimi（月之暗面）等 OpenAI 兼容厂商，零第三方依赖，不依赖 summer-boot。
+> summer-ai —— 纯 JDK 实现的国内大模型对话抽象，覆盖 DeepSeek、GLM（智谱）、MiniMax、Kimi（月之暗面）等 OpenAI 兼容厂商与 OpenCode Go 订阅制聚合服务，零第三方依赖，不依赖 summer-boot。
 
 summer-ai 提供一套 provider 无关的对话模型抽象（`ChatModel`）与链式门面（`ChatClient`），底层用 `HttpURLConnection`（阻塞式，无 selector）直连各厂商的 `OpenAI 兼容` 端点，支持同步调用与 SSE 流式调用，并解析国内思考模型的思维链（`reasoning_content`）与 token 用量。在 summer-boot 中以 `summer.ai.*` 配置自动装配，不在 classpath 时零影响。
 
@@ -25,7 +25,7 @@ summer-ai 提供一套 provider 无关的对话模型抽象（`ChatModel`）与�
 ```yaml
 summer:
   ai:
-    provider: deepseek              # deepseek | glm | minimax | kimi
+    provider: deepseek              # deepseek | glm | minimax | kimi | opencode-go
     api-key: sk-your-api-key-here
     # 以下均可省略，使用厂商默认值
     # model: deepseek-chat
@@ -63,10 +63,12 @@ public class AiController {
 
 | 配置项 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- |
-| `summer.ai.provider` | 是 | — | 厂商：`deepseek`/`glm`/`minimax`/`kimi`，决定默认 base-url 与模型名 |
+| `summer.ai.provider` | 是 | — | 厂商：`deepseek`/`glm`/`minimax`/`kimi`/`opencode-go`，决定默认 base-url 与模型名 |
 | `summer.ai.api-key` | 是 | — | 厂商 API Key，以 `Bearer` 头发送 |
 | `summer.ai.model` | 否 | 厂商默认 | 模型名（如 `deepseek-chat`、`glm-5.3-flash`、`MiniMax-Text-01`、`kimi-k3`） |
 | `summer.ai.base-url` | 否 | 厂商默认 | API 根地址，自动追加 `/chat/completions` |
+| `summer.ai.client-name` | 否 | — | 客户端标识（`User-Agent` 头，如 `summer-ai/1.0`），OpenCode Go 等服务要求自报身份；未配置不发送 |
+| `summer.ai.session-id` | 否 | — | 会话 ID（`x-opencode-session` 头，常量值）；按会话动态生成时直接构造 `OpenAiCompatibleChatModel` 传入会话 ID 供给器；未配置不发送 |
 | `summer.ai.timeout-seconds` | 否 | `60` | 连接与读取超时（秒） |
 | `summer.ai.temperature` | 否 | `0.7` | 采样温度，全局默认，可被单次 `ChatOptions` 覆盖 |
 | `summer.ai.max-tokens` | 否 | `2048` | 最大生成 token 数，可被单次 `ChatOptions` 覆盖 |
@@ -148,10 +150,13 @@ public void demo() {
 | 智谱 GLM | `GLM` | `https://open.bigmodel.cn/api/paas/v4` | `glm-5.3-flash` |
 | MiniMax | `MINIMAX` | `https://api.minimax.chat/v1` | `MiniMax-Text-01` |
 | Kimi（月之暗面） | `KIMI` | `https://api.moonshot.cn/v1` | `kimi-k3` |
+| OpenCode Go（订阅制聚合） | `OPENCODE_GO` | `https://opencode.ai/zen/go/v1` | `glm-5.3-flash` |
 
-切换新版本模型（如 `deepseek-reasoner`、`glm-5.3`、`kimi-k2.6`）时，仅需配置 `summer.ai.model`，无需改代码。`Provider.from(name)` 按名称不区分大小写解析，未匹配返回 `null`。
+切换新版本模型（如 `deepseek-reasoner`、`glm-5.3`、`kimi-k2.6`）时，仅需配置 `summer.ai.model`，无需改代码。`Provider.from(name)` 按名称不区分大小写解析（忽略连字符/下划线，`opencode-go`/`opencode_go`/`OPENCODE_GO` 等价），未匹配返回 `null`。
 
 Kimi（Moonshot）注意事项：API Key 与端点区域绑定，默认指向国内端点 `api.moonshot.cn`，使用国际版 Key 时需将 `summer.ai.base-url` 覆盖为 `https://api.moonshot.ai/v1`；Kimi 不提供 embedding 端点，启用 RAG/向量库时需将 `summer.ai.embedding.base-url` 与 `summer.ai.embedding.api-key` 指向其他厂商（如 GLM）；`kimi-k3`、`glm-5.3` 等思考模型思维链计入输出 token，建议调大 `summer.ai.max-tokens` 以免回复被截断。
+
+OpenCode Go 注意事项：订阅制聚合服务（[opencode.ai/go](https://opencode.ai/go)），`api-key` 填 OPENCODE_API_KEY；**仅 `/chat/completions` 系模型可用**（如 `glm-5.3-flash`、`kimi-k3`、`mimo-v2.6-pro`、`deepseek-v4-pro`、`longcat-2.0` 等），走 Anthropic `/messages` 协议的 MiniMax M3/M2.7、Qwen 系列与走 OpenAI `/responses` 协议的 Grok、GPT Luna、Muse Spark **不支持**，完整模型清单见[官方 Endpoints 表](https://opencode.ai/docs/go)；无 embedding 端点，启用 RAG 时需将 embedding 指向其他厂商。服务方要求客户端自报 User-Agent 并按会话携带 `x-opencode-session` 头（用于路由优化与提示缓存），可配置 `summer.ai.client-name` 与 `summer.ai.session-id` 发送（见配置项表）。
 
 ## ChatClient 门面
 
@@ -618,7 +623,7 @@ model.close();
 ```
 
 - **纯 JDK**：用 `HttpURLConnection`（阻塞式）而非 selector，与 summer-boot 同样规避受限沙箱的 loopback 管道问题；JSON 序列化/解析复用 summer-boot 的 `JsonUtil`，零第三方依赖。
-- **OpenAI 兼容**：DeepSeek、GLM（智谱 OpenAI 兼容端点）、MiniMax 仅 base-url 与模型名不同，请求、响应与 SSE 流式协议一致。
+- **OpenAI 兼容**：DeepSeek、GLM（智谱 OpenAI 兼容端点）、MiniMax、OpenCode Go 仅 base-url 与模型名不同，请求、响应与 SSE 流式协议一致。
 - **思维链**：解析 `message`/`delta` 中的 `reasoning_content`，兼容 DeepSeek-R1 等思考模型的思维链输出。
 - **token 用量**：同步响应解析 `usage`（含 `prompt_cache_hit_tokens`），便于成本监控与缓存命中率统计。
 
