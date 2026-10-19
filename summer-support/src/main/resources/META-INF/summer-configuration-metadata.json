@@ -1,0 +1,18 @@
+{
+  "groups": [
+    {"name": "summer.ocr", "type": "cn.jiebaba.summer.support.ocr.OcrProperties", "sourceType": "cn.jiebaba.summer.support.ocr.OcrProperties"}
+  ],
+  "properties": [
+    {"name": "summer.ocr.lib-path", "type": "java.lang.String", "description": "onnxruntime 原生库（动态链接库）路径。"},
+    {"name": "summer.ocr.det-model-path", "type": "java.lang.String", "description": "PP-OCR 文本检测（DB）模型文件路径。"},
+    {"name": "summer.ocr.cls-model-path", "type": "java.lang.String", "description": "文本方向分类模型文件路径（use-cls 为 true 时需要）。"},
+    {"name": "summer.ocr.rec-model-path", "type": "java.lang.String", "description": "PP-OCR 文本识别（CRNN）模型文件路径。"},
+    {"name": "summer.ocr.dict-path", "type": "java.lang.String", "description": "识别字典文件路径；PP-OCRv4/v6 模型内嵌字典时可选。"},
+    {"name": "summer.ocr.use-cls", "type": "java.lang.Boolean", "description": "是否启用文本方向分类步骤。", "defaultValue": true},
+    {"name": "summer.ocr.text-score", "type": "java.lang.Double", "description": "文本置信度阈值，低于该值的识别结果被丢弃。", "defaultValue": 0.5},
+    {"name": "summer.ocr.det-unclip-ratio", "type": "java.lang.Double", "description": "文本框扩张（unclip）比例。", "defaultValue": 1.6},
+    {"name": "summer.ocr.det-box-thresh", "type": "java.lang.Double", "description": "文本框二值化阈值。", "defaultValue": 0.5},
+    {"name": "summer.ocr.cls-thresh", "type": "java.lang.Double", "description": "方向分类置信度阈值。", "defaultValue": 0.9}
+  ],
+  "hints": []
+}

@@ -1,0 +1,116 @@
+{
+  "groups": [
+    {"name": "summer.ai", "type": "cn.jiebaba.summer.boot.ai.AiProperties", "sourceType": "cn.jiebaba.summer.boot.ai.AiProperties"},
+    {"name": "summer.ai.retry", "type": "cn.jiebaba.summer.boot.ai.AiProperties", "sourceType": "cn.jiebaba.summer.boot.ai.AiProperties"},
+    {"name": "summer.ai.rate-limit", "type": "cn.jiebaba.summer.boot.ai.AiProperties", "sourceType": "cn.jiebaba.summer.boot.ai.AiProperties"},
+    {"name": "summer.ai.circuit-breaker", "type": "cn.jiebaba.summer.boot.ai.AiProperties", "sourceType": "cn.jiebaba.summer.boot.ai.AiProperties"},
+    {"name": "summer.ai.embedding", "type": "cn.jiebaba.summer.boot.ai.AiProperties", "sourceType": "cn.jiebaba.summer.boot.ai.AiProperties"},
+    {"name": "summer.ai.embedding.onnx", "type": "cn.jiebaba.summer.boot.ai.AiProperties", "sourceType": "cn.jiebaba.summer.boot.ai.AiProperties"},
+    {"name": "summer.ai.vectorstore", "type": "cn.jiebaba.summer.boot.ai.AiProperties", "sourceType": "cn.jiebaba.summer.boot.ai.AiProperties"},
+    {"name": "summer.ai.memory", "type": "cn.jiebaba.summer.boot.ai.AiProperties", "sourceType": "cn.jiebaba.summer.boot.ai.AiProperties"},
+    {"name": "summer.ai.rag", "type": "cn.jiebaba.summer.boot.ai.AiProperties", "sourceType": "cn.jiebaba.summer.boot.ai.AiProperties"},
+    {"name": "summer.ai.tools", "type": "cn.jiebaba.summer.boot.ai.AiProperties", "sourceType": "cn.jiebaba.summer.boot.ai.AiProperties"},
+    {"name": "summer.ai.logging", "type": "cn.jiebaba.summer.boot.ai.AiProperties", "sourceType": "cn.jiebaba.summer.boot.ai.AiProperties"},
+    {"name": "summer.ai.models", "type": "cn.jiebaba.summer.boot.ai.NamedAiModel", "sourceType": "cn.jiebaba.summer.boot.ai.NamedAiModel"},
+    {"name": "summer.ai.agent", "type": "cn.jiebaba.summer.boot.ai.AgentAutoConfiguration", "sourceType": "cn.jiebaba.summer.boot.ai.AgentAutoConfiguration"},
+    {"name": "summer.ai.usage", "type": "cn.jiebaba.summer.boot.ai.AiAutoConfiguration", "sourceType": "cn.jiebaba.summer.boot.ai.AiAutoConfiguration"}
+  ],
+  "properties": [
+    {"name": "summer.ai.enabled", "type": "java.lang.Boolean", "description": "AI 自动配置总开关，false 时整体关闭装配（默认开启）。", "defaultValue": true},
+    {"name": "summer.ai.provider", "type": "java.lang.String", "description": "大模型厂商，决定默认 base-url 与模型名，不区分大小写并忽略连字符/下划线。"},
+    {"name": "summer.ai.api-key", "type": "java.lang.String", "description": "大模型服务 API 密钥。"},
+    {"name": "summer.ai.model", "type": "java.lang.String", "description": "对话模型名；缺省取厂商档案默认值。"},
+    {"name": "summer.ai.base-url", "type": "java.lang.String", "description": "OpenAI 兼容端点地址；缺省取厂商档案默认值。"},
+    {"name": "summer.ai.client-name", "type": "java.lang.String", "description": "客户端标识，发送为 User-Agent 头。"},
+    {"name": "summer.ai.session-id", "type": "java.lang.String", "description": "会话 ID 常量值，发送为 x-opencode-session 头（如 OpenCode Go）。"},
+    {"name": "summer.ai.timeout-seconds", "type": "java.lang.Integer", "description": "单次调用超时时间（秒）。", "defaultValue": 60},
+    {"name": "summer.ai.temperature", "type": "java.lang.Double", "description": "采样温度，控制输出随机性。", "defaultValue": 0.7},
+    {"name": "summer.ai.max-tokens", "type": "java.lang.Integer", "description": "单次回答最大 token 数。", "defaultValue": 2048},
+    {"name": "summer.ai.retry.max-attempts", "type": "java.lang.Integer", "description": "失败重试最大次数，1 表示不重试。", "defaultValue": 1},
+    {"name": "summer.ai.retry.initial-backoff-millis", "type": "java.lang.Long", "description": "重试初始退避时间（毫秒）。", "defaultValue": 500},
+    {"name": "summer.ai.retry.multiplier", "type": "java.lang.Double", "description": "退避时间增长乘数（指数退避）。", "defaultValue": 2.0},
+    {"name": "summer.ai.retry.max-backoff-millis", "type": "java.lang.Long", "description": "退避时间上限（毫秒）。", "defaultValue": 20000},
+    {"name": "summer.ai.rate-limit.permits-per-second", "type": "java.lang.Double", "description": "每秒许可数（令牌桶限流），0 表示不限流。", "defaultValue": 0.0},
+    {"name": "summer.ai.circuit-breaker.failure-threshold", "type": "java.lang.Integer", "description": "熔断触发失败次数阈值，0 表示不启用熔断。", "defaultValue": 0},
+    {"name": "summer.ai.circuit-breaker.wait-millis", "type": "java.lang.Long", "description": "熔断后等待恢复时间（毫秒）。", "defaultValue": 30000},
+    {"name": "summer.ai.embedding.enabled", "type": "java.lang.Boolean", "description": "是否启用向量化（embedding）。", "defaultValue": false},
+    {"name": "summer.ai.embedding.model", "type": "java.lang.String", "description": "embedding 模型名（openai 类型时必填）。"},
+    {"name": "summer.ai.embedding.base-url", "type": "java.lang.String", "description": "embedding 端点地址；缺省回退到主 base-url。"},
+    {"name": "summer.ai.embedding.api-key", "type": "java.lang.String", "description": "embedding 服务密钥；缺省回退到主 api-key。"},
+    {"name": "summer.ai.embedding.type", "type": "java.lang.String", "description": "embedding 实现类型：openai（OpenAI 兼容端点）或 onnx（本地 ONNX 推理）。", "defaultValue": "openai"},
+    {"name": "summer.ai.embedding.onnx.lib-path", "type": "java.lang.String", "description": "onnx 类型时 onnxruntime 原生库路径。"},
+    {"name": "summer.ai.embedding.onnx.model-path", "type": "java.lang.String", "description": "onnx 类型时 embedding 模型文件路径。"},
+    {"name": "summer.ai.embedding.onnx.tokenizer-path", "type": "java.lang.String", "description": "onnx 类型时 tokenizer 模型文件路径。"},
+    {"name": "summer.ai.embedding.onnx.max-seq-len", "type": "java.lang.Integer", "description": "onnx 类型时最大序列长度。", "defaultValue": 8192},
+    {"name": "summer.ai.embedding.onnx.pooling", "type": "java.lang.String", "description": "onnx 类型时向量池化方式：cls 或 mean。", "defaultValue": "cls"},
+    {"name": "summer.ai.vectorstore.type", "type": "java.lang.String", "description": "向量库类型：memory（进程内存）、pgvector（PostgreSQL pgvector）。", "defaultValue": "none"},
+    {"name": "summer.ai.vectorstore.table", "type": "java.lang.String", "description": "pgvector 向量表名。", "defaultValue": "summer_ai_vectors"},
+    {"name": "summer.ai.vectorstore.dimensions", "type": "java.lang.Integer", "description": "向量维度；pgvector 建表时使用，0 表示按模型实际维度推断。", "defaultValue": 0},
+    {"name": "summer.ai.vectorstore.create-extension", "type": "java.lang.Boolean", "description": "pgvector 是否自动创建 vector 扩展。", "defaultValue": true},
+    {"name": "summer.ai.vectorstore.create-index", "type": "java.lang.Boolean", "description": "pgvector 是否自动创建向量索引。", "defaultValue": true},
+    {"name": "summer.ai.memory.enabled", "type": "java.lang.Boolean", "description": "是否启用对话记忆。", "defaultValue": false},
+    {"name": "summer.ai.memory.max-messages", "type": "java.lang.Integer", "description": "对话记忆保留的最大消息数。", "defaultValue": 20},
+    {"name": "summer.ai.rag.enabled", "type": "java.lang.Boolean", "description": "是否启用 RAG 检索增强。", "defaultValue": false},
+    {"name": "summer.ai.rag.top-k", "type": "java.lang.Integer", "description": "RAG 检索返回的最相似文档条数。", "defaultValue": 4},
+    {"name": "summer.ai.rag.similarity-threshold", "type": "java.lang.Double", "description": "RAG 检索相似度阈值，低于该值的结果被过滤，0 表示不过滤。", "defaultValue": 0.0},
+    {"name": "summer.ai.rag.instruction", "type": "java.lang.String", "description": "RAG 注入检索内容时的系统指令。"},
+    {"name": "summer.ai.tools.enabled", "type": "java.lang.Boolean", "description": "是否启用工具调用（function calling）。", "defaultValue": false},
+    {"name": "summer.ai.tools.max-iterations", "type": "java.lang.Integer", "description": "工具调用循环最大迭代次数，防止死循环。", "defaultValue": 10},
+    {"name": "summer.ai.logging.enabled", "type": "java.lang.Boolean", "description": "是否记录 AI 调用日志。", "defaultValue": false},
+    {"name": "summer.ai.logging.table", "type": "java.lang.String", "description": "AI 调用日志表名。", "defaultValue": "ai_call_log"},
+    {"name": "summer.ai.usage.table", "type": "java.lang.String", "description": "AI 用量统计表名（JdbcUsageMeter 惰性建表）。", "defaultValue": "ai_usage"},
+    {"name": "summer.ai.agent.timeout-seconds", "type": "java.lang.Integer", "description": "Agent 单次任务同步等待上限（秒）。", "defaultValue": 300},
+    {"name": "summer.ai.agent.max-depth", "type": "java.lang.Integer", "description": "Agent 协作链最大深度，防止嵌套成环。", "defaultValue": 8},
+    {"name": "summer.ai.models.<id>.provider", "type": "java.lang.String", "description": "命名模型实例的大模型厂商；<id> 为实例标识（不支持点号）。"},
+    {"name": "summer.ai.models.<id>.api-key", "type": "java.lang.String", "description": "命名模型实例的 API 密钥。"},
+    {"name": "summer.ai.models.<id>.model", "type": "java.lang.String", "description": "命名模型实例的模型名；缺省取厂商档案默认值。"},
+    {"name": "summer.ai.models.<id>.base-url", "type": "java.lang.String", "description": "命名模型实例的端点地址；缺省取厂商档案默认值。"},
+    {"name": "summer.ai.models.<id>.timeout-seconds", "type": "java.lang.Integer", "description": "命名模型实例的超时时间（秒）。", "defaultValue": 60},
+    {"name": "summer.ai.models.<id>.temperature", "type": "java.lang.Double", "description": "命名模型实例的采样温度。", "defaultValue": 0.7},
+    {"name": "summer.ai.models.<id>.max-tokens", "type": "java.lang.Integer", "description": "命名模型实例的最大 token 数。", "defaultValue": 2048}
+  ],
+  "hints": [
+    {
+      "name": "summer.ai.provider",
+      "values": [
+        {"value": "deepseek"},
+        {"value": "glm"},
+        {"value": "minimax"},
+        {"value": "kimi"},
+        {"value": "opencode-go"}
+      ]
+    },
+    {
+      "name": "summer.ai.models.<id>.provider",
+      "values": [
+        {"value": "deepseek"},
+        {"value": "glm"},
+        {"value": "minimax"},
+        {"value": "kimi"},
+        {"value": "opencode-go"}
+      ]
+    },
+    {
+      "name": "summer.ai.embedding.type",
+      "values": [
+        {"value": "openai"},
+        {"value": "onnx"}
+      ]
+    },
+    {
+      "name": "summer.ai.embedding.onnx.pooling",
+      "values": [
+        {"value": "cls"},
+        {"value": "mean"}
+      ]
+    },
+    {
+      "name": "summer.ai.vectorstore.type",
+      "values": [
+        {"value": "none"},
+        {"value": "memory"},
+        {"value": "pgvector"}
+      ]
+    }
+  ]
+}
