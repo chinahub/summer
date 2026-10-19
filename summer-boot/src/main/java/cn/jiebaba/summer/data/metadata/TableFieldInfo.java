@@ -55,6 +55,19 @@ public class TableFieldInfo {
     }
 
     public void setValue(Object entity, Object value) {
+        // 数字主键的窄化兜底：如 MySQL 自增主键的 generated key 是 BigInteger
+        // （BIGINT UNSIGNED 列），直接 field.set 到 Integer/Long 字段会类型不匹配。
+        if (value instanceof Number n) {
+            if (field.getType() == Integer.class || field.getType() == int.class) {
+                long v = n.longValue();
+                if (v < Integer.MIN_VALUE || v > Integer.MAX_VALUE) {
+                    throw new IllegalStateException("Generated key out of int range: " + v);
+                }
+                value = (int) v;
+            } else if (field.getType() == Long.class || field.getType() == long.class) {
+                value = n.longValue();
+            }
+        }
         try {
             field.set(entity, value);
         } catch (IllegalAccessException e) {
