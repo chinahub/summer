@@ -17,7 +17,13 @@ public class ProviderTest {
     @Test
     public void kimiDefaults() {
         Assertions.assertEquals("https://api.moonshot.cn/v1", Provider.KIMI.getDefaultBaseUrl());
-        Assertions.assertEquals("kimi-k3", Provider.KIMI.getDefaultModel());
+        Assertions.assertEquals("kimi-k3.1-pro", Provider.KIMI.getDefaultModel());
+    }
+
+    @Test
+    public void minimaxDefaults() {
+        Assertions.assertEquals("https://api.minimaxi.com/v1", Provider.MINIMAX.getDefaultBaseUrl());
+        Assertions.assertEquals("MiniMax-M3.1-Flash", Provider.MINIMAX.getDefaultModel());
     }
 
     @Test

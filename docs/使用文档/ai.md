@@ -28,7 +28,7 @@ summer:
     provider: deepseek              # deepseek | glm | minimax | kimi | opencode-go
     api-key: sk-your-api-key-here
     # 以下均可省略，使用厂商默认值
-    # model: deepseek-chat
+    # model: deepseek-flash
     # base-url: https://api.deepseek.com
     # timeout-seconds: 60
     # temperature: 0.7
@@ -65,7 +65,7 @@ public class AiController {
 | --- | --- | --- | --- |
 | `summer.ai.provider` | 是 | — | 厂商：`deepseek`/`glm`/`minimax`/`kimi`/`opencode-go`，决定默认 base-url 与模型名 |
 | `summer.ai.api-key` | 是 | — | 厂商 API Key，以 `Bearer` 头发送 |
-| `summer.ai.model` | 否 | 厂商默认 | 模型名（如 `deepseek-chat`、`glm-5.3-flash`、`MiniMax-Text-01`、`kimi-k3`） |
+| `summer.ai.model` | 否 | 厂商默认 | 模型名（如 `deepseek-flash`、`glm-5.3-flash`、`MiniMax-M3.1-Flash`、`kimi-k3.1-pro`） |
 | `summer.ai.base-url` | 否 | 厂商默认 | API 根地址，自动追加 `/chat/completions` |
 | `summer.ai.client-name` | 否 | — | 客户端标识（`User-Agent` 头，如 `summer-ai/1.0`），OpenCode Go 等服务要求自报身份；未配置不发送 |
 | `summer.ai.session-id` | 否 | — | 会话 ID（`x-opencode-session` 头，常量值）；按会话动态生成时直接构造 `OpenAiCompatibleChatModel` 传入会话 ID 供给器；未配置不发送 |
@@ -146,15 +146,15 @@ public void demo() {
 
 | 厂商 | 枚举 | 默认 base-url | 默认模型 |
 | --- | --- | --- | --- |
-| DeepSeek | `DEEPSEEK` | `https://api.deepseek.com` | `deepseek-chat` |
+| DeepSeek | `DEEPSEEK` | `https://api.deepseek.com` | `deepseek-flash` |
 | 智谱 GLM | `GLM` | `https://open.bigmodel.cn/api/paas/v4` | `glm-5.3-flash` |
-| MiniMax | `MINIMAX` | `https://api.minimax.chat/v1` | `MiniMax-Text-01` |
-| Kimi（月之暗面） | `KIMI` | `https://api.moonshot.cn/v1` | `kimi-k3` |
+| MiniMax | `MINIMAX` | `https://api.minimaxi.com/v1` | `MiniMax-M3.1-Flash` |
+| Kimi（月之暗面） | `KIMI` | `https://api.moonshot.cn/v1` | `kimi-k3.1-pro` |
 | OpenCode Go（订阅制聚合） | `OPENCODE_GO` | `https://opencode.ai/zen/go/v1` | `glm-5.3-flash` |
 
 切换新版本模型（如 `deepseek-reasoner`、`glm-5.3`、`kimi-k2.6`）时，仅需配置 `summer.ai.model`，无需改代码。`Provider.from(name)` 按名称不区分大小写解析（忽略连字符/下划线，`opencode-go`/`opencode_go`/`OPENCODE_GO` 等价），未匹配返回 `null`。
 
-Kimi（Moonshot）注意事项：API Key 与端点区域绑定，默认指向国内端点 `api.moonshot.cn`，使用国际版 Key 时需将 `summer.ai.base-url` 覆盖为 `https://api.moonshot.ai/v1`；Kimi 不提供 embedding 端点，启用 RAG/向量库时需将 `summer.ai.embedding.base-url` 与 `summer.ai.embedding.api-key` 指向其他厂商（如 GLM）；`kimi-k3`、`glm-5.3` 等思考模型思维链计入输出 token，建议调大 `summer.ai.max-tokens` 以免回复被截断。
+Kimi（Moonshot）注意事项：API Key 与端点区域绑定，默认指向国内端点 `api.moonshot.cn`，使用国际版 Key 时需将 `summer.ai.base-url` 覆盖为 `https://api.moonshot.ai/v1`；Kimi 不提供 embedding 端点，启用 RAG/向量库时需将 `summer.ai.embedding.base-url` 与 `summer.ai.embedding.api-key` 指向其他厂商（如 GLM）；`kimi-k3.1-pro`、`glm-5.3` 等思考模型思维链计入输出 token，建议调大 `summer.ai.max-tokens` 以免回复被截断。
 
 OpenCode Go 注意事项：订阅制聚合服务（[opencode.ai/go](https://opencode.ai/go)），`api-key` 填 OPENCODE_API_KEY；**仅 `/chat/completions` 系模型可用**（如 `glm-5.3-flash`、`kimi-k3`、`mimo-v2.6-pro`、`deepseek-v4-pro`、`longcat-2.0` 等），走 Anthropic `/messages` 协议的 MiniMax M3/M2.7、Qwen 系列与走 OpenAI `/responses` 协议的 Grok、GPT Luna、Muse Spark **不支持**，完整模型清单见[官方 Endpoints 表](https://opencode.ai/docs/go)；无 embedding 端点，启用 RAG 时需将 embedding 指向其他厂商。服务方要求客户端自报 User-Agent 并按会话携带 `x-opencode-session` 头（用于路由优化与提示缓存），可配置 `summer.ai.client-name` 与 `summer.ai.session-id` 发送（见配置项表）。
 
@@ -496,7 +496,7 @@ ChatModel model = new LoggingChatModel(chatModel, logger);
 
 ```java
 ChatModel model = new OpenAiCompatibleChatModel(
-        "https://api.deepseek.com", "sk-xxx", "deepseek-chat",
+        "https://api.deepseek.com", "sk-xxx", "deepseek-flash",
         Duration.ofSeconds(60), 0.7, 2048);
 
 List<Message> messages = List.of(
@@ -549,7 +549,7 @@ summer-ai 依赖 summer-boot（用其 `JsonUtil` 等 core 能力），模块内�
 
 ```java
 ChatModel model = new OpenAiCompatibleChatModel(
-        "https://api.deepseek.com", "sk-xxx", "deepseek-chat",
+        "https://api.deepseek.com", "sk-xxx", "deepseek-flash",
         Duration.ofSeconds(60), 0.7, 2048);
 
 ChatResponse resp = ChatClient.create(model)
