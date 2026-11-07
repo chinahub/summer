@@ -48,6 +48,9 @@ public final class MapperProxyFactory {
             case "upsert" -> support.upsert((T) args[0]);
             case "deleteById" -> support.deleteById(args[0]);
             case "updateById" -> support.updateById((T) args[0]);
+            case "update" -> args.length == 1
+                    ? support.update(null, (AbstractWrapper<T, ?>) args[0])
+                    : support.update((T) args[0], (AbstractWrapper<T, ?>) args[1]);
             case "selectById" -> support.selectById(args[0]);
             case "selectList" -> args == null || args.length == 0
                     ? support.selectList()

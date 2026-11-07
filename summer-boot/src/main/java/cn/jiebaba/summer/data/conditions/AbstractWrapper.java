@@ -14,10 +14,14 @@ public abstract class AbstractWrapper<T, W extends AbstractWrapper<T, W>> {
     /** or() 插入的连接符标记段，拼接 SQL 时识别为 OR 连接符。 */
     private static final String OR_SEGMENT = "OR";
 
+    /** SET 子句片段：{@code rawSql=true} 时 value 为裸 SQL 文本（无占位、无参数）。 */
+    public record SetFragment(String column, Object value, boolean rawSql) {}
+
     protected final List<String> segments = new ArrayList<>();
     protected final List<Object> params = new ArrayList<>();
     protected final List<String> orderBy = new ArrayList<>();
     protected final List<String> groupBy = new ArrayList<>();
+    protected final List<SetFragment> setFragments = new ArrayList<>();
     protected String lastSql = "";
 
     @SuppressWarnings("unchecked")
@@ -101,6 +105,23 @@ public abstract class AbstractWrapper<T, W extends AbstractWrapper<T, W>> {
         return self();
     }
 
+    /**
+     * SET 子句：显式设置列值，供条件更新（{@code BaseMapper.update}）使用。
+     * 与条件方法的语义不同：{@code value == null} 不是"忽略该条件"，
+     * 而是生成 {@code column = ?} 并绑定 NULL —— 这是框架内把列更新为 NULL 的唯一入口。
+     * 列引用可以是属性名（SQL 生成时解析为列名）或列名本身。
+     */
+    public W set(String column, Object value) {
+        setFragments.add(new SetFragment(column, value, false));
+        return self();
+    }
+
+    /** SET 子句追加裸 SQL 片段（不产生参数占位），如 {@code setSql("progress = progress + 1")}。 */
+    public W setSql(String sql) {
+        setFragments.add(new SetFragment(null, sql, true));
+        return self();
+    }
+
     @SuppressWarnings("unchecked")
     private W nest(String connector, Consumer<W> consumer) {
         AbstractWrapper<T, W> nested;
@@ -155,6 +176,8 @@ public abstract class AbstractWrapper<T, W extends AbstractWrapper<T, W>> {
 
     public List<Object> params() { return params; }
     public List<String> segments() { return segments; }
+    public List<SetFragment> setFragments() { return setFragments; }
+    public boolean hasSet() { return !setFragments.isEmpty(); }
 
     public String orderByClause() {
         if (orderBy.isEmpty()) return "";

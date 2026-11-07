@@ -37,6 +37,16 @@ public interface BaseMapper<T> {
      */
     int updateById(T entity);
 
+    /**
+     * 条件更新：SET 由 entity 非空字段（entity 非 null 时）与 Wrapper.set 片段组成，
+     * 后者允许显式将列更新为 NULL；SET 或 WHERE 为空抛出 IllegalArgumentException。
+     * 不参与 @Version 乐观锁（乐观锁仅 {@link #updateById} 支持）。
+     */
+    int update(T entity, AbstractWrapper<T, ?> wrapper);
+
+    /** 仅按 Wrapper.set 片段更新的便捷形态（entity 为 null）。 */
+    default int update(AbstractWrapper<T, ?> wrapper) { return update(null, wrapper); }
+
     T selectById(Object id);
 
     List<T> selectList();

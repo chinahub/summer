@@ -104,6 +104,14 @@ public class MapperSupport<T> {
         return rows;
     }
 
+    /**
+     * 条件更新：见 {@link SqlBuilder#update(Object, AbstractWrapper)}。与 {@link #updateById}
+     * 不同，允许经 Wrapper.set 显式将列更新为 NULL；SET 或 WHERE 为空抛出 IllegalArgumentException。
+     */
+    public int update(T entity, AbstractWrapper<T, ?> wrapper) {
+        return executor.update(sqlBuilder.update(entity, wrapper));
+    }
+
     public T selectById(Object id) {
         List<T> rows = executor.query(sqlBuilder.selectById(id), table);
         return rows.isEmpty() ? null : rows.get(0);

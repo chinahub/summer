@@ -2,6 +2,7 @@ package cn.jiebaba.summer.test.data;
 
 import cn.jiebaba.summer.data.annotation.TableId;
 import cn.jiebaba.summer.data.annotation.TableName;
+import cn.jiebaba.summer.data.conditions.QueryWrapper;
 import cn.jiebaba.summer.data.dialect.Dialect;
 import cn.jiebaba.summer.data.dialect.H2Dialect;
 import cn.jiebaba.summer.data.mapper.MapperSupport;
@@ -110,5 +111,19 @@ public class H2DialectIntegrationTest {
         assertRow(ms.selectById(1L), 1L, "api", 10, "k1");
         ms.upsert(new H2Task(1L, "web", 20, "k2"));
         assertRow(ms.selectById(1L), 1L, "web", 20, "k2");
+    }
+
+    @Test
+    @DisplayName("条件更新：Wrapper.set 显式写 NULL 真实落库（updateById 无法表达，DATA-2）")
+    void updateWrapperWritesNull() {
+        MapperSupport<H2Task> ms = support("h2dialect_update_null", "");
+        ms.insert(new H2Task(1L, "api", 10, "k1"));
+        // 显式把保留字列 key 清成 NULL、progress 更新为 99：SET 走 wrapper，WHERE 走 eq
+        QueryWrapper<H2Task> w = QueryWrapper.<H2Task>of()
+                .set("key", null)
+                .set("progress", 99)
+                .eq("id", 1L);
+        Assertions.assertEquals(1, ms.update(null, w));
+        assertRow(ms.selectById(1L), 1L, "api", 99, null);
     }
 }

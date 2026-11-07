@@ -47,6 +47,7 @@ public interface ProductMapper extends BaseMapper<Product> {}
 | `insert(T)` | 插入（ASSIGN_ID/UUID 自动生成主键，AUTO 回填） |
 | `deleteById(id)` | 删除（有 `@TableLogic` 则逻辑删除） |
 | `updateById(T)` | 按主键更新（非空字段） |
+| `update(T, wrapper)` / `update(wrapper)` | 条件更新：Wrapper.set 可显式写 NULL（见下文） |
 | `selectById(id)` | 按主键查询 |
 | `selectList()` / `selectList(wrapper)` | 列表查询 |
 | `selectOne(wrapper)` | 单条查询（多条抛异常） |
@@ -93,6 +94,31 @@ new LambdaQueryWrapper<Product>()
 
 支持：`eq/ne/gt/ge/lt/le`、`like/likeLeft/likeRight/notLike`、`isNull/isNotNull`、`in/notIn`、`between`、`orderByAsc/Desc`、`groupBy`、`and(Consumer)/or(Consumer)` 嵌套、`or()` 连接符、`last`。采用自类型泛型，链式调用保留具体类型。
 
+### 条件更新 update + set（显式写 NULL）
+
+`updateById` 只更新非空字段（防误覆盖），无法把列清回 NULL；条件更新 `update` 补上这个能力——`set(column, value)` 的 `value == null` 不是"忽略"，而是显式写 NULL：
+
+```java
+// 仅按 set 片段更新：把调度目标从作业切换为转换（job_id 清 NULL）
+mapper.update(new QueryWrapper<Schedule>()
+        .set("jobId", null)                      // 显式写 NULL（列引用为属性名或列名）
+        .set("transformationId", 59L)
+        .eq("id", 4L));
+
+// lambda 版（类型安全）
+mapper.update(new LambdaQueryWrapper<Schedule>()
+        .set(Schedule::getJobId, null)
+        .eq(Schedule::getId, 4L));
+
+// entity 非空字段 + set 片段混合（entity 非空字段语义同 updateById）
+mapper.update(entity, wrapper);
+
+// setSql：裸 SQL 片段，不产生参数占位
+mapper.update(new QueryWrapper<Product>().setSql("stock = stock - 1").eq("id", 4L));
+```
+
+约定：**WHERE 为空直接抛 `IllegalArgumentException`**（阻止全表更新）；SET 整体为空同样抛出。不参与 `@Version` 乐观锁，也不自动附加逻辑删除条件。
+
 `or()` 语义与 MyBatis-Plus 一致：只把**紧随其后的一个条件**以 OR 连接，其余相邻条件默认 AND（AND 优先级高于 OR）；嵌套组合用 `and(Consumer)/or(Consumer)` 生成带括号的条件组：
 
 ```java
@@ -127,7 +153,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         return (Page<Product>) page(new Page<>(current, size), w);
     }
 }
-// 可用 save/saveBatch/updateById/removeById/getById/list/getOne/count/page
+// 可用 save/saveBatch/updateById/update/removeById/getById/list/getOne/count/page
 ```
 
 ## 事务管理 @Transactional

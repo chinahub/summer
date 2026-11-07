@@ -21,6 +21,15 @@ public interface IService<T> {
 
     default boolean updateById(T entity) { return baseMapper().updateById(entity) > 0; }
 
+    /**
+     * 条件更新：SET 由 entity 非空字段（entity 非 null 时）与 wrapper.set 片段组成，
+     * 后者允许显式将列更新为 NULL；SET 或 WHERE 为空抛出 IllegalArgumentException。
+     */
+    default boolean update(T entity, AbstractWrapper<T, ?> wrapper) { return baseMapper().update(entity, wrapper) > 0; }
+
+    /** 仅按 wrapper.set 片段更新的便捷形态（entity 为 null）。 */
+    default boolean update(AbstractWrapper<T, ?> wrapper) { return update(null, wrapper); }
+
     default boolean removeById(Object id) { return baseMapper().deleteById(id) > 0; }
 
     default T getById(Object id) { return baseMapper().selectById(id); }

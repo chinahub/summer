@@ -30,6 +30,12 @@ public class LambdaQueryWrapper<T> extends AbstractWrapper<T, LambdaQueryWrapper
     public LambdaQueryWrapper<T> orderByDesc(SFunction<T, ?> column) { orderBy.add(LambdaUtils.propertyName(column) + " DESC"); return this; }
     public LambdaQueryWrapper<T> groupBy(SFunction<T, ?> column) { groupBy.add(LambdaUtils.propertyName(column)); return this; }
 
+    /** lambda 版 {@link AbstractWrapper#set}：显式设置列值（value 为 null 时该列更新为 NULL）。 */
+    public LambdaQueryWrapper<T> set(SFunction<T, ?> column, Object value) {
+        setFragments.add(new SetFragment(LambdaUtils.propertyName(column), value, false));
+        return self();
+    }
+
     public boolean hasSelect() { return !selectProperties.isEmpty(); }
     public List<String> selectProperties() { return selectProperties; }
 

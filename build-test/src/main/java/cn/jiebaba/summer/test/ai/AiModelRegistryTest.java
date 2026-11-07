@@ -117,7 +117,7 @@ public class AiModelRegistryTest {
         Environment env = new Environment(new String[]{PRD_PROVIDER, PRD_KEY});
         NamedAiModel named = NamedAiModel.from("product", env);
         Assertions.assertEquals("https://api.moonshot.cn/v1", named.getBaseUrl());
-        Assertions.assertEquals("kimi-k3", named.getModel());
+        Assertions.assertEquals("kimi-k3.1-pro", named.getModel());
         Assertions.assertTrue(named.isConfigured());
     }
 }

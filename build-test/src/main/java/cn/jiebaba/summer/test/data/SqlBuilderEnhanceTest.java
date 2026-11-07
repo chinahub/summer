@@ -5,6 +5,8 @@ import cn.jiebaba.summer.data.annotation.TableField;
 import cn.jiebaba.summer.data.annotation.TableId;
 import cn.jiebaba.summer.data.annotation.TableName;
 import cn.jiebaba.summer.data.annotation.Version;
+import cn.jiebaba.summer.data.conditions.LambdaQueryWrapper;
+import cn.jiebaba.summer.data.conditions.QueryWrapper;
 import cn.jiebaba.summer.data.dialect.Dialect;
 import cn.jiebaba.summer.data.dialect.H2Dialect;
 import cn.jiebaba.summer.data.dialect.MySqlDialect;
@@ -86,6 +88,25 @@ public class SqlBuilderEnhanceTest {
         @TableId("id_")
         @TableField("id_")
         private Long id;
+    }
+
+    @TableName("wrapper_task")
+    public static class WrapperTask {
+        @TableId
+        private Long id;
+        private String name;
+        private Integer score;
+        private String status;
+
+        public WrapperTask(Long id, String name, Integer score, String status) {
+            this.id = id;
+            this.name = name;
+            this.score = score;
+            this.status = status;
+        }
+
+        public Long getId() { return id; }
+        public Integer getScore() { return score; }
     }
 
     private static SqlBuilder builder(Class<?> entity, Dialect dialect) {
@@ -222,5 +243,76 @@ public class SqlBuilderEnhanceTest {
     void agreedIdAndFieldColumnAccepted() {
         TableInfo info = MetadataParser.parse(AgreedColumnTask.class);
         Assertions.assertEquals("id_", info.idField().column());
+    }
+
+    @Test
+    @DisplayName("条件更新：Wrapper.set 显式写 NULL，参数顺序 SET 在前 WHERE 在后")
+    void updateWrapperSetNullSql() {
+        SqlBuilder sb = builder(WrapperTask.class, new PostgreSqlDialect());
+        QueryWrapper<WrapperTask> w = QueryWrapper.<WrapperTask>of()
+                .set("status", null)
+                .set("score", 66)
+                .eq("id", 7L);
+        SqlBuilder.Sql sql = sb.update(null, w);
+        Assertions.assertEquals(
+                "UPDATE wrapper_task SET status = ?, score = ? WHERE id = ?",
+                sql.sql());
+        Assertions.assertEquals(Arrays.asList(null, 66, 7L), sql.params());
+    }
+
+    @Test
+    @DisplayName("条件更新：entity 非空字段与 Wrapper.set 混合，wrapper 可把实体留下的列写 NULL")
+    void updateEntityAndWrapperMixed() {
+        SqlBuilder sb = builder(WrapperTask.class, new PostgreSqlDialect());
+        QueryWrapper<WrapperTask> w = QueryWrapper.<WrapperTask>of()
+                .set("score", null)
+                .eq("id", 7L);
+        // entity：name/status 非空进 SET（score 为 null 按既有语义跳过）；wrapper：显式把 score 写 NULL
+        SqlBuilder.Sql sql = sb.update(new WrapperTask(7L, "api", null, "run"), w);
+        Assertions.assertEquals(
+                "UPDATE wrapper_task SET name = ?, status = ?, score = ? WHERE id = ?",
+                sql.sql());
+        Assertions.assertEquals(Arrays.asList("api", "run", null, 7L), sql.params());
+    }
+
+    @Test
+    @DisplayName("条件更新：Lambda set 的属性名解析为列名")
+    void updateWrapperLambdaSet() {
+        SqlBuilder sb = builder(WrapperTask.class, new PostgreSqlDialect());
+        LambdaQueryWrapper<WrapperTask> w = new LambdaQueryWrapper<WrapperTask>()
+                .set(WrapperTask::getScore, null)
+                .eq("id", 7L);
+        SqlBuilder.Sql sql = sb.update(null, w);
+        Assertions.assertEquals("UPDATE wrapper_task SET score = ? WHERE id = ?", sql.sql());
+        Assertions.assertEquals(Arrays.asList((Object) null, 7L), sql.params());
+    }
+
+    @Test
+    @DisplayName("条件更新：setSql 裸片段不产生参数占位")
+    void updateWrapperSetSql() {
+        SqlBuilder sb = builder(WrapperTask.class, new PostgreSqlDialect());
+        SqlBuilder.Sql sql = sb.update(null, QueryWrapper.<WrapperTask>of()
+                .setSql("score = score + 1")
+                .eq("id", 7L));
+        Assertions.assertEquals("UPDATE wrapper_task SET score = score + 1 WHERE id = ?", sql.sql());
+        Assertions.assertEquals(List.of(7L), sql.params());
+    }
+
+    @Test
+    @DisplayName("条件更新：SET 为空（无 entity 非空字段且未 set）报错")
+    void updateWrapperRejectsEmptySet() {
+        SqlBuilder sb = builder(WrapperTask.class, new PostgreSqlDialect());
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> sb.update(null, QueryWrapper.<WrapperTask>of().eq("id", 7L)));
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> sb.update(null, null));
+    }
+
+    @Test
+    @DisplayName("条件更新：WHERE 为空阻止全表更新")
+    void updateWrapperRejectsEmptyWhere() {
+        SqlBuilder sb = builder(WrapperTask.class, new PostgreSqlDialect());
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> sb.update(null, QueryWrapper.<WrapperTask>of().set("score", 1)));
     }
 }

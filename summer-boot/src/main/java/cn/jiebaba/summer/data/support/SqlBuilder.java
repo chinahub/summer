@@ -2,6 +2,7 @@ package cn.jiebaba.summer.data.support;
 
 import cn.jiebaba.summer.data.annotation.IdType;
 import cn.jiebaba.summer.data.conditions.AbstractWrapper;
+import cn.jiebaba.summer.data.conditions.AbstractWrapper.SetFragment;
 import cn.jiebaba.summer.data.conditions.LambdaQueryWrapper;
 import cn.jiebaba.summer.data.conditions.QueryWrapper;
 import cn.jiebaba.summer.data.dialect.PostgreSqlDialect;
@@ -154,6 +155,58 @@ public final class SqlBuilder {
                 + (sets.isEmpty() ? "" : " SET " + String.join(", ", sets))
                 + " WHERE " + col(table.idField().column()) + " = ?";
         return new Sql(sql, params);
+    }
+
+    /**
+     * 条件更新：SET 由 {@code entity} 非空字段（entity 非 null 时，语义同 {@link #updateById}）
+     * 与 {@code wrapper} 的 set 片段按序组成，后者允许显式将列更新为 NULL（见
+     * {@link AbstractWrapper#set}）；set 片段的列引用优先按属性名解析、其次按列名匹配。
+     * WHERE 取自 wrapper 条件，为空时抛出 IllegalArgumentException 阻止全表更新；
+     * SET 整体为空同样抛出。不参与 {@code @Version} 乐观锁，也不自动附加逻辑删除条件。
+     */
+    public Sql update(Object entity, AbstractWrapper<?, ?> wrapper) {
+        if (table.idField() == null) throw new IllegalStateException("Entity has no id field: " + table.entityType());
+        List<String> sets = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
+        if (entity != null) {
+            for (TableFieldInfo f : table.updateFields()) {
+                Object value = f.getValue(entity);
+                if (value == null) continue;
+                sets.add(col(f.column()) + " = ?");
+                params.add(wrap(f, value));
+            }
+        }
+        if (wrapper != null) {
+            for (SetFragment fragment : wrapper.setFragments()) {
+                if (fragment.rawSql()) {
+                    sets.add(fragment.value().toString());
+                    continue;
+                }
+                TableFieldInfo f = resolveField(fragment.column());
+                sets.add(col(f != null ? f.column() : fragment.column()) + " = ?");
+                // NULL 直接绑定（无类型转换），非 NULL 走字段元数据包装（TypeHandler/JSON 列）
+                params.add(f != null && fragment.value() != null ? wrap(f, fragment.value()) : fragment.value());
+            }
+        }
+        if (sets.isEmpty()) {
+            throw new IllegalArgumentException("update 缺少 SET 字段：entity 无非空字段且 Wrapper 未调用 set/setSql");
+        }
+        String where = whereClause(wrapper, params);
+        if (where.isEmpty()) {
+            throw new IllegalArgumentException("update 的 WHERE 条件为空，已阻止全表更新");
+        }
+        String sql = "UPDATE " + tbl() + " SET " + String.join(", ", sets) + " WHERE " + where;
+        return new Sql(sql, params);
+    }
+
+    /** set 片段的列引用解析：优先按属性名查元数据，其次按列名匹配（忽略大小写），未命中则原样透传。 */
+    private TableFieldInfo resolveField(String reference) {
+        TableFieldInfo f = table.field(reference);
+        if (f != null) return f;
+        for (TableFieldInfo tf : table.fields()) {
+            if (tf.column().equalsIgnoreCase(reference)) return tf;
+        }
+        return null;
     }
 
     public Sql deleteById(Object id) {
