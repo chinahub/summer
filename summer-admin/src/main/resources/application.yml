@@ -2,9 +2,19 @@ server:
   port: 8080
 
 summer:
-  # 骨架阶段先关闭安全层以保证健康检查可匿名访问；Task 7 将开启并收紧规则
   security:
-    enabled: false
+    # Task 7 起启用安全层：自定义 SecurityFilterChain + 数据库 UserDetailsService
+    enabled: true
+    jwt:
+      # JWT 密钥经松弛映射环境变量 SUMMER_JWT_SECRET 注入（>=32 字节），不在文件中配置；
+      # 未设置时框架生成临时密钥并告警，重启后旧令牌全部失效
+      # 访问令牌有效期：默认两小时
+      access-token-ttl: 7200
+  admin:
+    captcha:
+      # 图形验证码开关与有效期（秒）；内存单实例，仅支持单实例部署
+      enabled: true
+      ttl-seconds: 120
   datasource:
     url: jdbc:mysql://localhost:3306/summer_admin?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
     # 正数连接池：应用启动期预填充连接，需保证数据库可用；凭据经 SUMMER_DATASOURCE_USERNAME/PASSWORD 注入

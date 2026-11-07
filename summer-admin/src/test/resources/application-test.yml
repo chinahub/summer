@@ -4,3 +4,11 @@ summer:
     url: jdbc:mysql://localhost:3306/summer_admin_test?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
     # 正的小连接池：满足冒烟测试期间的多路访问即可
     pool-size: 2
+  security:
+    jwt:
+      # 测试专用密钥：仅用于隔离测试库，不得用于任何真实环境
+      secret: summer-admin-test-only-jwt-secret-0123456789abcdef
+  admin:
+    captcha:
+      # 测试关闭验证码：登录 API 用例直接覆盖完整链路，验证码由独立单元测试覆盖
+      enabled: false

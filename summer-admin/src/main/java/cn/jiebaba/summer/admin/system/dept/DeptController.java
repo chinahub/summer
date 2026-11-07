@@ -1,7 +1,9 @@
 package cn.jiebaba.summer.admin.system.dept;
 
 import cn.jiebaba.summer.admin.common.api.R;
+import cn.jiebaba.summer.admin.auth.AdminUserDetails;
 import cn.jiebaba.summer.admin.system.security.DataScopeResolver;
+import cn.jiebaba.summer.security.annotation.AuthenticationPrincipal;
 import cn.jiebaba.summer.web.annotation.DeleteMapping;
 import cn.jiebaba.summer.web.annotation.GetMapping;
 import cn.jiebaba.summer.web.annotation.PathVariable;
@@ -9,7 +11,6 @@ import cn.jiebaba.summer.web.annotation.PostMapping;
 import cn.jiebaba.summer.web.annotation.PutMapping;
 import cn.jiebaba.summer.web.annotation.RequestBody;
 import cn.jiebaba.summer.web.annotation.RequestMapping;
-import cn.jiebaba.summer.web.annotation.RequestParam;
 import cn.jiebaba.summer.web.annotation.RestController;
 
 import java.util.List;
@@ -34,11 +35,12 @@ public class DeptController {
     }
 
     /**
-     * 当前数据范围可见的部门列表。userId 由后续安全链从令牌解析，
-     * 第一阶段显式传参；范围规则在服务端解析，不信任客户端传入。
+     * 当前数据范围可见的部门列表。当前用户从认证主体解析（不信任客户端传参），
+     * 范围规则在服务端解析。
      */
     @GetMapping("/visible")
-    public R<List<SysDept>> visible(@RequestParam("userId") Long userId) {
+    public R<List<SysDept>> visible(@AuthenticationPrincipal AdminUserDetails currentUser) {
+        Long userId = currentUser.getUserId();
         return R.ok(deptService.visibleList(dataScopeResolver.resolve(userId), userId));
     }
 

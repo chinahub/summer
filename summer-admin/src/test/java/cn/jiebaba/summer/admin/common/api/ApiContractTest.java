@@ -25,22 +25,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * （业务 409、显式校验 400、框架校验 400、未知接口 404、未知异常 500）均为
  * {@code {code,msg}} 统一格式；500 响应不得泄露堆栈、SQL 或敏感请求体；
  * 非 /api 路径保持框架内置错误格式不被改写；/api 健康接口走 R 包装。
- * <p>401/403 真实请求断言按 brief 约定推迟到 Task 7 安全链启用后补充。
+ * 安全链启用后探针请求统一携带管理员令牌（401/403 真实断言见 AuthApiTest）。
  */
 class ApiContractTest {
 
     private static SummerApplication app;
     private static HttpClient http;
     private static int port;
+    /** Task 7 起安全链启用：探针端点需持有效管理员令牌。 */
+    private static String accessToken;
 
-    /** 启动应用：先重建隔离测试库，再以随机端口、test 配置拉起。 */
+    /**
+     * 启动应用：先重建隔离测试库，再以随机端口、test 配置拉起；
+     * 以 admin 登录获取令牌，供各探针请求携带。
+     */
     @BeforeAll
-    static void startApplication() {
+    static void startApplication() throws Exception {
         MySqlTestDatabase.reset();
         app = SummerApplication.run(SummerAdminApplication.class,
                 new String[]{"--server.port=0", "--summer.profiles.active=test"});
         port = app.webServer().port();
         http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
+        accessToken = loginToken();
     }
 
     /** 关闭应用：停止 Web 服务并关闭 IoC 容器。 */
@@ -141,6 +147,7 @@ class ApiContractTest {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://127.0.0.1:" + port + path))
                 .timeout(Duration.ofSeconds(5))
+                .header("Authorization", "Bearer " + accessToken)
                 .GET()
                 .build();
         return http.send(request, HttpResponse.BodyHandlers.ofString());
@@ -151,9 +158,28 @@ class ApiContractTest {
                 .uri(URI.create("http://127.0.0.1:" + port + path))
                 .timeout(Duration.ofSeconds(5))
                 .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + accessToken)
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
         return http.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    /** 以测试种子账号 admin 登录换取访问令牌（测试配置已关闭验证码）。 */
+    private static String loginToken() throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://127.0.0.1:" + port + "/api/auth/login"))
+                .timeout(Duration.ofSeconds(5))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(
+                        "{\"username\":\"admin\",\"password\":\"admin123\"}"))
+                .build();
+        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new IllegalStateException("契约测试登录失败: " + response.statusCode());
+        }
+        Map<String, Object> body = (Map<String, Object>) Json.parse(response.body());
+        Map<?, ?> data = (Map<?, ?>) body.get("data");
+        return (String) data.get("access_token");
     }
 
     @SuppressWarnings("unchecked")
