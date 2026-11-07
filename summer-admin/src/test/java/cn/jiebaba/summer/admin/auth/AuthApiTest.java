@@ -188,9 +188,31 @@ class AuthApiTest {
         assertRShape(response, 403);
     }
 
+    /**
+     * 令牌签发后账号被删除（逻辑删除）：受保护路径必须一致返回 401 R 形，
+     * 且不泄露账号资料（邮箱等）。userinfo/routers 走 AuthService 重载，
+     * 部门可见树走 @AuthenticationPrincipal 参数解析器重载，两条机制都要验证。
+     */
     @Test
-    void captchaEndpointExposesSwitch() throws Exception {
-        HttpResponse<String> response = get("/api/auth/captcha", null);
+    void deletedAccountTokenGets401OnProtectedPaths() throws Exception {
+        String token = loginToken(ADMIN, ADMIN_PASSWORD);
+        setUserDelFlag(1L, "2");
+        try {
+            for (String path : new String[]{"/api/auth/userinfo", "/api/auth/routers",
+                    "/api/system/depts/visible"}) {
+                HttpResponse<String> response = get(path, token);
+                assertEquals(401, response.statusCode(), path + " 对已删除账号应返回 401");
+                assertRShape(response, 401);
+                assertFalse(response.body().contains("admin@jiebaba.cn"),
+                        path + " 不得泄露账号资料: " + response.body());
+            }
+        } finally {
+            setUserDelFlag(1L, "0");
+        }
+    }
+
+    @Test
+    void captchaEndpointExposesSwitch() throws Exception {        HttpResponse<String> response = get("/api/auth/captcha", null);
         assertEquals(200, response.statusCode());
         Map<?, ?> data = (Map<?, ?>) json(response).get("data");
         assertNotNull(data, "验证码接口必须返回 data: " + response.body());
@@ -284,6 +306,17 @@ class AuthApiTest {
              PreparedStatement ps = conn.prepareStatement(
                      "UPDATE sys_user SET status = ? WHERE user_id = ?")) {
             ps.setString(1, status);
+            ps.setLong(2, userId);
+            ps.executeUpdate();
+        }
+    }
+
+    /** 直接改测试库用户删除标志（仅 summer_admin_test），用后即恢复。 */
+    private static void setUserDelFlag(long userId, String delFlag) throws Exception {
+        try (Connection conn = testConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "UPDATE sys_user SET del_flag = ? WHERE user_id = ?")) {
+            ps.setString(1, delFlag);
             ps.setLong(2, userId);
             ps.executeUpdate();
         }
