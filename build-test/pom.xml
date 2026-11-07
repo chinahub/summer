@@ -37,12 +37,6 @@
             <artifactId>summer-support</artifactId>
             <version>${summer.version}</version>
         </dependency>
-        <!-- SmokeTest 依赖 sample 的 entity/mapper/service -->
-        <dependency>
-            <groupId>cn.jiebaba.summer</groupId>
-            <artifactId>summer-sample</artifactId>
-            <version>${summer.version}</version>
-        </dependency>
         <!-- 真实数据库驱动（DbSmokeTest / OrmSmokeTest） -->
         <dependency>
             <groupId>org.postgresql</groupId>

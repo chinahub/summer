@@ -11,7 +11,7 @@ summer 是基于 JDK 25 内置库、虚拟线程构建的类 Spring Boot 轻量�
 - **版本**：4.2.0
 - **许可**：Apache 2.0
 - **JDK**：25（`maven.compiler.release=25`）
-- **构建**：Maven，多模块（parent POM，8 个子模块；web/data/security/office 已并入 summer-boot，`cn.jiebaba.summer.core.*` 独立为 summer-core）
+- **构建**：Maven，多模块（parent POM，7 个子模块；web/data/security/office 已并入 summer-boot，`cn.jiebaba.summer.core.*` 独立为 summer-core）
 
 ## 构建命令
 
@@ -42,10 +42,9 @@ mvn clean deploy -P release
 | summer-ai | 大模型对话抽象 + RAG + 向量存储 + 进程内多 agent 协作 | ChatClient, OpenAI 兼容, SSE 流式, 工具调用, embedding, 重试/熔断, agent(进程内多 agent 编排 AgentOrchestrator), AI 自动配置（cn.jiebaba.summer.boot.ai 包随本模块发布） |
 | summer-boot-loader | 可执行 jar 启动器 | JarLauncher（`java -jar` 入口） |
 | summer-pack-maven-plugin | 打包插件 | 产出 BOOT-INF 可执行 jar |
-| summer-sample | 示例应用 | controller/service/repository/aspect 示例 |
-| build-test | 集中式测试 | AOP 单测/集成测试 + sample 冒烟测试 |
+| build-test | 集中式测试 | AOP 单测/集成测试 + 内聚的 sample 测试夹具（原 summer-sample 已迁入，包名保留 `cn.jiebaba.summer.sample`） |
 
-> 模块依赖方向：summer-support → summer-core ← summer-boot；summer-ai → summer-boot；summer-sample/build-test 依赖上述模块。
+> 模块依赖方向：summer-support → summer-core ← summer-boot；summer-ai → summer-boot；build-test 依赖上述模块。
 > summer-boot 不编译期依赖 summer-ai/summer-support（避免循环依赖），二者由 SummerApplication
 > 按 classpath 探测（isClassPresent + Class.forName 反射）注册自动配置。
 

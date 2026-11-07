@@ -30,7 +30,6 @@
         <module>summer-boot</module>
         <module>summer-boot-loader</module>
         <module>summer-pack-maven-plugin</module>
-        <module>summer-sample</module>
         <module>build-test</module>
     </modules>
 
@@ -41,7 +40,7 @@
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.version}</version>
             </dependency>
-            <!-- JUnit 5：测试模块整合（summer-boot optional，@SummerTest/SummerExtension）与 summer-sample/build-test 的 test 依赖 -->
+            <!-- JUnit 5：测试模块整合（summer-boot optional，@SummerTest/SummerExtension）与 build-test 的 test 依赖 -->
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter</artifactId>
