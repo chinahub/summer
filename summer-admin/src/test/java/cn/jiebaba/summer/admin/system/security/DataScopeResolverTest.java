@@ -196,6 +196,32 @@ class DataScopeResolverTest {
     }
 
     @Test
+    void selfScopeWithNullCurrentUserIdDenies() {
+        user(10L, 2L);
+        role(20L, "5", "0");
+        assign(10L, 20L);
+
+        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
+        resolver.resolve(10L).applyToUser(wrapper, null);
+        assertEquals("1=0", wrapper.sqlSegment());
+        assertTrue(wrapper.params().isEmpty());
+    }
+
+    @Test
+    void mixedScopeWithNullCurrentUserIdKeepsDeptRestriction() {
+        user(10L, 2L);
+        role(20L, "3", "0");
+        role(21L, "5", "0");
+        assign(10L, 20L);
+        assign(10L, 21L);
+
+        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
+        resolver.resolve(10L).applyToUser(wrapper, null);
+        assertEquals("dept_id IN (?)", wrapper.sqlSegment());
+        assertEquals(List.of(2L), wrapper.params());
+    }
+
+    @Test
     void assertVisibleRejectsOutOfScopeUserWith403() {
         user(10L, 2L);
         user(11L, 3L);

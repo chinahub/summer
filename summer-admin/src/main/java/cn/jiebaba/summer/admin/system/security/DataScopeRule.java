@@ -75,10 +75,20 @@ public final class DataScopeRule {
             return;
         }
         if (includeSelf && deptIds.isEmpty()) {
+            if (currentUserId == null) {
+                // 无法定位"本人"时按拒绝默认收敛为永假条件，绝不放行
+                wrapper.in("dept_id", List.of());
+                return;
+            }
             wrapper.eq(SysUser::getUserId, currentUserId);
             return;
         }
         if (!includeSelf) {
+            wrapper.in("dept_id", deptIds);
+            return;
+        }
+        if (currentUserId == null) {
+            // 混合范围缺当前用户 ID 时保留部门限制，不丢弃条件扩大权限
             wrapper.in("dept_id", deptIds);
             return;
         }
