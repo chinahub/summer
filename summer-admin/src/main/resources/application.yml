@@ -1,0 +1,11 @@
+server:
+  port: 8080
+
+summer:
+  # 骨架阶段先关闭安全层以保证健康检查可匿名访问；Task 7 将开启并收紧规则
+  security:
+    enabled: false
+  datasource:
+    url: jdbc:mysql://localhost:3306/summer_admin?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    # 骨架阶段连接池懒初始化（不在启动期预填充连接），健康检查不依赖数据库可用性；接入业务后收紧
+    pool-size: 0
