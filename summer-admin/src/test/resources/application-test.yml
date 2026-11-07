@@ -1,0 +1,6 @@
+summer:
+  datasource:
+    # 测试专用隔离库：所有 DB 测试共享 summer_admin_test，绝不触碰 summer_admin
+    url: jdbc:mysql://localhost:3306/summer_admin_test?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    # 正的小连接池：满足冒烟测试期间的多路访问即可
+    pool-size: 2
