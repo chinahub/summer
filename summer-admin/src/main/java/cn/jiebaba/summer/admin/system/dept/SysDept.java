@@ -39,7 +39,7 @@ public class SysDept extends BaseEntity {
     private String status;
 
     /** 删除标志（0存在 2删除） */
-    @TableLogic
+    @TableLogic(value = "0", delval = "2")
     private String delFlag;
 
     public Long getDeptId() {

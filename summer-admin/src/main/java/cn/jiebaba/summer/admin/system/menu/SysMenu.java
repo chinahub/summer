@@ -54,7 +54,7 @@ public class SysMenu extends BaseEntity {
     private String icon;
 
     /** 删除标志（0存在 2删除） */
-    @TableLogic
+    @TableLogic(value = "0", delval = "2")
     private String delFlag;
 
     public Long getMenuId() {

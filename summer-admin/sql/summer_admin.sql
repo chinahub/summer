@@ -2,10 +2,13 @@
 -- summer-admin 数据库初始化脚本（设计 §6.2，共 15 张表）
 --
 -- 特性：
---   1. 可重复执行：CREATE DATABASE/TABLE IF NOT EXISTS，种子数据使用 INSERT IGNORE
---      带固定主键，重跑既不报错也不覆盖已有业务修改；
---   2. 密码仅保存 BCrypt 哈希（admin/admin123、user/user123，仅用于本地首次登录）；
---   3. 核心实体带 del_flag 逻辑删除，关系表与日志表物理删除、不建逻辑删除字段。
+--   1. 可重复执行：CREATE DATABASE/TABLE IF NOT EXISTS；
+--   2. 幂等且不覆盖业务修改：种子数据仅在首次初始化（sys_config 无
+--      sys.init.marker 标记）时写入，全部写入完成后落标记；重跑脚本不会
+--      覆盖已有数据、不会复活已删除的种子行/关系；若脚本曾中断（无标记），
+--      重跑会以 INSERT IGNORE 补齐缺失种子后再落标记；
+--   3. 密码仅保存 BCrypt 哈希（admin/admin123、user/user123，仅用于本地首次登录）；
+--   4. 核心实体带 del_flag 逻辑删除（0存在 2删除），关系表与日志表物理删除。
 --
 -- 测试环境说明：测试执行器会跳过本文件头部的 CREATE DATABASE / USE 语句，
 -- 在 summer_admin_test 库上重放其余全部语句（见 MySqlTestDatabase）。
@@ -293,132 +296,204 @@ CREATE TABLE IF NOT EXISTS sys_login_log (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '登录日志表';
 
 -- =============================================================================
--- 种子数据（全部 INSERT IGNORE + 固定主键：可重复执行，不覆盖已有修改）
+-- 种子数据（一次性初始化，固定主键/自然键）
+--
+-- 机制：进入种子段时读取 @init_done（sys_config 中 sys.init.marker 标记是否
+-- 已存在）。@init_done = 0（首次或曾中断的初始化）：全部种子以 INSERT IGNORE
+-- 写入，写完后落标记；@init_done = 1（初始化已完成）：全部种子语句被跳过，
+-- 既不覆盖已有业务修改，也不复活已删除的种子行/关系。
 -- =============================================================================
 
+SET @init_done = (SELECT COUNT(*) FROM sys_config WHERE config_key = 'sys.init.marker');
+
 -- 部门树
-INSERT IGNORE INTO sys_dept (dept_id, parent_id, ancestors, dept_name, order_num, leader, status, create_by, create_time) VALUES
-(1, 0,  '0',       '总公司',     0, '管理员', '0', 'admin', NOW()),
-(2, 1,  '0,1',     '研发部门',   1, NULL,     '0', 'admin', NOW()),
-(3, 1,  '0,1',     '市场部门',   2, NULL,     '0', 'admin', NOW()),
-(4, 2,  '0,1,2',   '质量测试组', 1, NULL,     '0', 'admin', NOW());
+INSERT IGNORE INTO sys_dept (dept_id, parent_id, ancestors, dept_name, order_num, leader, status, create_by, create_time)
+SELECT s.dept_id, s.parent_id, s.ancestors, s.dept_name, s.order_num, s.leader, s.status, s.create_by, s.create_time
+FROM (
+    SELECT 1 AS dept_id, 0 AS parent_id, '0' AS ancestors, '总公司' AS dept_name, 0 AS order_num, '管理员' AS leader, '0' AS status, 'admin' AS create_by, NOW() AS create_time
+    UNION ALL SELECT 2, 1, '0,1', '研发部门', 1, NULL, '0', 'admin', NOW()
+    UNION ALL SELECT 3, 1, '0,1', '市场部门', 2, NULL, '0', 'admin', NOW()
+    UNION ALL SELECT 4, 2, '0,1,2', '质量测试组', 1, NULL, '0', 'admin', NOW()
+) s
+WHERE @init_done = 0;
 
 -- 岗位
-INSERT IGNORE INTO sys_post (post_id, post_code, post_name, post_sort, status, create_by, create_time) VALUES
-(1, 'ceo',    '总经理',   1, '0', 'admin', NOW()),
-(2, 'dev',    '研发工程师', 2, '0', 'admin', NOW()),
-(3, 'tester', '测试工程师', 3, '0', 'admin', NOW()),
-(4, 'market', '市场专员', 4, '0', 'admin', NOW());
+INSERT IGNORE INTO sys_post (post_id, post_code, post_name, post_sort, status, create_by, create_time)
+SELECT s.post_id, s.post_code, s.post_name, s.post_sort, s.status, s.create_by, s.create_time
+FROM (
+    SELECT 1 AS post_id, 'ceo' AS post_code, '总经理' AS post_name, 1 AS post_sort, '0' AS status, 'admin' AS create_by, NOW() AS create_time
+    UNION ALL SELECT 2, 'dev', '研发工程师', 2, '0', 'admin', NOW()
+    UNION ALL SELECT 3, 'tester', '测试工程师', 3, '0', 'admin', NOW()
+    UNION ALL SELECT 4, 'market', '市场专员', 4, '0', 'admin', NOW()
+) s
+WHERE @init_done = 0;
 
 -- 用户（密码为 BCrypt 哈希：admin/admin123、user/user123，仅本地首次登录使用）
-INSERT IGNORE INTO sys_user (user_id, dept_id, user_name, nick_name, email, phonenumber, sex, password, status, create_by, create_time) VALUES
-(1, 2, 'admin', '管理员',   'admin@jiebaba.cn', '15888888888', '0', '$2a$10$Xp2VBMCAcYX.ssnhuWsfp.s1AoeOuX28FarAMzA9kxwH9xeVxSM/6', '0', 'admin', NOW()),
-(2, 3, 'user',  '普通用户', 'user@jiebaba.cn',  '15666666666', '0', '$2a$10$ZpE7F1UWG89uVdA8kNtOEOZNE30PLK/DrkHHkyACLrVKy9PC1C1Fa', '0', 'admin', NOW());
+INSERT IGNORE INTO sys_user (user_id, dept_id, user_name, nick_name, email, phonenumber, sex, password, status, create_by, create_time)
+SELECT s.user_id, s.dept_id, s.user_name, s.nick_name, s.email, s.phonenumber, s.sex, s.password, s.status, s.create_by, s.create_time
+FROM (
+    SELECT 1 AS user_id, 2 AS dept_id, 'admin' AS user_name, '管理员' AS nick_name, 'admin@jiebaba.cn' AS email, '15888888888' AS phonenumber, '0' AS sex, '$2a$10$Xp2VBMCAcYX.ssnhuWsfp.s1AoeOuX28FarAMzA9kxwH9xeVxSM/6' AS password, '0' AS status, 'admin' AS create_by, NOW() AS create_time
+    UNION ALL SELECT 2, 3, 'user', '普通用户', 'user@jiebaba.cn', '15666666666', '0', '$2a$10$ZpE7F1UWG89uVdA8kNtOEOZNE30PLK/DrkHHkyACLrVKy9PC1C1Fa', '0', 'admin', NOW()
+) s
+WHERE @init_done = 0;
 
 -- 角色（data_scope：1全部 2自定义 3本部门 4本部门及以下 5仅本人）
-INSERT IGNORE INTO sys_role (role_id, role_name, role_key, role_sort, data_scope, status, create_by, create_time) VALUES
-(1, '超级管理员', 'admin',  1, '1', '0', 'admin', NOW()),
-(2, '普通角色',   'common', 2, '5', '0', 'admin', NOW());
+INSERT IGNORE INTO sys_role (role_id, role_name, role_key, role_sort, data_scope, status, create_by, create_time)
+SELECT s.role_id, s.role_name, s.role_key, s.role_sort, s.data_scope, s.status, s.create_by, s.create_time
+FROM (
+    SELECT 1 AS role_id, '超级管理员' AS role_name, 'admin' AS role_key, 1 AS role_sort, '1' AS data_scope, '0' AS status, 'admin' AS create_by, NOW() AS create_time
+    UNION ALL SELECT 2, '普通角色', 'common', 2, '5', '0', 'admin', NOW()
+) s
+WHERE @init_done = 0;
 
 -- 用户与角色/岗位关联
-INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (1, 1), (2, 2);
-INSERT IGNORE INTO sys_user_post (user_id, post_id) VALUES (1, 1), (2, 4);
+INSERT IGNORE INTO sys_user_role (user_id, role_id)
+SELECT s.user_id, s.role_id
+FROM (
+    SELECT 1 AS user_id, 1 AS role_id
+    UNION ALL SELECT 2, 2
+) s
+WHERE @init_done = 0;
+
+INSERT IGNORE INTO sys_user_post (user_id, post_id)
+SELECT s.user_id, s.post_id
+FROM (
+    SELECT 1 AS user_id, 1 AS post_id
+    UNION ALL SELECT 2, 4
+) s
+WHERE @init_done = 0;
 
 -- 菜单：覆盖设计已交付页面（系统管理目录 + 用户/角色/菜单/部门/岗位/字典/参数/公告 + 日志管理）
-INSERT IGNORE INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, menu_type, visible, status, perms, icon, create_by, create_time) VALUES
-(1,   '系统管理', 0,   10, 'system', NULL,                'M', '0', '0', NULL,               'setting', 'admin', NOW()),
-(100, '用户管理', 1,   1,  'user',   'system/user/index', 'C', '0', '0', 'system:user:list',   'user',    'admin', NOW()),
-(101, '角色管理', 1,   2,  'role',   'system/role/index', 'C', '0', '0', 'system:role:list',   'peoples', 'admin', NOW()),
-(102, '菜单管理', 1,   3,  'menu',   'system/menu/index', 'C', '0', '0', 'system:menu:list',   'tree',    'admin', NOW()),
-(103, '部门管理', 1,   4,  'dept',   'system/dept/index', 'C', '0', '0', 'system:dept:list',   'tree',    'admin', NOW()),
-(104, '岗位管理', 1,   5,  'post',   'system/post/index', 'C', '0', '0', 'system:post:list',   'post',    'admin', NOW()),
-(105, '字典管理', 1,   6,  'dict',   'system/dict/index', 'C', '0', '0', 'system:dict:list',   'dict',    'admin', NOW()),
-(106, '参数管理', 1,   7,  'config', 'system/config/index', 'C', '0', '0', 'system:config:list', 'edit',  'admin', NOW()),
-(107, '通知公告', 1,   8,  'notice', 'system/notice/index', 'C', '0', '0', 'system:notice:list', 'message', 'admin', NOW()),
-(108, '日志管理', 1,   9,  'log',    NULL,                'M', '0', '0', NULL,               'log',     'admin', NOW()),
-(109, '操作日志', 108, 1,  'operlog',   'monitor/operlog/index',    'C', '0', '0', 'system:operlog:list',    'form', 'admin', NOW()),
-(110, '登录日志', 108, 2,  'logininfor', 'monitor/logininfor/index', 'C', '0', '0', 'system:logininfor:list', 'key',  'admin', NOW());
+INSERT IGNORE INTO sys_menu (menu_id, menu_name, parent_id, order_num, path, component, menu_type, visible, status, perms, icon, create_by, create_time)
+SELECT s.menu_id, s.menu_name, s.parent_id, s.order_num, s.path, s.component, s.menu_type, s.visible, s.status, s.perms, s.icon, s.create_by, s.create_time
+FROM (
+    SELECT 1 AS menu_id, '系统管理' AS menu_name, 0 AS parent_id, 10 AS order_num, 'system' AS path, CAST(NULL AS CHAR) AS component, 'M' AS menu_type, '0' AS visible, '0' AS status, CAST(NULL AS CHAR) AS perms, 'setting' AS icon, 'admin' AS create_by, NOW() AS create_time
+    UNION ALL SELECT 100, '用户管理', 1, 1, 'user', 'system/user/index', 'C', '0', '0', 'system:user:list', 'user', 'admin', NOW()
+    UNION ALL SELECT 101, '角色管理', 1, 2, 'role', 'system/role/index', 'C', '0', '0', 'system:role:list', 'peoples', 'admin', NOW()
+    UNION ALL SELECT 102, '菜单管理', 1, 3, 'menu', 'system/menu/index', 'C', '0', '0', 'system:menu:list', 'tree', 'admin', NOW()
+    UNION ALL SELECT 103, '部门管理', 1, 4, 'dept', 'system/dept/index', 'C', '0', '0', 'system:dept:list', 'tree', 'admin', NOW()
+    UNION ALL SELECT 104, '岗位管理', 1, 5, 'post', 'system/post/index', 'C', '0', '0', 'system:post:list', 'post', 'admin', NOW()
+    UNION ALL SELECT 105, '字典管理', 1, 6, 'dict', 'system/dict/index', 'C', '0', '0', 'system:dict:list', 'dict', 'admin', NOW()
+    UNION ALL SELECT 106, '参数管理', 1, 7, 'config', 'system/config/index', 'C', '0', '0', 'system:config:list', 'edit', 'admin', NOW()
+    UNION ALL SELECT 107, '通知公告', 1, 8, 'notice', 'system/notice/index', 'C', '0', '0', 'system:notice:list', 'message', 'admin', NOW()
+    UNION ALL SELECT 108, '日志管理', 1, 9, 'log', CAST(NULL AS CHAR), 'M', '0', '0', CAST(NULL AS CHAR), 'log', 'admin', NOW()
+    UNION ALL SELECT 109, '操作日志', 108, 1, 'operlog', 'monitor/operlog/index', 'C', '0', '0', 'system:operlog:list', 'form', 'admin', NOW()
+    UNION ALL SELECT 110, '登录日志', 108, 2, 'logininfor', 'monitor/logininfor/index', 'C', '0', '0', 'system:logininfor:list', 'key', 'admin', NOW()
+) s
+WHERE @init_done = 0;
 
 -- 按钮权限
-INSERT IGNORE INTO sys_menu (menu_id, menu_name, parent_id, order_num, menu_type, visible, status, perms, icon, create_by, create_time) VALUES
-(1001, '用户查询', 100, 1, 'F', '0', '0', 'system:user:query',    '#', 'admin', NOW()),
-(1002, '用户新增', 100, 2, 'F', '0', '0', 'system:user:add',      '#', 'admin', NOW()),
-(1003, '用户修改', 100, 3, 'F', '0', '0', 'system:user:edit',     '#', 'admin', NOW()),
-(1004, '用户删除', 100, 4, 'F', '0', '0', 'system:user:remove',   '#', 'admin', NOW()),
-(1005, '用户导出', 100, 5, 'F', '0', '0', 'system:user:export',   '#', 'admin', NOW()),
-(1006, '重置密码', 100, 6, 'F', '0', '0', 'system:user:resetPwd', '#', 'admin', NOW()),
-(1007, '角色查询', 101, 1, 'F', '0', '0', 'system:role:query',    '#', 'admin', NOW()),
-(1008, '角色新增', 101, 2, 'F', '0', '0', 'system:role:add',      '#', 'admin', NOW()),
-(1009, '角色修改', 101, 3, 'F', '0', '0', 'system:role:edit',     '#', 'admin', NOW()),
-(1010, '角色删除', 101, 4, 'F', '0', '0', 'system:role:remove',   '#', 'admin', NOW()),
-(1011, '数据权限', 101, 5, 'F', '0', '0', 'system:role:dataScope', '#', 'admin', NOW()),
-(1012, '菜单查询', 102, 1, 'F', '0', '0', 'system:menu:query',  '#', 'admin', NOW()),
-(1013, '菜单新增', 102, 2, 'F', '0', '0', 'system:menu:add',    '#', 'admin', NOW()),
-(1014, '菜单修改', 102, 3, 'F', '0', '0', 'system:menu:edit',   '#', 'admin', NOW()),
-(1015, '菜单删除', 102, 4, 'F', '0', '0', 'system:menu:remove', '#', 'admin', NOW()),
-(1016, '部门查询', 103, 1, 'F', '0', '0', 'system:dept:query',  '#', 'admin', NOW()),
-(1017, '部门新增', 103, 2, 'F', '0', '0', 'system:dept:add',    '#', 'admin', NOW()),
-(1018, '部门修改', 103, 3, 'F', '0', '0', 'system:dept:edit',   '#', 'admin', NOW()),
-(1019, '部门删除', 103, 4, 'F', '0', '0', 'system:dept:remove', '#', 'admin', NOW()),
-(1020, '岗位查询', 104, 1, 'F', '0', '0', 'system:post:query',  '#', 'admin', NOW()),
-(1021, '岗位新增', 104, 2, 'F', '0', '0', 'system:post:add',    '#', 'admin', NOW()),
-(1022, '岗位修改', 104, 3, 'F', '0', '0', 'system:post:edit',   '#', 'admin', NOW()),
-(1023, '岗位删除', 104, 4, 'F', '0', '0', 'system:post:remove', '#', 'admin', NOW()),
-(1024, '岗位导出', 104, 5, 'F', '0', '0', 'system:post:export', '#', 'admin', NOW()),
-(1025, '字典查询', 105, 1, 'F', '0', '0', 'system:dict:query',  '#', 'admin', NOW()),
-(1026, '字典新增', 105, 2, 'F', '0', '0', 'system:dict:add',    '#', 'admin', NOW()),
-(1027, '字典修改', 105, 3, 'F', '0', '0', 'system:dict:edit',   '#', 'admin', NOW()),
-(1028, '字典删除', 105, 4, 'F', '0', '0', 'system:dict:remove', '#', 'admin', NOW()),
-(1029, '字典导出', 105, 5, 'F', '0', '0', 'system:dict:export', '#', 'admin', NOW()),
-(1030, '参数查询', 106, 1, 'F', '0', '0', 'system:config:query',  '#', 'admin', NOW()),
-(1031, '参数新增', 106, 2, 'F', '0', '0', 'system:config:add',    '#', 'admin', NOW()),
-(1032, '参数修改', 106, 3, 'F', '0', '0', 'system:config:edit',   '#', 'admin', NOW()),
-(1033, '参数删除', 106, 4, 'F', '0', '0', 'system:config:remove', '#', 'admin', NOW()),
-(1034, '参数导出', 106, 5, 'F', '0', '0', 'system:config:export', '#', 'admin', NOW()),
-(1035, '公告查询', 107, 1, 'F', '0', '0', 'system:notice:query',  '#', 'admin', NOW()),
-(1036, '公告新增', 107, 2, 'F', '0', '0', 'system:notice:add',    '#', 'admin', NOW()),
-(1037, '公告修改', 107, 3, 'F', '0', '0', 'system:notice:edit',   '#', 'admin', NOW()),
-(1038, '公告删除', 107, 4, 'F', '0', '0', 'system:notice:remove', '#', 'admin', NOW()),
-(1039, '操作查询', 109, 1, 'F', '0', '0', 'system:operlog:query',  '#', 'admin', NOW()),
-(1040, '操作删除', 109, 2, 'F', '0', '0', 'system:operlog:remove', '#', 'admin', NOW()),
-(1041, '操作导出', 109, 3, 'F', '0', '0', 'system:operlog:export', '#', 'admin', NOW()),
-(1042, '操作清空', 109, 4, 'F', '0', '0', 'system:operlog:clean',  '#', 'admin', NOW()),
-(1043, '登录查询', 110, 1, 'F', '0', '0', 'system:logininfor:query',  '#', 'admin', NOW()),
-(1044, '登录删除', 110, 2, 'F', '0', '0', 'system:logininfor:remove', '#', 'admin', NOW()),
-(1045, '登录导出', 110, 3, 'F', '0', '0', 'system:logininfor:export', '#', 'admin', NOW()),
-(1046, '登录清空', 110, 4, 'F', '0', '0', 'system:logininfor:clean',  '#', 'admin', NOW());
+INSERT IGNORE INTO sys_menu (menu_id, menu_name, parent_id, order_num, menu_type, visible, status, perms, icon, create_by, create_time)
+SELECT s.menu_id, s.menu_name, s.parent_id, s.order_num, s.menu_type, s.visible, s.status, s.perms, s.icon, s.create_by, s.create_time
+FROM (
+    SELECT 1001 AS menu_id, '用户查询' AS menu_name, 100 AS parent_id, 1 AS order_num, 'F' AS menu_type, '0' AS visible, '0' AS status, 'system:user:query' AS perms, '#' AS icon, 'admin' AS create_by, NOW() AS create_time
+    UNION ALL SELECT 1002, '用户新增', 100, 2, 'F', '0', '0', 'system:user:add', '#', 'admin', NOW()
+    UNION ALL SELECT 1003, '用户修改', 100, 3, 'F', '0', '0', 'system:user:edit', '#', 'admin', NOW()
+    UNION ALL SELECT 1004, '用户删除', 100, 4, 'F', '0', '0', 'system:user:remove', '#', 'admin', NOW()
+    UNION ALL SELECT 1005, '用户导出', 100, 5, 'F', '0', '0', 'system:user:export', '#', 'admin', NOW()
+    UNION ALL SELECT 1006, '重置密码', 100, 6, 'F', '0', '0', 'system:user:resetPwd', '#', 'admin', NOW()
+    UNION ALL SELECT 1007, '角色查询', 101, 1, 'F', '0', '0', 'system:role:query', '#', 'admin', NOW()
+    UNION ALL SELECT 1008, '角色新增', 101, 2, 'F', '0', '0', 'system:role:add', '#', 'admin', NOW()
+    UNION ALL SELECT 1009, '角色修改', 101, 3, 'F', '0', '0', 'system:role:edit', '#', 'admin', NOW()
+    UNION ALL SELECT 1010, '角色删除', 101, 4, 'F', '0', '0', 'system:role:remove', '#', 'admin', NOW()
+    UNION ALL SELECT 1011, '数据权限', 101, 5, 'F', '0', '0', 'system:role:dataScope', '#', 'admin', NOW()
+    UNION ALL SELECT 1012, '菜单查询', 102, 1, 'F', '0', '0', 'system:menu:query', '#', 'admin', NOW()
+    UNION ALL SELECT 1013, '菜单新增', 102, 2, 'F', '0', '0', 'system:menu:add', '#', 'admin', NOW()
+    UNION ALL SELECT 1014, '菜单修改', 102, 3, 'F', '0', '0', 'system:menu:edit', '#', 'admin', NOW()
+    UNION ALL SELECT 1015, '菜单删除', 102, 4, 'F', '0', '0', 'system:menu:remove', '#', 'admin', NOW()
+    UNION ALL SELECT 1016, '部门查询', 103, 1, 'F', '0', '0', 'system:dept:query', '#', 'admin', NOW()
+    UNION ALL SELECT 1017, '部门新增', 103, 2, 'F', '0', '0', 'system:dept:add', '#', 'admin', NOW()
+    UNION ALL SELECT 1018, '部门修改', 103, 3, 'F', '0', '0', 'system:dept:edit', '#', 'admin', NOW()
+    UNION ALL SELECT 1019, '部门删除', 103, 4, 'F', '0', '0', 'system:dept:remove', '#', 'admin', NOW()
+    UNION ALL SELECT 1020, '岗位查询', 104, 1, 'F', '0', '0', 'system:post:query', '#', 'admin', NOW()
+    UNION ALL SELECT 1021, '岗位新增', 104, 2, 'F', '0', '0', 'system:post:add', '#', 'admin', NOW()
+    UNION ALL SELECT 1022, '岗位修改', 104, 3, 'F', '0', '0', 'system:post:edit', '#', 'admin', NOW()
+    UNION ALL SELECT 1023, '岗位删除', 104, 4, 'F', '0', '0', 'system:post:remove', '#', 'admin', NOW()
+    UNION ALL SELECT 1024, '岗位导出', 104, 5, 'F', '0', '0', 'system:post:export', '#', 'admin', NOW()
+    UNION ALL SELECT 1025, '字典查询', 105, 1, 'F', '0', '0', 'system:dict:query', '#', 'admin', NOW()
+    UNION ALL SELECT 1026, '字典新增', 105, 2, 'F', '0', '0', 'system:dict:add', '#', 'admin', NOW()
+    UNION ALL SELECT 1027, '字典修改', 105, 3, 'F', '0', '0', 'system:dict:edit', '#', 'admin', NOW()
+    UNION ALL SELECT 1028, '字典删除', 105, 4, 'F', '0', '0', 'system:dict:remove', '#', 'admin', NOW()
+    UNION ALL SELECT 1029, '字典导出', 105, 5, 'F', '0', '0', 'system:dict:export', '#', 'admin', NOW()
+    UNION ALL SELECT 1030, '参数查询', 106, 1, 'F', '0', '0', 'system:config:query', '#', 'admin', NOW()
+    UNION ALL SELECT 1031, '参数新增', 106, 2, 'F', '0', '0', 'system:config:add', '#', 'admin', NOW()
+    UNION ALL SELECT 1032, '参数修改', 106, 3, 'F', '0', '0', 'system:config:edit', '#', 'admin', NOW()
+    UNION ALL SELECT 1033, '参数删除', 106, 4, 'F', '0', '0', 'system:config:remove', '#', 'admin', NOW()
+    UNION ALL SELECT 1034, '参数导出', 106, 5, 'F', '0', '0', 'system:config:export', '#', 'admin', NOW()
+    UNION ALL SELECT 1035, '公告查询', 107, 1, 'F', '0', '0', 'system:notice:query', '#', 'admin', NOW()
+    UNION ALL SELECT 1036, '公告新增', 107, 2, 'F', '0', '0', 'system:notice:add', '#', 'admin', NOW()
+    UNION ALL SELECT 1037, '公告修改', 107, 3, 'F', '0', '0', 'system:notice:edit', '#', 'admin', NOW()
+    UNION ALL SELECT 1038, '公告删除', 107, 4, 'F', '0', '0', 'system:notice:remove', '#', 'admin', NOW()
+    UNION ALL SELECT 1039, '操作查询', 109, 1, 'F', '0', '0', 'system:operlog:query', '#', 'admin', NOW()
+    UNION ALL SELECT 1040, '操作删除', 109, 2, 'F', '0', '0', 'system:operlog:remove', '#', 'admin', NOW()
+    UNION ALL SELECT 1041, '操作导出', 109, 3, 'F', '0', '0', 'system:operlog:export', '#', 'admin', NOW()
+    UNION ALL SELECT 1042, '操作清空', 109, 4, 'F', '0', '0', 'system:operlog:clean', '#', 'admin', NOW()
+    UNION ALL SELECT 1043, '登录查询', 110, 1, 'F', '0', '0', 'system:logininfor:query', '#', 'admin', NOW()
+    UNION ALL SELECT 1044, '登录删除', 110, 2, 'F', '0', '0', 'system:logininfor:remove', '#', 'admin', NOW()
+    UNION ALL SELECT 1045, '登录导出', 110, 3, 'F', '0', '0', 'system:logininfor:export', '#', 'admin', NOW()
+    UNION ALL SELECT 1046, '登录清空', 110, 4, 'F', '0', '0', 'system:logininfor:clean', '#', 'admin', NOW()
+) s
+WHERE @init_done = 0;
 
 -- 超级管理员角色授予全部菜单；普通角色仅可见系统管理目录
-INSERT IGNORE INTO sys_role_menu (role_id, menu_id) SELECT 1, menu_id FROM sys_menu;
-INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (2, 1);
+INSERT IGNORE INTO sys_role_menu (role_id, menu_id)
+SELECT 1, menu_id FROM sys_menu WHERE @init_done = 0;
+
+INSERT IGNORE INTO sys_role_menu (role_id, menu_id)
+SELECT s.role_id, s.menu_id
+FROM (
+    SELECT 2 AS role_id, 1 AS menu_id
+) s
+WHERE @init_done = 0;
 
 -- 常用字典
-INSERT IGNORE INTO sys_dict_type (dict_id, dict_name, dict_type, status, create_by, create_time) VALUES
-(1, '系统状态',   'sys_normal_disable', '0', 'admin', NOW()),
-(2, '用户性别',   'sys_user_sex',       '0', 'admin', NOW()),
-(3, '公告类型',   'sys_notice_type',    '0', 'admin', NOW()),
-(4, '公告状态',   'sys_notice_status',  '0', 'admin', NOW()),
-(5, '操作状态',   'sys_common_status',  '0', 'admin', NOW());
+INSERT IGNORE INTO sys_dict_type (dict_id, dict_name, dict_type, status, create_by, create_time)
+SELECT s.dict_id, s.dict_name, s.dict_type, s.status, s.create_by, s.create_time
+FROM (
+    SELECT 1 AS dict_id, '系统状态' AS dict_name, 'sys_normal_disable' AS dict_type, '0' AS status, 'admin' AS create_by, NOW() AS create_time
+    UNION ALL SELECT 2, '用户性别', 'sys_user_sex', '0', 'admin', NOW()
+    UNION ALL SELECT 3, '公告类型', 'sys_notice_type', '0', 'admin', NOW()
+    UNION ALL SELECT 4, '公告状态', 'sys_notice_status', '0', 'admin', NOW()
+    UNION ALL SELECT 5, '操作状态', 'sys_common_status', '0', 'admin', NOW()
+) s
+WHERE @init_done = 0;
 
-INSERT IGNORE INTO sys_dict_data (dict_code, dict_sort, dict_label, dict_value, dict_type, list_class, is_default, status, create_by, create_time) VALUES
-(1,  1, '正常', '0', 'sys_normal_disable', 'primary', 'Y', '0', 'admin', NOW()),
-(2,  2, '停用', '1', 'sys_normal_disable', 'danger',  'N', '0', 'admin', NOW()),
-(3,  1, '男',   '0', 'sys_user_sex',       'primary', 'Y', '0', 'admin', NOW()),
-(4,  2, '女',   '1', 'sys_user_sex',       'danger',  'N', '0', 'admin', NOW()),
-(5,  3, '未知', '2', 'sys_user_sex',       'info',    'N', '0', 'admin', NOW()),
-(6,  1, '通知', '1', 'sys_notice_type',    'warning', 'Y', '0', 'admin', NOW()),
-(7,  2, '公告', '2', 'sys_notice_type',    'success', 'N', '0', 'admin', NOW()),
-(8,  1, '正常', '0', 'sys_notice_status',  'primary', 'Y', '0', 'admin', NOW()),
-(9,  2, '关闭', '1', 'sys_notice_status',  'danger',  'N', '0', 'admin', NOW()),
-(10, 1, '成功', '0', 'sys_common_status',  'primary', 'Y', '0', 'admin', NOW()),
-(11, 2, '失败', '1', 'sys_common_status',  'danger',  'N', '0', 'admin', NOW());
+INSERT IGNORE INTO sys_dict_data (dict_code, dict_sort, dict_label, dict_value, dict_type, list_class, is_default, status, create_by, create_time)
+SELECT s.dict_code, s.dict_sort, s.dict_label, s.dict_value, s.dict_type, s.list_class, s.is_default, s.status, s.create_by, s.create_time
+FROM (
+    SELECT 1 AS dict_code, 1 AS dict_sort, '正常' AS dict_label, '0' AS dict_value, 'sys_normal_disable' AS dict_type, 'primary' AS list_class, 'Y' AS is_default, '0' AS status, 'admin' AS create_by, NOW() AS create_time
+    UNION ALL SELECT 2, 2, '停用', '1', 'sys_normal_disable', 'danger', 'N', '0', 'admin', NOW()
+    UNION ALL SELECT 3, 1, '男', '0', 'sys_user_sex', 'primary', 'Y', '0', 'admin', NOW()
+    UNION ALL SELECT 4, 2, '女', '1', 'sys_user_sex', 'danger', 'N', '0', 'admin', NOW()
+    UNION ALL SELECT 5, 3, '未知', '2', 'sys_user_sex', 'info', 'N', '0', 'admin', NOW()
+    UNION ALL SELECT 6, 1, '通知', '1', 'sys_notice_type', 'warning', 'Y', '0', 'admin', NOW()
+    UNION ALL SELECT 7, 2, '公告', '2', 'sys_notice_type', 'success', 'N', '0', 'admin', NOW()
+    UNION ALL SELECT 8, 1, '正常', '0', 'sys_notice_status', 'primary', 'Y', '0', 'admin', NOW()
+    UNION ALL SELECT 9, 2, '关闭', '1', 'sys_notice_status', 'danger', 'N', '0', 'admin', NOW()
+    UNION ALL SELECT 10, 1, '成功', '0', 'sys_common_status', 'primary', 'Y', '0', 'admin', NOW()
+    UNION ALL SELECT 11, 2, '失败', '1', 'sys_common_status', 'danger', 'N', '0', 'admin', NOW()
+) s
+WHERE @init_done = 0;
 
--- 示例参数
-INSERT IGNORE INTO sys_config (config_id, config_name, config_key, config_value, config_type, status, create_by, create_time) VALUES
-(1, '登录验证码开关', 'sys.account.captchaEnabled', 'true', 'Y', '0', 'admin', NOW()),
-(2, '账号初始密码',   'sys.user.initPassword',      'admin123', 'Y', '0', 'admin', NOW()),
-(3, '主框架页皮肤',   'sys.index.skinName',         'skin-blue', 'Y', '0', 'admin', NOW());
+-- 示例参数（初始化标记 sys.init.marker 不在这里：种子全部写完后才落标记）
+INSERT IGNORE INTO sys_config (config_id, config_name, config_key, config_value, config_type, status, create_by, create_time)
+SELECT s.config_id, s.config_name, s.config_key, s.config_value, s.config_type, s.status, s.create_by, s.create_time
+FROM (
+    SELECT 1 AS config_id, '登录验证码开关' AS config_name, 'sys.account.captchaEnabled' AS config_key, 'true' AS config_value, 'Y' AS config_type, '0' AS status, 'admin' AS create_by, NOW() AS create_time
+    UNION ALL SELECT 2, '账号初始密码', 'sys.user.initPassword', 'admin123', 'Y', '0', 'admin', NOW()
+    UNION ALL SELECT 3, '主框架页皮肤', 'sys.index.skinName', 'skin-blue', 'Y', '0', 'admin', NOW()
+) s
+WHERE @init_done = 0;
 
 -- 示例公告
-INSERT IGNORE INTO sys_notice (notice_id, notice_title, notice_type, notice_content, status, create_by, create_time) VALUES
-(1, '欢迎使用 summer-admin', '1', '基于 summer-boot 4.2.0 的轻量级管理后台，默认账号 admin/admin123，仅用于本地首次登录。', '0', 'admin', NOW());
+INSERT IGNORE INTO sys_notice (notice_id, notice_title, notice_type, notice_content, status, create_by, create_time)
+SELECT s.notice_id, s.notice_title, s.notice_type, s.notice_content, s.status, s.create_by, s.create_time
+FROM (
+    SELECT 1 AS notice_id, '欢迎使用 summer-admin' AS notice_title, '1' AS notice_type, '基于 summer-boot 4.2.0 的轻量级管理后台，默认账号 admin/admin123，仅用于本地首次登录。' AS notice_content, '0' AS status, 'admin' AS create_by, NOW() AS create_time
+) s
+WHERE @init_done = 0;
+
+-- 初始化完成标记：以上种子全部写入后落标记；此后重跑脚本将整段跳过种子
+INSERT IGNORE INTO sys_config (config_id, config_name, config_key, config_value, config_type, status, create_by, create_time)
+SELECT 100, '初始化完成标记', 'sys.init.marker', '1', 'Y', '0', 'admin', NOW()
+WHERE @init_done = 0;

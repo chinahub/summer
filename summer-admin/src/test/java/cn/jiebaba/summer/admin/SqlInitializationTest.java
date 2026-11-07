@@ -80,6 +80,55 @@ class SqlInitializationTest {
         }
     }
 
+    @Test
+    @Order(4)
+    void rerunDoesNotResurrectDeletedSeedRowsOrRelations() throws Exception {
+        // 业务删除一条种子关系与一条种子业务行
+        try (Connection conn = testConnection(); Statement st = conn.createStatement()) {
+            st.execute("DELETE FROM sys_user_role WHERE user_id = 2 AND role_id = 2");
+            st.execute("DELETE FROM sys_dict_data WHERE dict_code = 11");
+        }
+        MySqlTestDatabase.executeScript();
+        try (Connection conn = testConnection(); Statement st = conn.createStatement()) {
+            try (ResultSet rs = st.executeQuery(
+                    "SELECT COUNT(*) FROM sys_user_role WHERE user_id = 2 AND role_id = 2")) {
+                rs.next();
+                assertEquals(0, rs.getLong(1), "重跑脚本不得复活已删除的种子关系");
+            }
+            try (ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM sys_dict_data WHERE dict_code = 11")) {
+                rs.next();
+                assertEquals(0, rs.getLong(1), "重跑脚本不得复活已删除的种子业务行");
+            }
+            try (ResultSet rs = st.executeQuery(
+                    "SELECT COUNT(*) FROM sys_config WHERE config_key = 'sys.init.marker'")) {
+                rs.next();
+                assertEquals(1, rs.getLong(1), "初始化标记必须保持存在");
+            }
+        }
+    }
+
+    @Test
+    @Order(5)
+    void interruptedInitializationCanBeCompletedOnRerun() throws Exception {
+        // 模拟初始化中断后的状态：无标记且缺失部分种子
+        try (Connection conn = testConnection(); Statement st = conn.createStatement()) {
+            st.execute("DELETE FROM sys_config WHERE config_key = 'sys.init.marker'");
+            st.execute("DELETE FROM sys_dept WHERE dept_id = 4");
+        }
+        MySqlTestDatabase.executeScript();
+        try (Connection conn = testConnection(); Statement st = conn.createStatement()) {
+            try (ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM sys_dept WHERE dept_id = 4")) {
+                rs.next();
+                assertEquals(1, rs.getLong(1), "无标记时重跑应补齐缺失的种子行");
+            }
+            try (ResultSet rs = st.executeQuery(
+                    "SELECT COUNT(*) FROM sys_config WHERE config_key = 'sys.init.marker'")) {
+                rs.next();
+                assertEquals(1, rs.getLong(1), "补齐后必须重新落初始化标记");
+            }
+        }
+    }
+
     private static Set<String> actualTables() throws SQLException {
         Set<String> tables = new HashSet<>();
         try (Connection conn = testConnection()) {
