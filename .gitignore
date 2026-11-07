@@ -26,3 +26,5 @@ build-test/*.class
 .mimosa/
 # ZCode 工具本地状态
 .zcode/
+# Git 隔离工作区
+.worktrees/
