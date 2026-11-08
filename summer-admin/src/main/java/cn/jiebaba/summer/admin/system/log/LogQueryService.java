@@ -7,8 +7,11 @@ import cn.jiebaba.summer.admin.common.log.OperLogRecorder;
 import cn.jiebaba.summer.core.annotation.Service;
 import cn.jiebaba.summer.data.conditions.LambdaQueryWrapper;
 import cn.jiebaba.summer.data.page.IPage;
+import cn.jiebaba.summer.data.transaction.Transactional;
 
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * 日志查询服务：操作日志（sys_oper_log）与登录日志（sys_login_log）的
@@ -18,6 +21,8 @@ import java.util.List;
  */
 @Service
 public class LogQueryService {
+
+    private static final Logger LOG = Logger.getLogger(LogQueryService.class.getName());
 
     private final SysOperLogMapper operLogMapper;
     private final SysLoginLogMapper loginLogMapper;
@@ -97,17 +102,19 @@ public class LogQueryService {
     }
 
     /**
-     * 清空操作日志：物理删除全部行，随后以独立事务补记一条"清空"审计事件。
-     * 审计写入失败不影响已完成的清空结果（异常由全局兜底）。
+     * 清空操作日志：整体一个 REQUIRED 事务——任一删除失败回滚全部已删行，
+     * 且不会执行审计写入；删除成功后以 REQUIRES_NEW 独立事务补记"清空"审计，
+     * 审计写库失败仅记服务端日志，不影响已提交的清空结果。
      *
      * @return 被清空的行数
      */
+    @Transactional
     public int clearOperLogs() {
         List<SysOperLog> all = operLogMapper.selectList();
         for (SysOperLog log : all) {
             operLogMapper.deleteById(log.getOperId());
         }
-        operLogRecorder.recordClearAudit("操作日志");
+        recordClearAuditSafely("操作日志");
         return all.size();
     }
 
@@ -172,18 +179,34 @@ public class LogQueryService {
     }
 
     /**
-     * 清空登录日志：物理删除全部行，审计事件（标题"登录日志"）写入操作日志表，
-     * 独立事务保证不随外层事务回滚。
+     * 清空登录日志：整体一个 REQUIRED 事务（语义同 {@link #clearOperLogs()}），
+     * 审计事件（标题"登录日志"）以 REQUIRES_NEW 独立事务写入操作日志表。
      *
      * @return 被清空的行数
      */
+    @Transactional
     public int clearLoginLogs() {
         List<SysLoginLog> all = loginLogMapper.selectList();
         for (SysLoginLog log : all) {
             loginLogMapper.deleteById(log.getInfoId());
         }
-        operLogRecorder.recordClearAudit("登录日志");
+        recordClearAuditSafely("登录日志");
         return all.size();
+    }
+
+    /**
+     * 隔离清空审计的失败：审计不得反噬已完成的清空结果——写库失败仅输出
+     * 服务端日志，调用方仍按成功返回（REQUIRES_NEW 事务此时已自行回滚）。
+     *
+     * @param module 被清空的日志模块（操作日志/登录日志）
+     */
+    private void recordClearAuditSafely(String module) {
+        try {
+            operLogRecorder.recordClearAudit(module);
+        } catch (Throwable auditFailure) {
+            LOG.log(Level.WARNING, "清空审计写入失败（已忽略，不影响清空结果）: " + module,
+                    auditFailure);
+        }
     }
 
     /** 校验并拷贝 ID 列表：null/空一律 400。 */

@@ -214,6 +214,39 @@ class LogQueryServiceTest {
                 "清空审计不得随外层事务回滚");
     }
 
+    @Test
+    void clearMethodsDeclareRequiredTransaction() throws NoSuchMethodException {
+        Transactional operClear = LogQueryService.class
+                .getMethod("clearOperLogs").getAnnotation(Transactional.class);
+        Transactional loginClear = LogQueryService.class
+                .getMethod("clearLoginLogs").getAnnotation(Transactional.class);
+
+        assertNotNull(operClear, "clearOperLogs 应声明事务，删除中途失败必须整体回滚");
+        assertNotNull(loginClear, "clearLoginLogs 应声明事务");
+        assertEquals(Propagation.REQUIRED, operClear.propagation());
+        assertEquals(Propagation.REQUIRED, loginClear.propagation());
+    }
+
+    @Test
+    void auditFailureDoesNotAffectClearResult() {
+        OperFake failingAuditStore = new OperFake() {
+            @Override
+            public int insert(SysOperLog entity) {
+                throw new IllegalStateException("审计库不可用");
+            }
+        };
+        LogQueryService isolated = new LogQueryService(operMapper, loginMapper,
+                new OperLogRecorder(failingAuditStore));
+        seedOperLogs();
+        seedLoginLogs();
+
+        assertEquals(3, isolated.clearOperLogs(), "审计写库失败绝不允许替换清空的成功返回");
+        assertTrue(operMapper.rows().isEmpty(), "审计失败不影响已完成的清空结果");
+
+        assertEquals(3, isolated.clearLoginLogs());
+        assertTrue(loginMapper.rows().isEmpty());
+    }
+
     // ---- 夹具与辅助 -------------------------------------------------------
 
     private void seedOperLogs() {
@@ -256,7 +289,7 @@ class LogQueryServiceTest {
     }
 
     /** 内存操作日志 Mapper，selectPage 由 WrapperSupport 求值。 */
-    private static final class OperFake extends InMemoryBaseMapper<SysOperLog>
+    private static class OperFake extends InMemoryBaseMapper<SysOperLog>
             implements SysOperLogMapper {
         @Override
         protected Long idOf(SysOperLog entity) {
