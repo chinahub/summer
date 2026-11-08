@@ -377,8 +377,8 @@ FROM (
     UNION ALL SELECT 106, '参数管理', 1, 7, 'config', 'system/config/index', 'C', '0', '0', 'system:config:list', 'edit', 'admin', NOW()
     UNION ALL SELECT 107, '通知公告', 1, 8, 'notice', 'system/notice/index', 'C', '0', '0', 'system:notice:list', 'message', 'admin', NOW()
     UNION ALL SELECT 108, '日志管理', 1, 9, 'log', CAST(NULL AS CHAR), 'M', '0', '0', CAST(NULL AS CHAR), 'log', 'admin', NOW()
-    UNION ALL SELECT 109, '操作日志', 108, 1, 'operlog', 'monitor/operlog/index', 'C', '0', '0', 'system:operlog:list', 'form', 'admin', NOW()
-    UNION ALL SELECT 110, '登录日志', 108, 2, 'logininfor', 'monitor/logininfor/index', 'C', '0', '0', 'system:logininfor:list', 'key', 'admin', NOW()
+    UNION ALL SELECT 109, '操作日志', 108, 1, 'operlog', 'monitor/operlog/index', 'C', '0', '0', 'monitor:log:list', 'form', 'admin', NOW()
+    UNION ALL SELECT 110, '登录日志', 108, 2, 'logininfor', 'monitor/logininfor/index', 'C', '0', '0', 'monitor:log:list', 'key', 'admin', NOW()
 ) s
 WHERE @init_done = 0;
 
@@ -424,14 +424,14 @@ FROM (
     UNION ALL SELECT 1036, '公告新增', 107, 2, 'F', '0', '0', 'system:notice:add', '#', 'admin', NOW()
     UNION ALL SELECT 1037, '公告修改', 107, 3, 'F', '0', '0', 'system:notice:edit', '#', 'admin', NOW()
     UNION ALL SELECT 1038, '公告删除', 107, 4, 'F', '0', '0', 'system:notice:remove', '#', 'admin', NOW()
-    UNION ALL SELECT 1039, '操作查询', 109, 1, 'F', '0', '0', 'system:operlog:query', '#', 'admin', NOW()
-    UNION ALL SELECT 1040, '操作删除', 109, 2, 'F', '0', '0', 'system:operlog:remove', '#', 'admin', NOW()
-    UNION ALL SELECT 1041, '操作导出', 109, 3, 'F', '0', '0', 'system:operlog:export', '#', 'admin', NOW()
-    UNION ALL SELECT 1042, '操作清空', 109, 4, 'F', '0', '0', 'system:operlog:clean', '#', 'admin', NOW()
-    UNION ALL SELECT 1043, '登录查询', 110, 1, 'F', '0', '0', 'system:logininfor:query', '#', 'admin', NOW()
-    UNION ALL SELECT 1044, '登录删除', 110, 2, 'F', '0', '0', 'system:logininfor:remove', '#', 'admin', NOW()
-    UNION ALL SELECT 1045, '登录导出', 110, 3, 'F', '0', '0', 'system:logininfor:export', '#', 'admin', NOW()
-    UNION ALL SELECT 1046, '登录清空', 110, 4, 'F', '0', '0', 'system:logininfor:clean', '#', 'admin', NOW()
+    UNION ALL SELECT 1039, '操作查询', 109, 1, 'F', '0', '0', 'monitor:log:query', '#', 'admin', NOW()
+    UNION ALL SELECT 1040, '操作删除', 109, 2, 'F', '0', '0', 'monitor:log:remove', '#', 'admin', NOW()
+    UNION ALL SELECT 1041, '操作导出', 109, 3, 'F', '0', '0', 'monitor:log:export', '#', 'admin', NOW()
+    UNION ALL SELECT 1042, '操作清空', 109, 4, 'F', '0', '0', 'monitor:log:remove', '#', 'admin', NOW()
+    UNION ALL SELECT 1043, '登录查询', 110, 1, 'F', '0', '0', 'monitor:log:query', '#', 'admin', NOW()
+    UNION ALL SELECT 1044, '登录删除', 110, 2, 'F', '0', '0', 'monitor:log:remove', '#', 'admin', NOW()
+    UNION ALL SELECT 1045, '登录导出', 110, 3, 'F', '0', '0', 'monitor:log:export', '#', 'admin', NOW()
+    UNION ALL SELECT 1046, '登录清空', 110, 4, 'F', '0', '0', 'monitor:log:remove', '#', 'admin', NOW()
 ) s
 WHERE @init_done = 0;
 

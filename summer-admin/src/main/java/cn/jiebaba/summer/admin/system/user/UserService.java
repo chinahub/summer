@@ -2,6 +2,7 @@ package cn.jiebaba.summer.admin.system.user;
 
 import cn.jiebaba.summer.admin.common.api.PageQuery;
 import cn.jiebaba.summer.admin.common.exception.BusinessException;
+import cn.jiebaba.summer.admin.common.log.OperLog;
 import cn.jiebaba.summer.admin.common.validation.RequestValidator;
 import cn.jiebaba.summer.admin.system.dept.SysDept;
 import cn.jiebaba.summer.admin.system.dept.SysDeptMapper;
@@ -135,6 +136,7 @@ public class UserService {
      * @param currentUserId 当前登录用户 ID
      * @return 生成的用户 ID
      */
+    @OperLog(module = "用户管理", action = "新增")
     @Transactional
     public Long create(CreateUserRequest request, Long currentUserId) {
         RequestValidator.requireValid(request);
@@ -171,6 +173,7 @@ public class UserService {
      * @param request       变更请求（userId 必填）
      * @param currentUserId 当前登录用户 ID
      */
+    @OperLog(module = "用户管理", action = "修改")
     @Transactional
     public void update(UpdateUserRequest request, Long currentUserId) {
         RequestValidator.requireValid(request);
@@ -250,6 +253,7 @@ public class UserService {
      * @param userId        目标用户 ID
      * @param currentUserId 当前登录用户 ID
      */
+    @OperLog(module = "用户管理", action = "删除")
     @Transactional
     public void delete(Long userId, Long currentUserId) {
         assertNotForbiddenTarget(userId, currentUserId, "删除");
@@ -268,6 +272,7 @@ public class UserService {
      * @param status        目标状态（仅允许 0/1）
      * @param currentUserId 当前登录用户 ID
      */
+    @OperLog(module = "用户管理", action = "修改")
     public void updateStatus(Long userId, String status, Long currentUserId) {
         if (status == null || (!"0".equals(status) && !"1".equals(status))) {
             throw new BusinessException(400, "状态仅支持 0（正常）或 1（停用）");
@@ -287,6 +292,7 @@ public class UserService {
      * @param newPassword   新密码（明文仅用于编码，绝不落库/回显）
      * @param currentUserId 当前登录用户 ID
      */
+    @OperLog(module = "用户管理", action = "重置密码")
     public void resetPassword(Long userId, String newPassword, Long currentUserId) {
         ResetPasswordRequest check = new ResetPasswordRequest();
         check.setPassword(newPassword);
@@ -310,6 +316,7 @@ public class UserService {
      * @param userId  当前登录用户 ID（来自认证主体）
      * @param request 资料变更（字段均为可选）
      */
+    @OperLog(module = "个人中心", action = "修改")
     public void updateProfile(Long userId, UpdateProfileRequest request) {
         RequestValidator.requireValid(request);
         SysUser user = requireActiveUser(userId);
@@ -335,6 +342,7 @@ public class UserService {
      * @param userId  当前登录用户 ID（来自认证主体）
      * @param request 改密请求（原密码/新密码必填）
      */
+    @OperLog(module = "个人中心", action = "修改")
     public void changePassword(Long userId, ChangePasswordRequest request) {
         RequestValidator.requireValid(request);
         SysUser user = requireActiveUser(userId);

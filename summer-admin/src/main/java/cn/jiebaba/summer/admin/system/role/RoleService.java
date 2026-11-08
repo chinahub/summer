@@ -2,6 +2,7 @@ package cn.jiebaba.summer.admin.system.role;
 
 import cn.jiebaba.summer.admin.common.api.PageQuery;
 import cn.jiebaba.summer.admin.common.exception.BusinessException;
+import cn.jiebaba.summer.admin.common.log.OperLog;
 import cn.jiebaba.summer.admin.system.dept.SysDept;
 import cn.jiebaba.summer.admin.system.dept.SysDeptMapper;
 import cn.jiebaba.summer.admin.system.menu.SysMenu;
@@ -100,6 +101,7 @@ public class RoleService {
      * @param role 角色实体（roleName/roleKey 必填）
      * @return 生成的角色 ID
      */
+    @OperLog(module = "角色管理", action = "新增")
     public Long create(SysRole role) {
         validateUnique(role, null);
         if (role.getDataScope() == null || role.getDataScope().isBlank()) {
@@ -122,6 +124,7 @@ public class RoleService {
      *
      * @param role 变更字段（roleId 必填；为 null 的字段保持不变）
      */
+    @OperLog(module = "角色管理", action = "修改")
     public void update(SysRole role) {
         if (role == null || role.getRoleId() == null) {
             throw new BusinessException(400, "角色ID不能为空");
@@ -152,6 +155,7 @@ public class RoleService {
      *
      * @param roleId 角色 ID
      */
+    @OperLog(module = "角色管理", action = "删除")
     @Transactional
     public void delete(Long roleId) {
         SysRole role = get(roleId);
@@ -176,6 +180,7 @@ public class RoleService {
      * @param roleId  角色 ID
      * @param menuIds 菜单 ID 集合（可空，表示清空）
      */
+    @OperLog(module = "角色管理", action = "分配")
     @Transactional
     public void assignMenus(Long roleId, Set<Long> menuIds) {
         get(roleId);
@@ -207,6 +212,7 @@ public class RoleService {
      * @param scopeType 数据范围枚举（必填）
      * @param deptIds   自定义部门集合（仅 CUSTOM 需要，其余类型忽略）
      */
+    @OperLog(module = "角色管理", action = "分配")
     @Transactional
     public void assignDataScope(Long roleId, DataScopeType scopeType, Set<Long> deptIds) {
         SysRole role = get(roleId);

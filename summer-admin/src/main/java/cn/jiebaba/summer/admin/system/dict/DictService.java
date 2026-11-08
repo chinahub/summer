@@ -2,6 +2,7 @@ package cn.jiebaba.summer.admin.system.dict;
 
 import cn.jiebaba.summer.admin.common.api.PageQuery;
 import cn.jiebaba.summer.admin.common.exception.BusinessException;
+import cn.jiebaba.summer.admin.common.log.OperLog;
 import cn.jiebaba.summer.core.annotation.Service;
 import cn.jiebaba.summer.data.conditions.LambdaQueryWrapper;
 import cn.jiebaba.summer.data.page.IPage;
@@ -65,6 +66,7 @@ public class DictService {
     }
 
     /** 新增字典类型：dictType 在未删除类型中唯一，缺省状态正常。 */
+    @OperLog(module = "字典管理", action = "新增")
     public Long createType(SysDictType type) {
         validateType(type);
         validateTypeUnique(type, null);
@@ -77,6 +79,7 @@ public class DictService {
     }
 
     /** 修改字典类型：目标必须存在，非空字段覆盖，dictType 唯一性校验排除自身。 */
+    @OperLog(module = "字典管理", action = "修改")
     public void updateType(SysDictType type) {
         if (type == null || type.getDictId() == null) {
             throw new BusinessException(400, "字典ID不能为空");
@@ -103,6 +106,7 @@ public class DictService {
      *
      * @param dictId 字典类型 ID
      */
+    @OperLog(module = "字典管理", action = "删除")
     public void deleteType(Long dictId) {
         SysDictType type = getType(dictId);
         for (SysDictData data : dataMapper.selectList()) {
@@ -175,6 +179,7 @@ public class DictService {
     }
 
     /** 新增字典数据：同类型未删除行内 dictValue 唯一，缺省排序 0、状态正常、非默认。 */
+    @OperLog(module = "字典管理", action = "新增")
     public Long createData(SysDictData data) {
         validateData(data);
         validateDataUnique(data, null);
@@ -193,6 +198,7 @@ public class DictService {
     }
 
     /** 修改字典数据：目标必须存在，非空字段覆盖，同类型值唯一性校验排除自身。 */
+    @OperLog(module = "字典管理", action = "修改")
     public void updateData(SysDictData data) {
         if (data == null || data.getDictCode() == null) {
             throw new BusinessException(400, "字典编码不能为空");
@@ -228,6 +234,7 @@ public class DictService {
     }
 
     /** 删除字典数据（逻辑删除，del_flag 0→2）。 */
+    @OperLog(module = "字典管理", action = "删除")
     public void deleteData(Long dictCode) {
         getData(dictCode);
         dataMapper.deleteById(dictCode);

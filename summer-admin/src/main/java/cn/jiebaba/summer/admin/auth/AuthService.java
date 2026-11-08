@@ -17,6 +17,7 @@ import cn.jiebaba.summer.security.core.Authentication;
 import cn.jiebaba.summer.security.core.UsernamePasswordAuthenticationToken;
 import cn.jiebaba.summer.security.jwt.JwtClaims;
 import cn.jiebaba.summer.security.jwt.JwtEncoder;
+import cn.jiebaba.summer.security.userdetails.UserDetailsService;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -36,13 +37,15 @@ public class AuthService {
     private final JwtEncoder jwtEncoder;
     private final CaptchaService captchaService;
     private final LoginLogService loginLogService;
-    private final DatabaseUserDetailsService userDetailsService;
+    // 依赖 UserDetailsService 接口而非实现：该实现会被操作日志切面 JDK 代理，
+    // 按接口注入才能保证拿到代理 Bean；本应用唯一实现即 DatabaseUserDetailsService
+    private final UserDetailsService userDetailsService;
     private final MenuService menuService;
     private final long tokenTtlSeconds;
 
     public AuthService(AuthenticationManager authenticationManager, JwtEncoder jwtEncoder,
                        CaptchaService captchaService, LoginLogService loginLogService,
-                       DatabaseUserDetailsService userDetailsService, MenuService menuService,
+                       UserDetailsService userDetailsService, MenuService menuService,
                        Environment env) {
         this.authenticationManager = authenticationManager;
         this.jwtEncoder = jwtEncoder;
@@ -132,7 +135,8 @@ public class AuthService {
     /** 重新加载当前用户；用户不存在（令牌仍有效但账号已删）按 401 处理。 */
     private AdminUserDetails requireCurrentUser(String username) {
         try {
-            return userDetailsService.loadUserByUsername(username);
+            // 唯一实现为 DatabaseUserDetailsService（协变返回 AdminUserDetails），转换安全
+            return (AdminUserDetails) userDetailsService.loadUserByUsername(username);
         } catch (AuthenticationException e) {
             throw new BusinessException(401, "登录状态已失效，请重新登录");
         }

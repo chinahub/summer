@@ -1,6 +1,7 @@
 package cn.jiebaba.summer.admin.system.dept;
 
 import cn.jiebaba.summer.admin.common.exception.BusinessException;
+import cn.jiebaba.summer.admin.common.log.OperLog;
 import cn.jiebaba.summer.admin.system.security.DataScopeRule;
 import cn.jiebaba.summer.admin.system.user.SysUser;
 import cn.jiebaba.summer.admin.system.user.SysUserMapper;
@@ -84,6 +85,7 @@ public class DeptService {
      * @param dept 部门实体（deptName 必填，parentId 为空视为根）
      * @return 生成的部门 ID
      */
+    @OperLog(module = "部门管理", action = "新增")
     public Long create(SysDept dept) {
         if (dept == null || dept.getDeptName() == null || dept.getDeptName().isBlank()) {
             throw new BusinessException(400, "部门名称不能为空");
@@ -108,6 +110,7 @@ public class DeptService {
      *
      * @param dept 变更字段（deptId 必填；为 null 的字段保持不变）
      */
+    @OperLog(module = "部门管理", action = "修改")
     @Transactional
     public void update(SysDept dept) {
         if (dept == null || dept.getDeptId() == null) {
@@ -159,6 +162,7 @@ public class DeptService {
      *
      * @param deptId 部门 ID
      */
+    @OperLog(module = "部门管理", action = "删除")
     @Transactional
     public void delete(Long deptId) {
         get(deptId);

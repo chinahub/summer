@@ -1,6 +1,7 @@
 package cn.jiebaba.summer.admin.system.menu;
 
 import cn.jiebaba.summer.admin.common.exception.BusinessException;
+import cn.jiebaba.summer.admin.common.log.OperLog;
 import cn.jiebaba.summer.admin.system.role.SysRole;
 import cn.jiebaba.summer.admin.system.role.SysRoleMapper;
 import cn.jiebaba.summer.admin.system.role.SysRoleMenu;
@@ -136,6 +137,7 @@ public class MenuService {
      * @param menu 菜单实体（menuName/menuType 必填，C/M 必填 path）
      * @return 生成的菜单 ID
      */
+    @OperLog(module = "菜单管理", action = "新增")
     public Long create(SysMenu menu) {
         if (menu == null || menu.getMenuName() == null || menu.getMenuName().isBlank()) {
             throw new BusinessException(400, "菜单名称不能为空");
@@ -164,6 +166,7 @@ public class MenuService {
      *
      * @param menu 变更字段（menuId 必填；为 null 的字段保持不变）
      */
+    @OperLog(module = "菜单管理", action = "修改")
     public void update(SysMenu menu) {
         if (menu == null || menu.getMenuId() == null) {
             throw new BusinessException(400, "菜单ID不能为空");
@@ -218,6 +221,7 @@ public class MenuService {
      *
      * @param menuId 菜单 ID
      */
+    @OperLog(module = "菜单管理", action = "删除")
     public void delete(Long menuId) {
         get(menuId);
         for (SysMenu menu : menuMapper.selectList()) {

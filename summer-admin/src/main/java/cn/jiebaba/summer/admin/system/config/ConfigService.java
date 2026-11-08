@@ -2,6 +2,7 @@ package cn.jiebaba.summer.admin.system.config;
 
 import cn.jiebaba.summer.admin.common.api.PageQuery;
 import cn.jiebaba.summer.admin.common.exception.BusinessException;
+import cn.jiebaba.summer.admin.common.log.OperLog;
 import cn.jiebaba.summer.core.annotation.Service;
 import cn.jiebaba.summer.data.conditions.LambdaQueryWrapper;
 import cn.jiebaba.summer.data.page.IPage;
@@ -68,6 +69,7 @@ public class ConfigService {
     }
 
     /** 新增参数：键名非空且在未删除行内唯一；初始化标记键一律拒绝。 */
+    @OperLog(module = "参数管理", action = "新增")
     public Long create(SysConfig config) {
         validateRequired(config);
         rejectMarkerKey(config.getConfigKey());
@@ -87,6 +89,7 @@ public class ConfigService {
      * 修改参数：目标必须存在，非空字段覆盖，键名唯一性校验排除自身。
      * 已存在的初始化标记行不可修改，普通参数也不可改名为初始化标记键。
      */
+    @OperLog(module = "参数管理", action = "修改")
     public void update(SysConfig config) {
         if (config == null || config.getConfigId() == null) {
             throw new BusinessException(400, "参数ID不能为空");
@@ -117,6 +120,7 @@ public class ConfigService {
     }
 
     /** 删除参数（逻辑删除，del_flag 0→2）；初始化标记禁止删除。 */
+    @OperLog(module = "参数管理", action = "删除")
     public void delete(Long configId) {
         SysConfig existing = requireExisting(configId);
         if (INIT_MARKER_KEY.equals(existing.getConfigKey())) {

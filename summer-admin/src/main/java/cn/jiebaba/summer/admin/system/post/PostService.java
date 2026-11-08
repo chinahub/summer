@@ -2,6 +2,7 @@ package cn.jiebaba.summer.admin.system.post;
 
 import cn.jiebaba.summer.admin.common.api.PageQuery;
 import cn.jiebaba.summer.admin.common.exception.BusinessException;
+import cn.jiebaba.summer.admin.common.log.OperLog;
 import cn.jiebaba.summer.core.annotation.Service;
 import cn.jiebaba.summer.data.conditions.LambdaQueryWrapper;
 import cn.jiebaba.summer.data.page.IPage;
@@ -63,6 +64,7 @@ public class PostService {
     }
 
     /** 新增岗位：编码与名称在未删除岗位中唯一。 */
+    @OperLog(module = "岗位管理", action = "新增")
     public Long create(SysPost post) {
         validateUnique(post, null);
         if (post.getPostSort() == null) {
@@ -77,6 +79,7 @@ public class PostService {
     }
 
     /** 更新岗位：目标必须存在，编码与名称唯一性校验排除自身。 */
+    @OperLog(module = "岗位管理", action = "修改")
     public void update(SysPost post) {
         if (post == null || post.getPostId() == null) {
             throw new BusinessException(400, "岗位ID不能为空");
@@ -92,6 +95,7 @@ public class PostService {
      *
      * @param postId 岗位 ID
      */
+    @OperLog(module = "岗位管理", action = "删除")
     public void delete(Long postId) {
         get(postId);
         for (SysUserPost userPost : userPostMapper.selectList()) {

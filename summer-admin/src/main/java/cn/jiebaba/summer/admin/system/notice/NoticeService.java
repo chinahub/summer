@@ -2,6 +2,7 @@ package cn.jiebaba.summer.admin.system.notice;
 
 import cn.jiebaba.summer.admin.common.api.PageQuery;
 import cn.jiebaba.summer.admin.common.exception.BusinessException;
+import cn.jiebaba.summer.admin.common.log.OperLog;
 import cn.jiebaba.summer.core.annotation.Service;
 import cn.jiebaba.summer.data.conditions.LambdaQueryWrapper;
 import cn.jiebaba.summer.data.page.IPage;
@@ -82,6 +83,7 @@ public class NoticeService {
     }
 
     /** 新增公告：标题必填，状态缺省为已发布，仅接受合法状态值。 */
+    @OperLog(module = "通知公告", action = "新增")
     public Long create(SysNotice notice) {
         validateTitle(notice);
         applyStatus(notice);
@@ -90,6 +92,7 @@ public class NoticeService {
     }
 
     /** 修改公告：目标必须存在，非空字段覆盖，可切换发布状态。 */
+    @OperLog(module = "通知公告", action = "修改")
     public void update(SysNotice notice) {
         if (notice == null || notice.getNoticeId() == null) {
             throw new BusinessException(400, "公告ID不能为空");
@@ -113,6 +116,7 @@ public class NoticeService {
     }
 
     /** 删除公告（物理删除）。 */
+    @OperLog(module = "通知公告", action = "删除")
     public void delete(Long noticeId) {
         get(noticeId);
         noticeMapper.deleteById(noticeId);
