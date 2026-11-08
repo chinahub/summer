@@ -85,7 +85,9 @@ public class DictService {
         if (type.getDictName() != null) {
             existing.setDictName(type.getDictName());
         }
-        if (type.getDictType() != null) {
+        if (type.getDictType() != null && !type.getDictType().equals(existing.getDictType())) {
+            // 改名会孤立存量字典数据并绕过删除守卫：有数据时拒绝改名，无数据放行
+            assertNoData(type.getDictId());
             existing.setDictType(type.getDictType());
         }
         if (type.getStatus() != null) {
@@ -229,6 +231,16 @@ public class DictService {
     public void deleteData(Long dictCode) {
         getData(dictCode);
         dataMapper.deleteById(dictCode);
+    }
+
+    /** 校验目标类型下不存在未删除字典数据，否则抛 409（防止改名孤立存量数据）。 */
+    private void assertNoData(Long dictId) {
+        SysDictType type = getType(dictId);
+        for (SysDictData data : dataMapper.selectList()) {
+            if (!"2".equals(data.getDelFlag()) && Objects.equals(type.getDictType(), data.getDictType())) {
+                throw new BusinessException(409, "该字典类型下存在字典数据，不允许修改字典类型");
+            }
+        }
     }
 
     /** 校验字典类型名称与类型非空。 */

@@ -86,6 +86,45 @@ class DictServiceTest {
     }
 
     @Test
+    void updateTypeRejectsRenameWhenDataExists() {
+        Long id = dictService.createType(type("颜色", "sys_color"));
+        dictService.createData(data("sys_color", "红", "1", 1));
+
+        SysDictType rename = type("颜色", "sys_color_new");
+        rename.setDictId(id);
+        assertEquals(409, assertThrows(BusinessException.class,
+                () -> dictService.updateType(rename)).status());
+
+        // 类型保持原名，数据仍可按原类型读取（不被孤立）
+        assertEquals("sys_color", typeMapper.selectById(id).getDictType());
+        assertEquals(1, dictService.enabledItems("sys_color").size());
+    }
+
+    @Test
+    void updateTypeAllowsRenameWithoutData() {
+        Long id = dictService.createType(type("颜色", "sys_color"));
+
+        SysDictType rename = type("颜色", "sys_color_new");
+        rename.setDictId(id);
+        dictService.updateType(rename);
+
+        assertEquals("sys_color_new", typeMapper.selectById(id).getDictType());
+    }
+
+    @Test
+    void updateTypeAllowsNameEditKeepingTypeWithData() {
+        Long id = dictService.createType(type("颜色", "sys_color"));
+        dictService.createData(data("sys_color", "红", "1", 1));
+
+        SysDictType rename = type("颜色改", "sys_color");
+        rename.setDictId(id);
+        dictService.updateType(rename);
+
+        assertEquals("颜色改", typeMapper.selectById(id).getDictName());
+        assertEquals(1, dictService.enabledItems("sys_color").size());
+    }
+
+    @Test
     void updateTypeNotFoundReturns404() {
         SysDictType missing = type("不存在", "sys_none");
         missing.setDictId(999L);

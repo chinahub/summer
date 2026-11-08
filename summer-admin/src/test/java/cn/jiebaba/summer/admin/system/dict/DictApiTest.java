@@ -208,6 +208,42 @@ class DictApiTest {
     }
 
     @Test
+    void renameTypeWithDataIsRejectedAndGuardRemainsEffective() throws Exception {
+        String token = loginToken(ADMIN, ADMIN_PASSWORD);
+        String dictType = "test_api_rename";
+        HttpResponse<String> created = postJson("/api/system/dict/types",
+                "{\"dictName\":\"改名测试\",\"dictType\":\"" + dictType + "\"}", token);
+        assertEquals(200, created.statusCode());
+        long typeId = ((Number) json(created).get("data")).longValue();
+        postJson("/api/system/dict/data",
+                "{\"dictType\":\"" + dictType + "\",\"dictLabel\":\"项一\",\"dictValue\":\"1\",\"dictSort\":1}", token);
+
+        // 有数据时改名被拒：409 R 形，类型保持原名
+        HttpResponse<String> rename = putJson("/api/system/dict/types",
+                "{\"dictId\":" + typeId + ",\"dictName\":\"改名测试\",\"dictType\":\"test_api_renamed\"}", token);
+        assertEquals(409, rename.statusCode());
+        assertRShape(rename, 409);
+        HttpResponse<String> found = get("/api/system/dict/types/" + typeId, token);
+        assertEquals(dictType, ((Map<?, ?>) json(found).get("data")).get("dictType"));
+
+        // 数据仍按原类型可读，删除守卫依然生效
+        HttpResponse<String> enabled = get("/api/system/dict/data/type/" + dictType, token);
+        assertEquals(1, ((List<?>) json(enabled).get("data")).size());
+        HttpResponse<String> guarded = delete("/api/system/dict/types/" + typeId, token);
+        assertEquals(409, guarded.statusCode());
+
+        // 无数据类型允许校验过的改名
+        HttpResponse<String> empty = postJson("/api/system/dict/types",
+                "{\"dictName\":\"空类型\",\"dictType\":\"test_api_empty\"}", token);
+        long emptyId = ((Number) json(empty).get("data")).longValue();
+        HttpResponse<String> renamed = putJson("/api/system/dict/types",
+                "{\"dictId\":" + emptyId + ",\"dictName\":\"空类型\",\"dictType\":\"test_api_empty_new\"}", token);
+        assertEquals(200, renamed.statusCode());
+        HttpResponse<String> renamedGet = get("/api/system/dict/types/" + emptyId, token);
+        assertEquals("test_api_empty_new", ((Map<?, ?>) json(renamedGet).get("data")).get("dictType"));
+    }
+
+    @Test
     void enabledEndpointExcludesDisabledAndSorts() throws Exception {
         String token = loginToken(ADMIN, ADMIN_PASSWORD);
         String dictType = "test_api_order";
