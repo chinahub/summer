@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vitest/globals"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@@/*": ["src/.umi/*"],
+      "@umijs/max": ["src/.umi/exports.ts"],
+      "@umijs/max/typings": ["src/.umi/typings.d.ts"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}

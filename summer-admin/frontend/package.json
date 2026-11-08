@@ -1,0 +1,33 @@
+{
+  "name": "summer-admin-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.34.9",
+  "scripts": {
+    "dev": "cross-env PORT=8000 max dev",
+    "build": "max build",
+    "build:prod": "max build",
+    "lint": "max lint && tsc --noEmit",
+    "postinstall": "max setup",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.3.4",
+    "@tanstack/react-query": "^5.107.1",
+    "@umijs/max": "^4.7.32",
+    "antd": "^6.7.0",
+    "axios": "^1.21.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zustand": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "axios-mock-adapter": "^2.1.0",
+    "cross-env": "^10.0.0",
+    "jsdom": "^31.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  }
+}

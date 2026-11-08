@@ -1,0 +1,13 @@
+# 前端依赖与构建产物
+node_modules/
+dist/
+coverage/
+
+# Umi 生成文件
+src/.umi/
+src/.umi-production/
+.umi/
+.umi-production/
+
+# 本地环境文件
+.env.local
