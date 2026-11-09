@@ -37,16 +37,20 @@ public class UserController {
         this.userService = userService;
     }
 
-    /** 用户分页列表：登录名/手机号模糊与状态过滤，列表受当前用户数据范围约束。 */
+    /**
+     * 用户分页列表：登录名/手机号模糊与状态过滤，支持部门树筛选（deptId 匹配部门子树，
+     * 与数据范围按 AND 组合）；列表受当前用户数据范围约束。
+     */
     @PreAuthorize(authorities = {"system:user:list"})
     @GetMapping("/list")
     public R<TableData<UserVo>> list(PageQuery pageQuery,
                                      @AuthenticationPrincipal AdminUserDetails currentUser,
                                      @RequestParam(value = "userName", required = false) String userName,
                                      @RequestParam(value = "phonenumber", required = false) String phonenumber,
-                                     @RequestParam(value = "status", required = false) String status) {
+                                     @RequestParam(value = "status", required = false) String status,
+                                     @RequestParam(value = "deptId", required = false) Long deptId) {
         IPage<UserVo> page = userService.page(pageQuery, currentUser.getUserId(),
-                userName, phonenumber, status);
+                userName, phonenumber, status, deptId);
         return R.ok(TableData.of(page));
     }
 

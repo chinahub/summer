@@ -244,6 +244,26 @@ public class RoleService {
     }
 
     /**
+     * 查询角色当前已授权的菜单 ID 列表（角色不存在抛 404），供编辑弹窗回填勾选。
+     */
+    public List<Long> menuIdsOf(Long roleId) {
+        get(roleId);
+        LambdaQueryWrapper<SysRoleMenu> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SysRoleMenu::getRoleId, roleId);
+        return roleMenuMapper.selectList(wrapper).stream().map(SysRoleMenu::getMenuId).toList();
+    }
+
+    /**
+     * 查询角色自定义数据范围的部门 ID 列表（角色不存在抛 404），供编辑弹窗回填勾选。
+     */
+    public List<Long> deptIdsOf(Long roleId) {
+        get(roleId);
+        LambdaQueryWrapper<SysRoleDept> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SysRoleDept::getRoleId, roleId);
+        return roleDeptMapper.selectList(wrapper).stream().map(SysRoleDept::getDeptId).toList();
+    }
+
+    /**
      * 物理删除角色的全部菜单关联：Central BaseMapper 缺少条件删除，
      * 使用预编译参数经 SqlExecutor 执行，杜绝 SQL 拼接注入。
      */

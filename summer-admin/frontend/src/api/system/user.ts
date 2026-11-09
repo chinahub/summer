@@ -22,13 +22,14 @@ export interface UserVo {
   postNames?: string[];
 }
 
-/** 用户分页查询参数：与后端 /list 查询参数一致（deptId 仅前端树筛选） */
+/** 用户分页查询参数：与后端 /list 查询参数一致；deptId 为部门树筛选（服务端按子树过滤） */
 export interface UserPageParams {
   pageNum: number;
   pageSize: number;
   userName?: string;
   phonenumber?: string;
   status?: string;
+  deptId?: number;
 }
 
 /** 新增/修改用户表单值：roleIds/postIds 为空数组时转换为不携带（后端 null=保持） */
@@ -114,9 +115,25 @@ export function buildUpdateUserPayload(
   };
 }
 
-/** 用户分页列表（数据范围由后端控制） */
+/** 用户分页列表（数据范围由后端控制；deptId 选中时服务端按部门子树过滤） */
 export function listUserApi(params: UserPageParams): Promise<TableData<UserVo>> {
-  return request<TableData<UserVo>>({ url: '/system/users/list', method: 'get', params });
+  const requestParams: Record<string, unknown> = {
+    pageNum: params.pageNum,
+    pageSize: params.pageSize,
+  };
+  if (params.userName) {
+    requestParams.userName = params.userName;
+  }
+  if (params.phonenumber) {
+    requestParams.phonenumber = params.phonenumber;
+  }
+  if (params.status) {
+    requestParams.status = params.status;
+  }
+  if (params.deptId !== undefined) {
+    requestParams.deptId = params.deptId;
+  }
+  return request<TableData<UserVo>>({ url: '/system/users/list', method: 'get', params: requestParams });
 }
 
 /** 用户详情（越权时后端返回 403） */

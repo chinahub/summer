@@ -3,7 +3,7 @@ import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App as AntdApp, Button, Card, Col, Popconfirm, Row, Space, Tag, Tree } from 'antd';
 import { useRef, useState } from 'react';
-import { collectDeptAndChildren, buildDeptTree, visibleDeptApi } from '@/api/system/dept';
+import { buildDeptTree, visibleDeptApi } from '@/api/system/dept';
 import { listPostApi } from '@/api/system/post';
 import { listRoleApi } from '@/api/system/role';
 import {
@@ -109,10 +109,10 @@ export default function UserPage() {
   });
 
   const columns: ProColumns<UserVo>[] = [
-    { title: '编号', dataIndex: 'userId', width: 70, hideInSearch: true },
+    { title: '编号', dataIndex: 'userId', width: 70, search: false },
     { title: '登录名称', dataIndex: 'userName', width: 110 },
-    { title: '用户昵称', dataIndex: 'nickName', width: 110, hideInSearch: true },
-    { title: '部门', dataIndex: 'deptName', width: 110, hideInSearch: true },
+    { title: '用户昵称', dataIndex: 'nickName', width: 110, search: false },
+    { title: '部门', dataIndex: 'deptName', width: 110, search: false },
     {
       title: '手机号码',
       dataIndex: 'phonenumber',
@@ -135,7 +135,7 @@ export default function UserPage() {
       title: '角色',
       dataIndex: 'roleNames',
       width: 160,
-      hideInSearch: true,
+      search: false,
       render: (_, row) =>
         (row.roleNames ?? []).map((name) => <Tag key={name}>{name}</Tag>),
     },
@@ -143,10 +143,10 @@ export default function UserPage() {
       title: '岗位',
       dataIndex: 'postNames',
       width: 140,
-      hideInSearch: true,
+      search: false,
       render: (_, row) => (row.postNames ?? []).map((name) => <Tag key={name}>{name}</Tag>),
     },
-    { title: '创建时间', dataIndex: 'createTime', width: 160, hideInSearch: true },
+    { title: '创建时间', dataIndex: 'createTime', width: 160, search: false },
     {
       title: '操作',
       valueType: 'option',
@@ -217,7 +217,10 @@ export default function UserPage() {
               blockNode
               selectedKeys={selectedDept ? [selectedDept] : []}
               treeData={buildDeptTree(depts)}
-              onSelect={(keys) => setSelectedDept(keys.length > 0 ? Number(keys[0]) : undefined)}
+              onSelect={(keys) => {
+                setSelectedDept(keys.length > 0 ? Number(keys[0]) : undefined);
+                actionRef.current?.reload();
+              }}
             />
           )}
         </Card>
@@ -253,14 +256,10 @@ export default function UserPage() {
               userName: params.userName,
               phonenumber: params.phonenumber,
               status: params.status,
+              // 部门树筛选：服务端按部门子树过滤，与数据范围 AND 组合
+              deptId: selectedDept,
             });
-            // 后端列表不支持部门过滤参数：选中部门时按当前数据范围子树做前端筛选
-            let rows = data.rows;
-            if (selectedDept) {
-              const scoped = collectDeptAndChildren(depts, selectedDept);
-              rows = rows.filter((row) => row.deptId !== undefined && scoped.has(row.deptId));
-            }
-            return { data: rows, total: data.total, success: true };
+            return { data: data.rows, total: data.total, success: true };
           }}
         />
       </Col>

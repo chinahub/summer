@@ -14,6 +14,12 @@ export default defineConfig({
       '@@/core/helmet.ts': resolve(__dirname, 'src/test/helmetStub.ts'),
       // 测试中 'umi' 以最小桩替代，避免把 CLI/esbuild 依赖链载入 jsdom
       umi: resolve(__dirname, 'src/test/umiStub.ts'),
+      // pro-components 3.x 无 exports 映射，Node ESM 会错误落到 CJS lib（与 type:module 冲突）；
+      // 显式指向 ESM es 构建并由下方 inline 交给 vite 解析目录导入，等同 webpack 的 module 字段行为
+      '@ant-design/pro-components': resolve(
+        __dirname,
+        'node_modules/@ant-design/pro-components/es/index.js',
+      ),
       // 强制单实例 React：renderer-react 的 pnpm 嵌套依赖默认解析到 react@18 副本，
       // 这里统一指向 react@19 兼容变体（路径与 pnpm-lock 绑定，变更需同步）
       react: resolve(__dirname, 'node_modules/react'),
@@ -41,7 +47,9 @@ export default defineConfig({
       deps: {
         // renderer-react 经绝对路径引入，默认被外部化导致双 React 实例；
         // 内联后与其余源码共享同一模块解析（单实例 React）
-        inline: [/renderer-react/, /react-router/, /react-helmet-async/, /react-side-effect/],
+        // pro-components 3.x ESM 构建内部使用目录导入（'./card'），Node ESM 不支持；
+      // 交给 vite 转换管线解析（等同 webpack module 字段行为），勿走 Node 外部化
+      inline: [/renderer-react/, /react-router/, /react-helmet-async/, /react-side-effect/, /@ant-design\/pro-/],
       },
     },
   },

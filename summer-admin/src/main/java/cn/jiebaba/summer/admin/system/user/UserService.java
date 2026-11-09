@@ -82,8 +82,19 @@ public class UserService {
     }
 
     /**
+     * 分页查询用户列表（无部门过滤）：等价于 deptId 传 null 的完整形态，
+     * 保留签名兼容既有调用方。
+     */
+    public IPage<UserVo> page(PageQuery query, Long currentUserId,
+                              String userName, String phonenumber, String status) {
+        return page(query, currentUserId, userName, phonenumber, status, null);
+    }
+
+    /**
      * 分页查询用户列表：登录名/手机号模糊、状态精确过滤，按用户 ID 升序；
-     * 数据范围经服务端解析后以预编译条件附加到查询。
+     * 数据范围经服务端解析后以预编译条件附加到查询；deptId 为选中部门时
+     * 仅返回该部门子树（含自身）内的用户，且与数据范围条件按 AND 组合——
+     * 部门过滤只会收窄、绝不放宽数据范围。
      * 注意框架 Wrapper 查询不自动附加逻辑删除条件，需显式声明 del_flag = '0'。
      *
      * @param query         分页参数
@@ -91,10 +102,11 @@ public class UserService {
      * @param userName      登录名模糊词（可空）
      * @param phonenumber   手机号模糊词（可空）
      * @param status        状态过滤（可空）
+     * @param deptId        部门树筛选（可空；匹配该部门子树，含自身）
      * @return 用户 VO 分页结果（部门/角色/岗位名称批量组装）
      */
     public IPage<UserVo> page(PageQuery query, Long currentUserId,
-                              String userName, String phonenumber, String status) {
+                              String userName, String phonenumber, String status, Long deptId) {
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq("del_flag", "0");
         if (userName != null && !userName.isBlank()) {
@@ -107,9 +119,36 @@ public class UserService {
             wrapper.eq(SysUser::getStatus, status);
         }
         dataScopeResolver.resolve(currentUserId).applyToUser(wrapper, currentUserId);
+        if (deptId != null) {
+            // 框架 LambdaQueryWrapper 未提供 lambda 版 in：直接给预编译列名
+            wrapper.in("dept_id", deptSubtreeIds(deptId));
+        }
         wrapper.orderByAsc(SysUser::getUserId);
         IPage<SysUser> page = userMapper.selectPage(query.toPage(), wrapper);
         return mapPage(page);
+    }
+
+    /**
+     * 计算部门子树（含自身）的全部部门 ID：基于 sys_dept.ancestors 祖级路径
+     * 匹配后代，与部门移动时维护 ancestors 的逻辑保持一致。
+     *
+     * @param deptId 选中部门 ID
+     * @return 该部门及全部后代的 ID 集合
+     */
+    private Set<Long> deptSubtreeIds(Long deptId) {
+        Set<Long> ids = new LinkedHashSet<>();
+        ids.add(deptId);
+        LambdaQueryWrapper<SysDept> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq("del_flag", "0");
+        String needle = "," + deptId;
+        for (SysDept dept : deptMapper.selectList(wrapper)) {
+            String ancestors = dept.getAncestors();
+            if (ancestors != null && (ancestors.equals(String.valueOf(deptId))
+                    || ancestors.contains(needle))) {
+                ids.add(dept.getDeptId());
+            }
+        }
+        return ids;
     }
 
     /**

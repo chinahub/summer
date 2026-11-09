@@ -354,6 +354,34 @@ class RoleServiceTest {
         assertTrue(roleDeptIdsFromDb(2L).isEmpty());
     }
 
+    @Test
+    void menuIdsOfReadsBackAssignedMenusOnRealDatabase() {
+        RoleService bean = app.context().getBean(RoleService.class);
+
+        bean.assignMenus(2L, Set.of(100L, 101L));
+        assertEquals(Set.of(100L, 101L), new HashSet<>(bean.menuIdsOf(2L)));
+
+        // 清空授权后读回为空集合；未知角色抛 404
+        bean.assignMenus(2L, Set.of());
+        assertTrue(bean.menuIdsOf(2L).isEmpty());
+        assertEquals(404, assertThrows(BusinessException.class,
+                () -> bean.menuIdsOf(999L)).status());
+    }
+
+    @Test
+    void deptIdsOfReadsBackCustomDeptsOnRealDatabase() {
+        RoleService bean = app.context().getBean(RoleService.class);
+
+        bean.assignDataScope(2L, DataScopeType.CUSTOM, Set.of(2L, 3L));
+        assertEquals(Set.of(2L, 3L), new HashSet<>(bean.deptIdsOf(2L)));
+
+        // 非 CUSTOM 范围清空自定义部门后读回为空集合；未知角色抛 404
+        bean.assignDataScope(2L, DataScopeType.ALL, null);
+        assertTrue(bean.deptIdsOf(2L).isEmpty());
+        assertEquals(404, assertThrows(BusinessException.class,
+                () -> bean.deptIdsOf(999L)).status());
+    }
+
     // ---------- 辅助 ----------
 
     private Set<Long> menuIdsOfRole(Long roleId) {

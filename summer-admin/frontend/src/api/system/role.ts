@@ -120,6 +120,16 @@ export function deleteRoleApi(roleId: number): Promise<void> {
   return request<void>({ url: `/system/roles/${roleId}`, method: 'delete' });
 }
 
+/** 角色自定义数据范围已选中的部门 ID 列表（编辑弹窗回填） */
+export function getRoleDeptIdsApi(roleId: number): Promise<number[]> {
+  return request<number[]>({ url: `/system/roles/${roleId}/depts`, method: 'get' });
+}
+
+/** 角色当前已授权的菜单 ID 列表（编辑弹窗回填） */
+export function getRoleMenuIdsApi(roleId: number): Promise<number[]> {
+  return request<number[]>({ url: `/system/roles/${roleId}/menus`, method: 'get' });
+}
+
 /** 替换角色菜单授权（整体一个事务） */
 export function assignRoleMenusApi(roleId: number, menuIds: number[]): Promise<void> {
   return request<void>({

@@ -16,6 +16,7 @@ import cn.jiebaba.summer.web.annotation.RequestMapping;
 import cn.jiebaba.summer.web.annotation.RequestParam;
 import cn.jiebaba.summer.web.annotation.RestController;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -91,6 +92,20 @@ public class RoleController {
                 body == null ? null : body.getScopeType(),
                 body == null ? null : body.getDeptIds());
         return R.ok();
+    }
+
+    /** 角色当前已授权的菜单 ID 列表（编辑弹窗回填勾选）。 */
+    @PreAuthorize(authorities = {"system:role:query"})
+    @GetMapping("/{roleId}/menus")
+    public R<List<Long>> menuIds(@PathVariable("roleId") Long roleId) {
+        return R.ok(roleService.menuIdsOf(roleId));
+    }
+
+    /** 角色自定义数据范围的部门 ID 列表（编辑弹窗回填勾选）。 */
+    @PreAuthorize(authorities = {"system:role:query"})
+    @GetMapping("/{roleId}/depts")
+    public R<List<Long>> dataScopeDeptIds(@PathVariable("roleId") Long roleId) {
+        return R.ok(roleService.deptIdsOf(roleId));
     }
 
     /** 菜单授权请求体：menuIds 为空表示清空角色全部菜单授权。 */

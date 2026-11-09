@@ -29,6 +29,8 @@ import {
   dataScopeCodeFromEnum,
   dataScopeEnumFromCode,
   DATA_SCOPE_ENUMS,
+  getRoleDeptIdsApi,
+  getRoleMenuIdsApi,
   listRoleApi,
   type DataScopeTypeName,
 } from '@/api/system/role';
@@ -158,6 +160,22 @@ describe('API 端点：method/url/载荷与后端 Controller 一致', () => {
       params: { pageNum: 1, pageSize: 10, userName: 'z', status: '0' },
     });
 
+    // 部门树筛选：deptId 原样传给服务端（服务端按子树过滤，AND 数据范围）
+    await listUserApi({ pageNum: 1, pageSize: 10, deptId: 2 });
+    expect(requestMock.request).toHaveBeenLastCalledWith({
+      url: '/system/users/list',
+      method: 'get',
+      params: { pageNum: 1, pageSize: 10, deptId: 2 },
+    });
+
+    // 空字符串条件不发送，避免后端 like '%%'
+    await listUserApi({ pageNum: 1, pageSize: 10, userName: '' });
+    expect(requestMock.request).toHaveBeenLastCalledWith({
+      url: '/system/users/list',
+      method: 'get',
+      params: { pageNum: 1, pageSize: 10 },
+    });
+
     await createUserApi(buildCreateUserPayload({ userName: 'a', nickName: 'A', password: 'x123456', deptId: 1 }));
     expect(requestMock.request).toHaveBeenLastCalledWith({
       url: '/system/users',
@@ -220,6 +238,18 @@ describe('API 端点：method/url/载荷与后端 Controller 一致', () => {
       url: '/system/roles/2/data-scope',
       method: 'put',
       data: { scopeType: 'CUSTOM', deptIds: [5] },
+    });
+
+    // 编辑弹窗回填：角色已授权菜单与 CUSTOM 已选部门读回端点
+    await getRoleMenuIdsApi(2);
+    expect(requestMock.request).toHaveBeenLastCalledWith({
+      url: '/system/roles/2/menus',
+      method: 'get',
+    });
+    await getRoleDeptIdsApi(2);
+    expect(requestMock.request).toHaveBeenLastCalledWith({
+      url: '/system/roles/2/depts',
+      method: 'get',
     });
   });
 

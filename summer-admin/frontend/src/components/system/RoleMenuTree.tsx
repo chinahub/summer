@@ -7,6 +7,8 @@ interface RoleMenuTreeProps {
   open: boolean;
   roleName?: string;
   menus: MenuVo[];
+  /** 角色当前已授权的菜单 ID（编辑弹窗回填勾选） */
+  initialCheckedKeys?: number[];
   submitting: boolean;
   onCancel: () => void;
   /** 提交勾选的菜单 ID 集合（后端整体替换授权） */
@@ -18,18 +20,19 @@ export default function RoleMenuTree({
   open,
   roleName,
   menus,
+  initialCheckedKeys,
   submitting,
   onCancel,
   onSubmit,
 }: RoleMenuTreeProps) {
   const [checkedKeys, setCheckedKeys] = useState<React.Key[]>([]);
 
-  // 打开时重置勾选（后端未提供查询角色已授权菜单的接口）
+  // 打开时回填角色当前已授权菜单（无初始值时从空开始）
   useEffect(() => {
     if (open) {
-      setCheckedKeys([]);
+      setCheckedKeys(initialCheckedKeys ?? []);
     }
-  }, [open]);
+  }, [open, initialCheckedKeys]);
 
   const onCheck: TreeProps['onCheck'] = (keys) => {
     setCheckedKeys(Array.isArray(keys) ? keys : keys.checked);

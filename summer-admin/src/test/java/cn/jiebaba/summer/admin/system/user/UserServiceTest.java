@@ -392,6 +392,30 @@ class UserServiceTest {
     }
 
     @Test
+    void pageDeptIdNarrowsToSubtreeAndNeverWidensDataScope() throws Exception {
+        UserService bean = app.context().getBean(UserService.class);
+        insertScopeFixtures();
+
+        try {
+            // ALL 范围 + 部门 2 子树（含部门 4）：1、3、4、5、7 共 5 人；部门 3：2、6 共 2 人
+            assertEquals(5, bean.page(new PageQuery(), 1L, null, null, null, 2L).total());
+            assertEquals(2, bean.page(new PageQuery(), 1L, null, null, null, 3L).total());
+            // AND 收窄绝不放宽：DEPT 范围用户 3（仅部门 2 的 1、3、4）过滤部门 4 必须为空
+            assertEquals(3, bean.page(new PageQuery(), 3L, null, null, null, 2L).total());
+            assertEquals(0, bean.page(new PageQuery(), 3L, null, null, null, 4L).total());
+            // SELF 范围用户 7（部门 4）：部门 4 子树仅见自己；
+            // SELF 范围用户 2（部门 3，在部门 2 子树外）过滤部门 2 必须为空、部门 1 子树含自己
+            assertEquals(1, bean.page(new PageQuery(), 7L, null, null, null, 4L).total());
+            assertEquals(0, bean.page(new PageQuery(), 2L, null, null, null, 2L).total());
+            assertEquals(1, bean.page(new PageQuery(), 2L, null, null, null, 1L).total());
+            // 不存在的部门：空结果而非全量
+            assertEquals(0, bean.page(new PageQuery(), 1L, null, null, null, 999L).total());
+        } finally {
+            deleteScopeFixtures();
+        }
+    }
+
+    @Test
     void pageAssemblesDeptRolePostNamesWithoutSecretsOnRealDatabase() {
         UserService bean = app.context().getBean(UserService.class);
 

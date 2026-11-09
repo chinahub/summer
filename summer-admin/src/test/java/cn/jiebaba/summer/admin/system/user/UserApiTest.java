@@ -103,6 +103,25 @@ class UserApiTest {
     }
 
     @Test
+    void adminListFiltersByDeptIdSubtreeOnServerSide() throws Exception {
+        String token = loginToken(ADMIN, ADMIN_PASSWORD);
+
+        // 部门 2：仅 admin（user 在部门 3）；部门 1 子树：两人；不存在部门：空
+        HttpResponse<String> dept2 = get("/api/system/users/list?pageNum=1&pageSize=20&deptId=2", token);
+        assertEquals(200, dept2.statusCode(), "部门过滤失败: " + dept2.body());
+        Map<?, ?> table2 = (Map<?, ?>) json(dept2).get("data");
+        assertEquals(1, ((Number) table2.get("total")).intValue());
+
+        HttpResponse<String> dept1 = get("/api/system/users/list?pageNum=1&pageSize=20&deptId=1", token);
+        assertEquals(200, dept1.statusCode());
+        assertEquals(2, ((Number) ((Map<?, ?>) json(dept1).get("data")).get("total")).intValue());
+
+        HttpResponse<String> missing = get("/api/system/users/list?pageNum=1&pageSize=20&deptId=999", token);
+        assertEquals(200, missing.statusCode());
+        assertEquals(0, ((Number) ((Map<?, ?>) json(missing).get("data")).get("total")).intValue());
+    }
+
+    @Test
     void adminGetByIdReturnsVoAndDeniedForUnknown() throws Exception {
         String token = loginToken(ADMIN, ADMIN_PASSWORD);
 

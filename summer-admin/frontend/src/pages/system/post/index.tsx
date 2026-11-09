@@ -83,10 +83,10 @@ export default function PostPage() {
   });
 
   const columns: ProColumns<PostVo>[] = [
-    { title: '编号', dataIndex: 'postId', width: 70, hideInSearch: true },
+    { title: '编号', dataIndex: 'postId', width: 70, search: false },
     { title: '岗位名称', dataIndex: 'postName', width: 160 },
     { title: '岗位编码', dataIndex: 'postCode', width: 160 },
-    { title: '排序', dataIndex: 'postSort', width: 70, hideInSearch: true },
+    { title: '排序', dataIndex: 'postSort', width: 70, search: false },
     {
       title: '状态',
       dataIndex: 'status',
@@ -97,7 +97,7 @@ export default function PostPage() {
         '1': { text: '停用' },
       },
     },
-    { title: '创建时间', dataIndex: 'createTime', width: 170, hideInSearch: true },
+    { title: '创建时间', dataIndex: 'createTime', width: 170, search: false },
     {
       title: '操作',
       valueType: 'option',

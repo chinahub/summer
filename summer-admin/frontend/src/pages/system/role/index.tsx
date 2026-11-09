@@ -12,6 +12,8 @@ import {
   DATA_SCOPE_OPTIONS,
   dataScopeEnumFromCode,
   deleteRoleApi,
+  getRoleDeptIdsApi,
+  getRoleMenuIdsApi,
   listRoleApi,
   updateRoleApi,
   type DataScopeTypeName,
@@ -51,9 +53,23 @@ export default function RolePage() {
     enabled: menuTarget !== null,
     retry: 1,
   });
+  // 编辑弹窗回填：角色当前已授权菜单（仅打开分配菜单时请求）
+  const { data: checkedMenuIds = [] } = useQuery({
+    queryKey: ['system-role-menus', menuTarget?.roleId],
+    queryFn: () => getRoleMenuIdsApi(menuTarget!.roleId),
+    enabled: menuTarget !== null,
+    retry: 1,
+  });
   const { data: depts = [] } = useQuery({
     queryKey: ['system-depts-visible'],
     queryFn: visibleDeptApi,
+    enabled: scopeTarget !== null,
+    retry: 1,
+  });
+  // 编辑弹窗回填：角色 CUSTOM 范围当前已选部门（仅打开数据权限时请求）
+  const { data: checkedDeptIds = [] } = useQuery({
+    queryKey: ['system-role-depts', scopeTarget?.roleId],
+    queryFn: () => getRoleDeptIdsApi(scopeTarget!.roleId),
     enabled: scopeTarget !== null,
     retry: 1,
   });
@@ -112,6 +128,7 @@ export default function RolePage() {
     onSuccess: () => {
       message.success('菜单授权成功');
       setMenuTarget(null);
+      queryClient.invalidateQueries({ queryKey: ['system-role-menus'] });
     },
     onError: (error) => onError(error, '菜单授权失败'),
   });
@@ -130,20 +147,21 @@ export default function RolePage() {
       message.success('数据权限保存成功');
       setScopeTarget(null);
       queryClient.invalidateQueries({ queryKey: ['system-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['system-role-depts'] });
     },
     onError: (error) => onError(error, '数据权限保存失败'),
   });
 
   const columns: ProColumns<RoleVo>[] = [
-    { title: '编号', dataIndex: 'roleId', width: 70, hideInSearch: true },
+    { title: '编号', dataIndex: 'roleId', width: 70, search: false },
     { title: '角色名称', dataIndex: 'roleName', width: 140 },
     { title: '权限字符', dataIndex: 'roleKey', width: 140 },
-    { title: '排序', dataIndex: 'roleSort', width: 70, hideInSearch: true },
+    { title: '排序', dataIndex: 'roleSort', width: 70, search: false },
     {
       title: '数据范围',
       dataIndex: 'dataScope',
       width: 150,
-      hideInSearch: true,
+      search: false,
       render: (_, row) => {
         const scope = dataScopeEnumFromCode(row.dataScope);
         const option = DATA_SCOPE_OPTIONS.find((o) => o.value === scope);
@@ -162,7 +180,7 @@ export default function RolePage() {
       render: (_, row) =>
         row.status === '0' ? <Tag color="success">正常</Tag> : <Tag color="error">停用</Tag>,
     },
-    { title: '创建时间', dataIndex: 'createTime', width: 160, hideInSearch: true },
+    { title: '创建时间', dataIndex: 'createTime', width: 160, search: false },
     {
       title: '操作',
       valueType: 'option',
@@ -285,6 +303,7 @@ export default function RolePage() {
         open={menuTarget !== null}
         roleName={menuTarget?.roleName}
         menus={menus}
+        initialCheckedKeys={checkedMenuIds}
         submitting={menuMutation.isPending}
         onCancel={() => setMenuTarget(null)}
         onSubmit={(menuIds) => {
@@ -297,6 +316,7 @@ export default function RolePage() {
         open={scopeTarget !== null}
         role={scopeTarget}
         depts={depts}
+        initialDeptIds={checkedDeptIds}
         submitting={scopeMutation.isPending}
         onCancel={() => setScopeTarget(null)}
         onSubmit={(scopeType, deptIds) => {

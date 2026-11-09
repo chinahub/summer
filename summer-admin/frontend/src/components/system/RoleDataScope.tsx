@@ -13,6 +13,8 @@ interface RoleDataScopeProps {
   open: boolean;
   role: RoleVo | null;
   depts: DeptVo[];
+  /** 角色 CUSTOM 范围当前已选部门 ID（编辑弹窗回填勾选） */
+  initialDeptIds?: number[];
   submitting: boolean;
   onCancel: () => void;
   /** 提交数据范围枚举名与自定义部门集合（CUSTOM 时 deptIds 非空） */
@@ -24,6 +26,7 @@ export default function RoleDataScope({
   open,
   role,
   depts,
+  initialDeptIds,
   submitting,
   onCancel,
   onSubmit,
@@ -33,14 +36,14 @@ export default function RoleDataScope({
   const [checkedKeys, setCheckedKeys] = useState<React.Key[]>([]);
   const deptTree = useMemo(() => buildDeptTree(depts), [depts]);
 
-  // 打开时按角色当前数据范围编码回填
+  // 打开时按角色当前数据范围编码回填，并回填 CUSTOM 已选部门
   useEffect(() => {
     if (!open) {
       return;
     }
     setScopeType(dataScopeEnumFromCode(role?.dataScope) ?? 'ALL');
-    setCheckedKeys([]);
-  }, [open, role]);
+    setCheckedKeys(initialDeptIds ?? []);
+  }, [open, role, initialDeptIds]);
 
   const onCheck: TreeProps['onCheck'] = (keys) => {
     setCheckedKeys(Array.isArray(keys) ? keys : keys.checked);
