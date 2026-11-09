@@ -26,8 +26,8 @@ import java.util.regex.Pattern;
 /**
  * 菜单服务：菜单 CRUD 与父子关系校验（类型/路由/权限标识/同级重名/防环）、
  * 按用户聚合权限标识与动态路由。user_id=1 获得全部启用菜单的权限与路由；
- * 普通用户只取其启用角色的菜单并集；停用菜单与停用角色一律排除；
- * 按钮（F）只进权限集合，不进入路由树。关系读取用 selectList() 全量后内存过滤，
+ * 普通用户只取其启用且未逻辑删除角色的菜单并集；停用菜单、停用角色与
+ * 已删除角色一律排除；按钮（F）只进权限集合，不进入路由树。关系读取用 selectList() 全量后内存过滤，
  * 与 DataScopeResolver 保持一致。
  */
 @Service
@@ -54,7 +54,7 @@ public class MenuService {
 
     /**
      * 用户权限标识集合：超级管理员（user_id=1）取全部启用菜单的权限；
-     * 普通用户取其启用角色（status=0）的菜单并集中的启用菜单权限；
+     * 普通用户取其启用且未逻辑删除角色（status=0 且 del_flag='0'）的菜单并集中的启用菜单权限；
      * 用户不存在或无启用角色时为空。按钮权限包含在内，返回按字典序稳定排序。
      *
      * @param userId 用户 ID
@@ -238,8 +238,8 @@ public class MenuService {
     }
 
     /**
-     * 用户可见菜单集合：超级管理员返回全部启用菜单；普通用户返回其启用角色
-     * （sys_user_role ∩ sys_role status=0）经 sys_role_menu 关联的启用菜单并集；
+     * 用户可见菜单集合：超级管理员返回全部启用菜单；普通用户返回其启用且未逻辑删除角色
+     * （sys_user_role ∩ sys_role status=0 且 del_flag='0'）经 sys_role_menu 关联的启用菜单并集；
      * 用户不存在或无启用角色时返回空列表（拒绝默认，不扩大权限）。
      */
     private List<SysMenu> menusForUser(Long userId) {
@@ -258,7 +258,9 @@ public class MenuService {
         }
         List<SysRole> enabledRoles = new ArrayList<>();
         for (SysRole role : roleMapper.selectList()) {
-            if (roleIds.contains(role.getRoleId()) && "0".equals(role.getStatus())) {
+            // 仅启用且未逻辑删除的角色参与授权（与 DatabaseUserDetailsService 一致，拒绝默认）
+            if (roleIds.contains(role.getRoleId()) && "0".equals(role.getStatus())
+                    && "0".equals(role.getDelFlag())) {
                 enabledRoles.add(role);
             }
         }

@@ -171,6 +171,32 @@ class DataScopeResolverTest {
     }
 
     @Test
+    void deletedRoleIsIgnoredAndDenies() {
+        user(10L, 2L);
+        // 已逻辑删除的角色即使数据范围为 ALL 也必须排除（与 DatabaseUserDetailsService 一致，拒绝默认）
+        role(20L, "1", "0", "2");
+        assign(10L, 20L);
+
+        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
+        resolver.resolve(10L).applyToUser(wrapper, 10L);
+        assertEquals("1=0", wrapper.sqlSegment());
+    }
+
+    @Test
+    void deletedAllRoleDoesNotUnionWithLiveRole() {
+        user(10L, 2L);
+        role(20L, "1", "0", "2");
+        role(21L, "3", "0");
+        assign(10L, 20L);
+        assign(10L, 21L);
+
+        // 已删除的 ALL 角色不得把整个并集放大为无限制
+        DataScopeRule rule = resolver.resolve(10L);
+        assertFalse(rule.isUnrestricted());
+        assertEquals(Set.of(2L), rule.deptIds());
+    }
+
+    @Test
     void unknownScopeCodeContributesNothing() {
         user(10L, 2L);
         role(20L, "9", "0");
@@ -285,10 +311,15 @@ class DataScopeResolverTest {
     }
 
     private void role(Long id, String dataScope, String status) {
+        role(id, dataScope, status, "0");
+    }
+
+    private void role(Long id, String dataScope, String status, String delFlag) {
         SysRole r = new SysRole();
         r.setRoleId(id);
         r.setDataScope(dataScope);
         r.setStatus(status);
+        r.setDelFlag(delFlag);
         roleMapper.insert(r);
     }
 

@@ -12,6 +12,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -22,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * <ul>
  *   <li>删除中途失败（计数器表触发器，确保必然发生在第二行）：REQUIRED 事务
  *       必须回滚已删行，且不得留下"清空"审计；</li>
+ *   <li>批量删除中途失败：同一 REQUIRED 事务语义，已删行必须随事务回滚，
+ *       绝不留半批删除；</li>
  *   <li>审计插入失败（BEFORE INSERT 触发器）：REQUIRES_NEW 审计失败被隔离，
  *       清空结果照常提交，调用方仍得到成功返回。</li>
  * </ul>
@@ -47,6 +50,34 @@ class LogClearTransactionTest {
             app.webServer().stop();
             app.context().close();
             app = null;
+        }
+    }
+
+    @Test
+    void operBatchDeleteFailureRollsBackAllRows() throws Exception {
+        seedOperLogs(3);
+        createCounterTrigger("sys_oper_log");
+        try {
+            List<Long> ids = operLogIds();
+            assertThrows(RuntimeException.class, () -> logQueryService.deleteOperLogs(ids),
+                    "第二条删除失败必须向外抛出，由全局异常处理");
+            assertEquals(3, countRows("sys_oper_log"), "REQUIRED 事务必须回滚批量删除已删的行，不允许部分删除");
+        } finally {
+            dropTrigger("trg_clear_probe", "sys_oper_log");
+        }
+    }
+
+    @Test
+    void loginBatchDeleteFailureRollsBackAllRows() throws Exception {
+        seedLoginLogs(3);
+        createCounterTrigger("sys_login_log");
+        try {
+            List<Long> ids = loginLogIds();
+            assertThrows(RuntimeException.class, () -> logQueryService.deleteLoginLogs(ids),
+                    "第二条删除失败必须向外抛出，由全局异常处理");
+            assertEquals(3, countRows("sys_login_log"), "登录日志批量删除失败同样不得部分删除");
+        } finally {
+            dropTrigger("trg_clear_probe", "sys_login_log");
         }
     }
 
@@ -181,6 +212,28 @@ class LogClearTransactionTest {
              ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM " + table)) {
             rs.next();
             return rs.getLong(1);
+        }
+    }
+
+    private static List<Long> operLogIds() throws Exception {
+        try (Connection conn = testConnection(); Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery("SELECT oper_id FROM sys_oper_log ORDER BY oper_id")) {
+            List<Long> ids = new java.util.ArrayList<>();
+            while (rs.next()) {
+                ids.add(rs.getLong(1));
+            }
+            return ids;
+        }
+    }
+
+    private static List<Long> loginLogIds() throws Exception {
+        try (Connection conn = testConnection(); Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery("SELECT info_id FROM sys_login_log ORDER BY info_id")) {
+            List<Long> ids = new java.util.ArrayList<>();
+            while (rs.next()) {
+                ids.add(rs.getLong(1));
+            }
+            return ids;
         }
     }
 

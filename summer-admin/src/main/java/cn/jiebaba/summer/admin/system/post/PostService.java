@@ -119,6 +119,10 @@ public class PostService {
             if (Objects.equals(other.getPostId(), excludeId)) {
                 continue;
             }
+            // 逻辑删除行不参与唯一性：生成列唯一索引同样只在未删除行生效，语义必须一致
+            if ("2".equals(other.getDelFlag())) {
+                continue;
+            }
             if (post.getPostCode().equals(other.getPostCode())) {
                 throw new BusinessException(409, "岗位编码已存在");
             }

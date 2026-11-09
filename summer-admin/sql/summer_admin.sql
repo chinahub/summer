@@ -8,7 +8,11 @@
 --      覆盖已有数据、不会复活已删除的种子行/关系；若脚本曾中断（无标记），
 --      重跑会以 INSERT IGNORE 补齐缺失种子后再落标记；
 --   3. 密码仅保存 BCrypt 哈希（admin/admin123、user/user123，仅用于本地首次登录）；
---   4. 核心实体带 del_flag 逻辑删除（0存在 2删除），关系表与日志表物理删除。
+--   4. 核心实体带 del_flag 逻辑删除（0存在 2删除），关系表与日志表物理删除；
+--   5. 逻辑删除表的自然唯一键由"生成列 + 唯一索引"承载：生成列仅在
+--      del_flag='0' 时等于自然键、删除后为 NULL，因此同名记录删除后可直接重建，
+--      且多条已删除记录可共存（复合键 (key,del_flag) 在第二轮删除周期即冲突，
+--      故不采用）。实体不感知生成列，ORM 仅映射业务字段。
 --
 -- 测试环境说明：测试执行器会跳过本文件头部的 CREATE DATABASE / USE 语句，
 -- 在 summer_admin_test 库上重放其余全部语句（见 MySqlTestDatabase）。
@@ -57,12 +61,13 @@ CREATE TABLE IF NOT EXISTS sys_user (
     del_flag    CHAR(1)      NOT NULL DEFAULT '0' COMMENT '删除标志（0存在 2删除）',
     login_ip    VARCHAR(128) NULL     DEFAULT '' COMMENT '最后登录IP',
     login_date  DATETIME     NULL     DEFAULT NULL COMMENT '最后登录时间',
+    user_name_active VARCHAR(64) GENERATED ALWAYS AS (IF(del_flag = '0', user_name, NULL)) STORED COMMENT '登录名唯一索引载体（仅未删除行非空）',
     create_by   VARCHAR(64)  NULL     DEFAULT '' COMMENT '创建者',
     create_time DATETIME     NULL     DEFAULT NULL COMMENT '创建时间',
     update_by   VARCHAR(64)  NULL     DEFAULT '' COMMENT '更新者',
     update_time DATETIME     NULL     DEFAULT NULL COMMENT '更新时间',
     PRIMARY KEY (user_id),
-    UNIQUE KEY uk_sys_user_name (user_name),
+    UNIQUE KEY uk_sys_user_name (user_name_active),
     KEY idx_sys_user_dept (dept_id),
     CONSTRAINT fk_sys_user_dept FOREIGN KEY (dept_id) REFERENCES sys_dept (dept_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表';
@@ -77,13 +82,15 @@ CREATE TABLE IF NOT EXISTS sys_post (
     post_sort   INT         NOT NULL DEFAULT 0 COMMENT '显示排序',
     status      CHAR(1)     NOT NULL DEFAULT '0' COMMENT '状态（0正常 1停用）',
     del_flag    CHAR(1)     NOT NULL DEFAULT '0' COMMENT '删除标志（0存在 2删除）',
+    post_code_active VARCHAR(64) GENERATED ALWAYS AS (IF(del_flag = '0', post_code, NULL)) STORED COMMENT '岗位编码唯一索引载体（仅未删除行非空）',
+    post_name_active VARCHAR(64) GENERATED ALWAYS AS (IF(del_flag = '0', post_name, NULL)) STORED COMMENT '岗位名称唯一索引载体（仅未删除行非空）',
     create_by   VARCHAR(64) NULL     DEFAULT '' COMMENT '创建者',
     create_time DATETIME    NULL     DEFAULT NULL COMMENT '创建时间',
     update_by   VARCHAR(64) NULL     DEFAULT '' COMMENT '更新者',
     update_time DATETIME    NULL     DEFAULT NULL COMMENT '更新时间',
     PRIMARY KEY (post_id),
-    UNIQUE KEY uk_sys_post_code (post_code),
-    UNIQUE KEY uk_sys_post_name (post_name)
+    UNIQUE KEY uk_sys_post_code (post_code_active),
+    UNIQUE KEY uk_sys_post_name (post_name_active)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '岗位表';
 
 -- -----------------------------------------------------------------------------
@@ -109,12 +116,15 @@ CREATE TABLE IF NOT EXISTS sys_role (
     data_scope  CHAR(1)     NOT NULL DEFAULT '1' COMMENT '数据范围（1全部 2自定义 3本部门 4本部门及以下 5仅本人）',
     status      CHAR(1)     NOT NULL DEFAULT '0' COMMENT '状态（0正常 1停用）',
     del_flag    CHAR(1)     NOT NULL DEFAULT '0' COMMENT '删除标志（0存在 2删除）',
+    role_key_active  VARCHAR(64) GENERATED ALWAYS AS (IF(del_flag = '0', role_key, NULL)) STORED COMMENT '权限字符唯一索引载体（仅未删除行非空）',
+    role_name_active VARCHAR(64) GENERATED ALWAYS AS (IF(del_flag = '0', role_name, NULL)) STORED COMMENT '角色名称唯一索引载体（仅未删除行非空）',
     create_by   VARCHAR(64) NULL     DEFAULT '' COMMENT '创建者',
     create_time DATETIME    NULL     DEFAULT NULL COMMENT '创建时间',
     update_by   VARCHAR(64) NULL     DEFAULT '' COMMENT '更新者',
     update_time DATETIME    NULL     DEFAULT NULL COMMENT '更新时间',
     PRIMARY KEY (role_id),
-    UNIQUE KEY uk_sys_role_key (role_key)
+    UNIQUE KEY uk_sys_role_key (role_key_active),
+    UNIQUE KEY uk_sys_role_name (role_name_active)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '角色表';
 
 -- -----------------------------------------------------------------------------
@@ -189,12 +199,13 @@ CREATE TABLE IF NOT EXISTS sys_dict_type (
     dict_type   VARCHAR(100) NOT NULL DEFAULT '' COMMENT '字典类型',
     status      CHAR(1)      NOT NULL DEFAULT '0' COMMENT '状态（0正常 1停用）',
     del_flag    CHAR(1)      NOT NULL DEFAULT '0' COMMENT '删除标志（0存在 2删除）',
+    dict_type_active VARCHAR(100) GENERATED ALWAYS AS (IF(del_flag = '0', dict_type, NULL)) STORED COMMENT '字典类型唯一索引载体（仅未删除行非空）',
     create_by   VARCHAR(64)  NULL     DEFAULT '' COMMENT '创建者',
     create_time DATETIME     NULL     DEFAULT NULL COMMENT '创建时间',
     update_by   VARCHAR(64)  NULL     DEFAULT '' COMMENT '更新者',
     update_time DATETIME     NULL     DEFAULT NULL COMMENT '更新时间',
     PRIMARY KEY (dict_id),
-    UNIQUE KEY uk_sys_dict_type (dict_type)
+    UNIQUE KEY uk_sys_dict_type (dict_type_active)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '字典类型表';
 
 -- -----------------------------------------------------------------------------
@@ -230,12 +241,13 @@ CREATE TABLE IF NOT EXISTS sys_config (
     config_type   CHAR(1)       NOT NULL DEFAULT 'N' COMMENT '系统内置（Y是 N否）',
     status        CHAR(1)       NOT NULL DEFAULT '0' COMMENT '状态（0正常 1停用）',
     del_flag      CHAR(1)       NOT NULL DEFAULT '0' COMMENT '删除标志（0存在 2删除）',
+    config_key_active VARCHAR(100) GENERATED ALWAYS AS (IF(del_flag = '0', config_key, NULL)) STORED COMMENT '参数键名唯一索引载体（仅未删除行非空）',
     create_by     VARCHAR(64)   NULL     DEFAULT '' COMMENT '创建者',
     create_time   DATETIME      NULL     DEFAULT NULL COMMENT '创建时间',
     update_by     VARCHAR(64)   NULL     DEFAULT '' COMMENT '更新者',
     update_time   DATETIME      NULL     DEFAULT NULL COMMENT '更新时间',
     PRIMARY KEY (config_id),
-    UNIQUE KEY uk_sys_config_key (config_key)
+    UNIQUE KEY uk_sys_config_key (config_key_active)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统参数表';
 
 -- -----------------------------------------------------------------------------

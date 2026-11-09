@@ -133,6 +133,34 @@ class MenuServiceTest {
     }
 
     @Test
+    void deletedRoleContributesNothing() {
+        // 已逻辑删除的角色（del_flag='2'）必须像停用角色一样被排除，拒绝默认
+        deletedRole(7L, "ghost");
+        user(5L);
+        userRole(5L, 7L);
+        roleMenu(7L, 100L);
+        roleMenu(7L, 1001L);
+
+        assertTrue(menuService.permissionsForUser(5L).isEmpty());
+        assertTrue(menuService.routersForUser(5L).isEmpty());
+    }
+
+    @Test
+    void deletedRoleDoesNotUnionWithLiveRole() {
+        // 已删除角色与存活角色并存时，只合并存活角色的菜单
+        deletedRole(7L, "ghost");
+        user(6L);
+        userRole(6L, 7L);
+        userRole(6L, 2L);
+        roleMenu(7L, 101L);
+        roleMenu(2L, 100L);
+        roleMenu(2L, 1001L);
+
+        assertEquals(Set.of("system:user:add", "system:user:list"),
+                menuService.permissionsForUser(6L));
+    }
+
+    @Test
     void unknownUserGetsNothing() {
         assertTrue(menuService.permissionsForUser(999L).isEmpty());
         assertTrue(menuService.routersForUser(999L).isEmpty());
@@ -380,6 +408,17 @@ class MenuServiceTest {
         roleMapper.insert(role);
     }
 
+    /** 直接写入已逻辑删除的角色（内存 Mapper 不回填自增主键，显式指定 ID）。 */
+    private void deletedRole(Long id, String key) {
+        SysRole role = new SysRole();
+        role.setRoleId(id);
+        role.setRoleName(key);
+        role.setRoleKey(key);
+        role.setStatus("0");
+        role.setDelFlag("2");
+        roleMapper.insert(role);
+    }
+
     private void user(Long id) {
         SysUser user = new SysUser();
         user.setUserId(id);
@@ -437,7 +476,7 @@ class MenuServiceTest {
         }
     }
 
-    /** 带逻辑删除语义的 sys_role 内存 Mapper。 */
+    /** sys_role 内存 Mapper：selectList 返回全部行（含已删除，与真实 BaseMapper 一致），删除过滤由被测代码负责。 */
     private static final class RoleFake extends InMemoryBaseMapper<SysRole> implements SysRoleMapper {
         @Override
         protected Long idOf(SysRole entity) {
@@ -446,7 +485,7 @@ class MenuServiceTest {
 
         @Override
         public List<SysRole> selectList() {
-            return rows.stream().filter(r -> !"2".equals(r.getDelFlag())).toList();
+            return List.copyOf(rows);
         }
 
         @Override

@@ -432,6 +432,10 @@ public class UserService {
             if (Objects.equals(other.getUserId(), excludeId)) {
                 continue;
             }
+            // 逻辑删除行不参与唯一性：生成列唯一索引同样只在未删除行生效，语义必须一致
+            if ("2".equals(other.getDelFlag())) {
+                continue;
+            }
             if (userName.equals(other.getUserName())) {
                 throw new BusinessException(409, "登录名已存在");
             }

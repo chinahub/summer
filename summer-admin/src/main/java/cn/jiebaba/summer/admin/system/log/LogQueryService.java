@@ -84,13 +84,15 @@ public class LogQueryService {
     }
 
     /**
-     * 批量删除操作日志：ID 列表必填；不存在的 ID 静默忽略；
+     * 批量删除操作日志：ID 列表必填；不存在的 ID 静默忽略；整体一个 REQUIRED
+     * 事务——任一删除失败回滚全部已删行，绝不部分删除。
      * 返回实际删除条数。
      *
      * @param ids 待删除主键列表
      * @return 实际删除条数
      * @throws BusinessException ID 列表为空 400
      */
+    @Transactional
     @OperLog(module = "操作日志", action = "删除")
     public int deleteOperLogs(List<Long> ids) {
         List<Long> normalized = normalizeIds(ids);
@@ -162,12 +164,15 @@ public class LogQueryService {
     }
 
     /**
-     * 批量删除登录日志：语义同 {@link #deleteOperLogs(List)}。
+     * 批量删除登录日志：ID 列表必填；不存在的 ID 静默忽略；整体一个 REQUIRED
+     * 事务——任一删除失败回滚全部已删行，绝不部分删除。语义同
+     * {@link #deleteOperLogs(List)}。
      *
      * @param ids 待删除主键列表
      * @return 实际删除条数
      * @throws BusinessException ID 列表为空 400
      */
+    @Transactional
     @OperLog(module = "登录日志", action = "删除")
     public int deleteLoginLogs(List<Long> ids) {
         List<Long> normalized = normalizeIds(ids);

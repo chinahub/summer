@@ -80,6 +80,10 @@ export default function LoginPage() {
       message.success('登录成功');
       history.push('/');
     } catch (error) {
+      // 登录Api 可能已成功并写入令牌：后续 userinfo/routers 失败时必须回滚
+      // 本地令牌与用户/权限状态，否则残留令牌会让用户卡在半登录态无法重试
+      useUserStore.getState().reset();
+      usePermissionStore.getState().reset();
       message.error(error instanceof Error ? error.message : '登录失败');
       form.setFieldsValue({ code: undefined });
       refreshCaptcha();

@@ -34,7 +34,8 @@ import static org.junit.jupiter.api.Assertions.fail;
  *   <li>启动真实 {@code java -jar} 进程（独立端口 18089，仅连接隔离测试库
  *       {@code summer_admin_test}），轮询 {@code /api/health} 等待就绪；</li>
  *   <li>{@code /} 返回前端页面、hash 资源可访问、{@code /api/health} 返回 UP；</li>
- *   <li>未知 {@code /api/not-found} 返回 404 且不回退为 index.html。</li>
+ *   <li>未知 {@code /api/not-found} 匿名请求先经 JWT 过滤器返回 401（若已认证
+ *       但无匹配路由则为 404），绝不回退为 index.html。</li>
  * </ul>
  * 进程在 {@code @AfterAll} 中无条件关闭（先 destroy，超时后 forcibly），绝不遗留。
  * 由 failsafe 在 package 之后运行；凭据只从进程环境变量读取。

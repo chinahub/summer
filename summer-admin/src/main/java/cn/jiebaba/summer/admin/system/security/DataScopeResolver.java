@@ -20,7 +20,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * 数据范围解析器：根据当前用户全部启用角色求可见范围并集，返回
+ * 数据范围解析器：根据当前用户全部启用且未逻辑删除的角色求可见范围并集，返回
  * {@link DataScopeRule}。超级管理员（user_id=1）绕过限制直接无限制；
  * 多角色按并集处理，任一 ALL 即无限制；无角色/空自定义集合/未知范围
  * 均按拒绝默认收敛为永假条件，不扩大权限。
@@ -71,7 +71,9 @@ public class DataScopeResolver {
         }
         List<SysRole> roles = new ArrayList<>();
         for (SysRole role : roleMapper.selectList()) {
-            if (roleIds.contains(role.getRoleId()) && "0".equals(role.getStatus())) {
+            // 仅启用且未逻辑删除的角色参与数据范围（与 DatabaseUserDetailsService 一致，拒绝默认）
+            if (roleIds.contains(role.getRoleId()) && "0".equals(role.getStatus())
+                    && "0".equals(role.getDelFlag())) {
                 roles.add(role);
             }
         }

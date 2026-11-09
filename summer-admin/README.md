@@ -1,6 +1,6 @@
 # summer-admin
 
-基于 [summer-boot](https://github.com/) 4.2.0（自研 JDK 25 轻量级微服务框架）的独立管理后台示例，参考 RuoYi-Vue-Plus 的核心后台业务与 plus-ui `6.X-React` 分支的页面交互重写。
+基于 [summer-boot](https://central.sonatype.com/artifact/cn.jiebaba.summer/summer-boot) 4.2.0（自研 JDK 25 轻量级微服务框架）的独立管理后台示例，参考 RuoYi-Vue-Plus 的核心后台业务与 plus-ui `6.X-React` 分支的页面交互重写。
 
 - 后端：Java 25 + summer-boot（嵌入式 HTTP / ORM / JWT 安全，零 Servlet），MySQL 8 持久化。
 - 前端：React 19 + TypeScript + Ant Design 6 + Ant Design Pro Components + Umi Max + Zustand + TanStack Query。

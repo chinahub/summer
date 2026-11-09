@@ -290,6 +290,10 @@ public class RoleService {
             if (Objects.equals(other.getRoleId(), excludeId)) {
                 continue;
             }
+            // 逻辑删除行不参与唯一性：生成列唯一索引同样只在未删除行生效，语义必须一致
+            if ("2".equals(other.getDelFlag())) {
+                continue;
+            }
             if (role.getRoleName().equals(other.getRoleName())) {
                 throw new BusinessException(409, "角色名称已存在");
             }
