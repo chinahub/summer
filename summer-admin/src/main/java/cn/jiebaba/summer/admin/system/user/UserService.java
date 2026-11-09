@@ -131,6 +131,8 @@ public class UserService {
     /**
      * 计算部门子树（含自身）的全部部门 ID：基于 sys_dept.ancestors 祖级路径
      * 匹配后代，与部门移动时维护 ancestors 的逻辑保持一致。
+     * 必须按逗号分段后精确比对：deptId=1 不得因 "0,11" 包含子串 ",1"
+     * 而误纳部门 11 的后代（子串匹配会把 11 的子树错挂到 1 下）。
      *
      * @param deptId 选中部门 ID
      * @return 该部门及全部后代的 ID 集合
@@ -140,12 +142,17 @@ public class UserService {
         ids.add(deptId);
         LambdaQueryWrapper<SysDept> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq("del_flag", "0");
-        String needle = "," + deptId;
+        String target = String.valueOf(deptId);
         for (SysDept dept : deptMapper.selectList(wrapper)) {
             String ancestors = dept.getAncestors();
-            if (ancestors != null && (ancestors.equals(String.valueOf(deptId))
-                    || ancestors.contains(needle))) {
-                ids.add(dept.getDeptId());
+            if (ancestors == null || ancestors.isBlank()) {
+                continue;
+            }
+            for (String segment : ancestors.split(",")) {
+                if (segment.trim().equals(target)) {
+                    ids.add(dept.getDeptId());
+                    break;
+                }
             }
         }
         return ids;

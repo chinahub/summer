@@ -416,6 +416,38 @@ class UserServiceTest {
     }
 
     @Test
+    void pageDeptIdMatchesAncestorsBySegmentNotSubstring() throws Exception {
+        UserService bean = app.context().getBean(UserService.class);
+        String hash = "$2a$10$ZpE7F1UWG89uVdA8kNtOEOZNE30PLK/DrkHHkyACLrVKy9PC1C1Fa";
+        // 部门 11（根下，ancestors '0'）与其子部门 12（ancestors '0,11'）：
+        // "0,11" 含子串 ",1"，子串匹配会误把 12 挂到部门 1 的子树
+        try (Connection conn = testConnection(); Statement st = conn.createStatement()) {
+            st.execute("INSERT INTO sys_dept (dept_id, parent_id, ancestors, dept_name, order_num, status, del_flag, create_by, create_time) VALUES "
+                    + "(11, 0, '0', '段匹配甲部', 99, '0', '0', 'admin', NOW()),"
+                    + "(12, 11, '0,11', '段匹配乙部', 99, '0', '0', 'admin', NOW())");
+            st.execute("INSERT INTO sys_user (user_id, dept_id, user_name, nick_name, password, status, del_flag, create_by, create_time) VALUES "
+                    + "(81, 12, 'seg_substring', '段匹配用户', '" + hash + "', '0', '0', 'admin', NOW())");
+            try {
+                // ALL 范围过滤部门 1：合法后代（部门 2/3 的 admin、user）保留，
+                // 部门 11 的后代（部门 12 用户）必须排除
+                IPage<UserVo> byOne = bean.page(new PageQuery(), 1L, null, null, null, 1L);
+                assertEquals(2, byOne.total());
+                assertTrue(byOne.records().stream().anyMatch(u -> "admin".equals(u.getUserName())));
+                assertFalse(byOne.records().stream()
+                        .anyMatch(u -> "seg_substring".equals(u.getUserName())));
+
+                // 过滤部门 11：其后代部门 12 正常命中
+                IPage<UserVo> byEleven = bean.page(new PageQuery(), 1L, null, null, null, 11L);
+                assertEquals(1, byEleven.total());
+                assertEquals("seg_substring", byEleven.records().get(0).getUserName());
+            } finally {
+                st.execute("DELETE FROM sys_user WHERE user_id = 81");
+                st.execute("DELETE FROM sys_dept WHERE dept_id IN (11, 12)");
+            }
+        }
+    }
+
+    @Test
     void pageAssemblesDeptRolePostNamesWithoutSecretsOnRealDatabase() {
         UserService bean = app.context().getBean(UserService.class);
 
