@@ -17,7 +17,7 @@ import {
 import { App as AntdApp, Avatar, Breadcrumb, Dropdown, Layout, Menu, Spin } from 'antd';
 import type { MenuProps } from 'antd';
 import { history, useLocation } from '@umijs/max';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import LayoutSettings from '@/components/layout/LayoutSettings';
 import Screenfull from '@/components/layout/Screenfull';
@@ -65,29 +65,31 @@ function buildMenuItems(routes: RouterVo[], parentPath = ''): MenuItem[] {
     if (route.hidden) {
       continue;
     }
-    if (isExternalPath(route.path)) {
+    // 先用父路径拼出完整路径再判外链：后端子菜单是相对路径（如 user），
+    // 直接判原始 path 会把所有子菜单误当外部链接，点击后整页跳出 SPA
+    const fullPath = parentPath ? joinRoutePath(parentPath, route.path) : route.path;
+    if (isExternalPath(fullPath)) {
       // 外部链接仅放行安全协议，危险协议（javascript:/data: 等）直接剔除
-      if (isSafeExternalUrl(route.path)) {
+      if (isSafeExternalUrl(fullPath)) {
         items.push({
-          key: route.path,
+          key: fullPath,
           icon: MENU_ICONS[route.meta?.icon ?? ''],
           label: (
-            <a href={route.path} target="_blank" rel="noreferrer">
-              {route.meta?.title ?? route.path}
+            <a href={fullPath} target="_blank" rel="noreferrer">
+              {route.meta?.title ?? fullPath}
             </a>
           ),
         });
       }
       continue;
     }
-    const fullPath = parentPath ? joinRoutePath(parentPath, route.path) : route.path;
     const children = route.children?.length
       ? buildMenuItems(route.children, fullPath)
       : [];
     items.push({
       key: fullPath,
       icon: MENU_ICONS[route.meta?.icon ?? ''],
-      label: route.meta?.title ?? route.path,
+      label: route.meta?.title ?? fullPath,
       ...(children.length ? { children } : {}),
     });
   }
@@ -231,7 +233,15 @@ export default function BasicLayout() {
   const siderItems =
     layout === 'mix' ? buildMenuItems(mixSiderRoutes, activeRootPath) : allMenuItems;
 
-  const openKeys = useMemo(() => computeOpenKeys(menuRoutes, pathname), [menuRoutes, pathname]);
+  // 受控展开目录：初始为当前路径的祖先目录，路由变化时补全，用户可手动开合
+  const ancestorOpenKeys = useMemo(
+    () => computeOpenKeys(menuRoutes, pathname),
+    [menuRoutes, pathname],
+  );
+  const [openKeys, setOpenKeys] = useState<string[]>(ancestorOpenKeys);
+  useEffect(() => {
+    setOpenKeys((prev) => Array.from(new Set([...prev, ...ancestorOpenKeys])));
+  }, [ancestorOpenKeys]);
   const breadcrumbItems = useMemo(
     () => computeBreadcrumb(routes, pathname).map((title) => ({ title })),
     [routes, pathname],
@@ -267,7 +277,8 @@ export default function BasicLayout() {
             mode="inline"
             theme={dark ? 'dark' : 'light'}
             selectedKeys={[pathname]}
-            defaultOpenKeys={collapsed ? undefined : openKeys}
+            openKeys={collapsed ? undefined : openKeys}
+            onOpenChange={(keys) => setOpenKeys(keys as string[])}
             items={[homeItem, ...siderItems]}
             onClick={({ key }) => history.push(String(key))}
           />
@@ -293,6 +304,7 @@ export default function BasicLayout() {
           <Screenfull />
           <LayoutSettings />
           <Dropdown
+            trigger={['click']}
             menu={{
               items: userMenuItems,
               onClick: ({ key }) => {
