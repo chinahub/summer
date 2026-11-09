@@ -4,6 +4,7 @@ import cn.jiebaba.summer.admin.common.api.R;
 import cn.jiebaba.summer.admin.auth.AdminUserDetails;
 import cn.jiebaba.summer.admin.system.security.DataScopeResolver;
 import cn.jiebaba.summer.security.annotation.AuthenticationPrincipal;
+import cn.jiebaba.summer.security.annotation.PreAuthorize;
 import cn.jiebaba.summer.web.annotation.DeleteMapping;
 import cn.jiebaba.summer.web.annotation.GetMapping;
 import cn.jiebaba.summer.web.annotation.PathVariable;
@@ -29,6 +30,7 @@ public class DeptController {
     }
 
     /** 全部部门列表（部门树由前端基于 parentId 组装）。 */
+    @PreAuthorize(authorities = {"system:dept:list"})
     @GetMapping("/list")
     public R<List<SysDept>> list() {
         return R.ok(deptService.list());
@@ -45,18 +47,21 @@ public class DeptController {
     }
 
     /** 部门详情。 */
+    @PreAuthorize(authorities = {"system:dept:query"})
     @GetMapping("/{deptId}")
     public R<SysDept> get(@PathVariable("deptId") Long deptId) {
         return R.ok(deptService.get(deptId));
     }
 
     /** 新增部门。 */
+    @PreAuthorize(authorities = {"system:dept:add"})
     @PostMapping
     public R<Long> create(@RequestBody SysDept dept) {
         return R.ok(deptService.create(dept));
     }
 
     /** 修改部门（含移动，同步维护后代 ancestors）。 */
+    @PreAuthorize(authorities = {"system:dept:edit"})
     @PutMapping
     public R<Void> update(@RequestBody SysDept dept) {
         deptService.update(dept);
@@ -64,6 +69,7 @@ public class DeptController {
     }
 
     /** 删除部门（有下级部门或归属用户时拒绝）。 */
+    @PreAuthorize(authorities = {"system:dept:remove"})
     @DeleteMapping("/{deptId}")
     public R<Void> delete(@PathVariable("deptId") Long deptId) {
         deptService.delete(deptId);

@@ -7,7 +7,7 @@
     <!-- 独立 POM：不继承 summer-parent、不加入根 reactor <modules>，可整体复制到任意目录单独构建 -->
     <groupId>cn.jiebaba.summer</groupId>
     <artifactId>summer-admin</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>summer-admin</name>
     <description>summer-admin 后端：基于 summer-boot 4.2.0 的独立管理后台服务</description>
 
@@ -16,10 +16,17 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.release>25</maven.compiler.release>
         <maven.compiler.plugin.version>3.14.0</maven.compiler.plugin.version>
+        <maven.resources.plugin.version>3.4.0</maven.resources.plugin.version>
         <maven.surefire.plugin.version>3.5.5</maven.surefire.plugin.version>
         <summer.version>4.2.0</summer.version>
         <mysql.version>8.4.0</mysql.version>
         <junit.jupiter.version>5.12.2</junit.jupiter.version>
+        <!-- 前端工具链固定版本，与 frontend/package.json 的 packageManager 保持一致 -->
+        <frontend.maven.plugin.version>1.15.1</frontend.maven.plugin.version>
+        <node.version>v24.15.0</node.version>
+        <pnpm.version>10.34.9</pnpm.version>
+        <!-- 仅后端调试时以 -Dskip.frontend=true 跳过前端构建；发布验收不得跳过 -->
+        <skip.frontend>false</skip.frontend>
     </properties>
 
     <dependencies>
@@ -62,7 +69,113 @@
                     <!-- 进程内启动 HTTP 服务做冒烟测试：共用 Maven JVM，避免 fork 开销 -->
                     <forkCount>0</forkCount>
                     <useManifestOnlyJar>false</useManifestOnlyJar>
+                    <!-- *IT 由 failsafe 在 package 之后执行，surefire 绝不预跑（JAR 尚不存在） -->
+                    <excludes>
+                        <exclude>**/*IT</exclude>
+                        <exclude>**/*ITCase</exclude>
+                    </excludes>
                 </configuration>
+            </plugin>
+            <!-- failsafe：package 之后对真实可执行 JAR 做集成验证，进程在 afterwards 无条件关闭 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${maven.surefire.plugin.version}</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <it.jar>${project.build.directory}/${project.build.finalName}-boot.jar</it.jar>
+                    </systemPropertyVariables>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- 可复现前端构建：固定 Node/pnpm 版本，frozen install + 生产构建；dist 只进 target -->
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>${frontend.maven.plugin.version}</version>
+                <configuration>
+                    <workingDirectory>${basedir}/frontend</workingDirectory>
+                    <installDirectory>${basedir}/frontend</installDirectory>
+                    <skip>${skip.frontend}</skip>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>install-node-and-pnpm</id>
+                        <goals>
+                            <goal>install-node-and-pnpm</goal>
+                        </goals>
+                        <configuration>
+                            <nodeVersion>${node.version}</nodeVersion>
+                            <pnpmVersion>${pnpm.version}</pnpmVersion>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>pnpm-install</id>
+                        <goals>
+                            <goal>pnpm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>install --frozen-lockfile</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>pnpm-build-prod</id>
+                        <goals>
+                            <goal>pnpm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>run build:prod</arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- 前端产物只复制进 target/classes/static，不写回 src，随打包进入 boot jar -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>${maven.resources.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>copy-frontend-dist</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
+                            <overwrite>true</overwrite>
+                            <resources>
+                                <resource>
+                                    <directory>${basedir}/frontend/dist</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- summer-pack：package 阶段产出可执行 boot jar，Start-Class 指向应用入口 -->
+            <plugin>
+                <groupId>cn.jiebaba.summer</groupId>
+                <artifactId>summer-pack-maven-plugin</artifactId>
+                <version>${summer.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                        <configuration>
+                            <startClass>cn.jiebaba.summer.admin.SummerAdminApplication</startClass>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
