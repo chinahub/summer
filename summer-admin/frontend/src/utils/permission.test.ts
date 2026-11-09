@@ -3,6 +3,7 @@ import MockAdapter from 'axios-mock-adapter';
 import { clearToken, getToken, setToken } from '@/utils/auth';
 import { hasPermission } from '@/utils/permission';
 import { filterAuthorizedMenus } from '@/utils/menu';
+import { useTagsViewStore } from '@/stores/tagsViewStore';
 import { request, service } from '@/api/request';
 
 describe('token 存取', () => {
@@ -118,6 +119,23 @@ describe('request 响应契约', () => {
     await expect(request({ url: '/auth/userinfo', method: 'get' })).rejects.toBeTruthy();
     expect(getToken()).toBeNull();
     expect(window.location.hash).toBe('#/login');
+  });
+
+  it('HTTP 401 时同时清空多标签页', async () => {
+    setToken('expired-token');
+    const tagsStore = useTagsViewStore.getState();
+    tagsStore.addView({ path: '/', title: '首页', affix: true });
+    tagsStore.addView({ path: '/system/user', title: '用户管理' });
+    mock.onGet('/auth/userinfo').reply(401, { code: 401, msg: '认证失败' });
+    await expect(request({ url: '/auth/userinfo', method: 'get' })).rejects.toBeTruthy();
+    expect(useTagsViewStore.getState().visitedViews).toHaveLength(0);
+  });
+
+  it('无响应的传输失败归一化为中文安全提示', async () => {
+    mock.onGet('/auth/userinfo').networkError();
+    await expect(request({ url: '/auth/userinfo', method: 'get' })).rejects.toThrow(
+      '网络异常，请稍后重试',
+    );
   });
 
   it('请求时携带 Authorization: Bearer', async () => {

@@ -4,6 +4,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { TestBrowser, history } from '@umijs/max';
 import { service } from '@/api/request';
+import { useAppStore } from '@/stores/appStore';
 import { usePermissionStore } from '@/stores/permissionStore';
 import { useTagsViewStore } from '@/stores/tagsViewStore';
 import { useUserStore } from '@/stores/userStore';
@@ -184,5 +185,61 @@ describe('BasicLayout 菜单导航回归', () => {
     expect(history.location.pathname).toBe('/system/user/profile/index');
     await waitForText('个人信息');
     expect(document.body.textContent).toContain('基本资料');
+  });
+
+  describe('混合布局（mix）回归', () => {
+    beforeEach(() => {
+      useAppStore.setState({ layout: 'mix' });
+    });
+
+    afterEach(() => {
+      useAppStore.setState({ layout: 'side' });
+    });
+
+    it('顶部渲染一级目录菜单且首页可达', async () => {
+      const topMenu = document.querySelector('ul.ant-menu-horizontal');
+      expect(topMenu).not.toBeNull();
+      expect(topMenu?.textContent).toContain('首页');
+      expect(topMenu?.textContent).toContain('系统管理');
+      // 顶部一级菜单点击首页回到首页
+      await act(async () => {
+        history.push('/system/user');
+        await new Promise((resolve) => { setTimeout(resolve, 30); });
+      });
+      await clickText('首页');
+      expect(history.location.pathname).toBe('/');
+    });
+
+    it('侧栏子菜单键只拼一次父路径，绝不出现 /system/system/*', async () => {
+      // 激活 system 目录，侧栏渲染其子菜单
+      await act(async () => {
+        history.push('/system/user');
+        await new Promise((resolve) => { setTimeout(resolve, 30); });
+      });
+      const sideMenu = document.querySelector('ul.ant-menu-root.ant-menu-inline');
+      expect(sideMenu).not.toBeNull();
+      expect(sideMenu?.textContent).toContain('用户管理');
+      const keys = Array.from(sideMenu?.querySelectorAll('li[data-menu-id]') ?? []).map(
+        (li) => li.getAttribute('data-menu-id') ?? '',
+      );
+      // 子菜单键为 /system/user（父路径恰好拼接一次）
+      expect(keys.some((key) => key.endsWith('/system/user'))).toBe(true);
+      // 回归：旧实现把根节点再次传入导致 /system/system/user
+      expect(keys.some((key) => key.includes('/system/system/'))).toBe(false);
+    });
+
+    it('侧栏点击子菜单按预期路径导航且内容切换', async () => {
+      // 激活 system 目录，侧栏渲染子菜单
+      await act(async () => {
+        history.push('/system/user');
+        await new Promise((resolve) => { setTimeout(resolve, 30); });
+      });
+      // 展开日志管理子目录后点击操作日志，验证 mix 侧栏导航路径正确
+      await clickText('日志管理');
+      await waitForText('操作日志');
+      await clickText('操作日志');
+      expect(history.location.pathname).toBe('/system/log/operlog');
+      await waitForText('页面不存在或没有访问权限');
+    });
   });
 });

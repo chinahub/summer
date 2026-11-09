@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
 import { usePermissionStore } from '@/stores/permissionStore';
+import { useTagsViewStore } from '@/stores/tagsViewStore';
 import { useUserStore } from '@/stores/userStore';
 import { getToken } from '@/utils/auth';
 
@@ -9,10 +10,11 @@ export const service: AxiosInstance = axios.create({
   timeout: 15000,
 });
 
-/** 重置登录态：令牌、用户资料与动态路由一并清空（登出或 401 时调用） */
+/** 重置登录态：令牌、用户资料、动态路由与多标签页一并清空（登出或 401 时调用） */
 function resetAuthState(): void {
   useUserStore.getState().reset();
   usePermissionStore.getState().reset();
+  useTagsViewStore.getState().delAll();
 }
 
 // 请求拦截：携带访问令牌
@@ -45,9 +47,9 @@ service.interceptors.response.use(
         window.location.hash = '#/login';
       }
     }
-    // 其余 HTTP 错误统一归一化为携带后端 msg 的 Error
+    // 其余 HTTP 错误统一归一化为携带后端 msg 的 Error；无响应的传输失败用安全中文提示
     const msg = error.response?.data?.msg;
-    return Promise.reject(msg ? new Error(msg) : error);
+    return Promise.reject(msg ? new Error(msg) : new Error('网络异常，请稍后重试'));
   },
 );
 

@@ -211,7 +211,8 @@ export default function BasicLayout() {
   // 首页固定入口置于菜单首位
   const homeItem: MenuItem = { key: '/', icon: MENU_ICONS.home, label: '首页' };
 
-  // 混合布局：顶部展示一级目录，侧栏展示当前激活目录的子菜单
+  // 混合布局：顶部展示一级目录（含首页），侧栏仅展示当前激活目录的子菜单，
+  // 子菜单键用 activeRootPath 作父路径拼一次，绝不重复拼接根路径
   const activeRootPath = useMemo(() => {
     for (const route of menuRoutes) {
       const rootPath = route.path.startsWith('/') ? route.path : `/${route.path}`;
@@ -221,17 +222,18 @@ export default function BasicLayout() {
     }
     return '';
   }, [menuRoutes, pathname]);
-  const mixSiderRoutes = useMemo(
-    () => menuRoutes.filter((route) => {
+  const mixSiderItems = useMemo(() => {
+    const activeRoot = menuRoutes.find((route) => {
       const rootPath = route.path.startsWith('/') ? route.path : `/${route.path}`;
       return rootPath === activeRootPath;
-    }),
-    [menuRoutes, activeRootPath],
-  );
+    });
+    return activeRoot?.children?.length
+      ? buildMenuItems(activeRoot.children, activeRootPath)
+      : [];
+  }, [menuRoutes, activeRootPath]);
 
-  const showSider = layout === 'side' || (layout === 'mix' && mixSiderRoutes.length > 0);
-  const siderItems =
-    layout === 'mix' ? buildMenuItems(mixSiderRoutes, activeRootPath) : allMenuItems;
+  const showSider = layout === 'side' || (layout === 'mix' && mixSiderItems.length > 0);
+  const siderItems = layout === 'mix' ? mixSiderItems : allMenuItems;
 
   // 受控展开目录：初始为当前路径的祖先目录，路由变化时补全，用户可手动开合
   const ancestorOpenKeys = useMemo(
@@ -322,7 +324,7 @@ export default function BasicLayout() {
             </span>
           </Dropdown>
         </Header>
-        {layout === 'top' && (
+        {layout !== 'side' && (
           <Menu
             mode="horizontal"
             selectedKeys={[pathname]}
