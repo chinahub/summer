@@ -6,11 +6,19 @@ export const NOT_FOUND_KEY = 'error/404';
 /**
  * 页面组件白名单：键为后端 RouterVo.component 字符串，
  * 值为静态 import 的 lazy 加载器；禁止用后端字符串构造动态 import。
- * 本任务仅注册占位首页与 404，后续任务在此追加各自页面键。
  */
 export const pageRegistry: Record<string, () => Promise<{ default: ComponentType }>> = {
   index: () => import('./index'),
+  'system/user/profile/index': () => import('./system/user/profile'),
   [NOT_FOUND_KEY]: () => import('./error/404'),
+};
+
+/**
+ * 前端内置静态页：不依赖后端动态路由，任何登录用户可访问。
+ * 键为完整 hash 路径，值为白名单组件键与页签标题。
+ */
+export const FRONTEND_STATIC_PAGES: Record<string, { componentKey: string; title: string }> = {
+  '/system/user/profile/index': { componentKey: 'system/user/profile/index', title: '个人中心' },
 };
 
 // 解析结果缓存，保证同一组件多次解析返回同一 lazy 引用
