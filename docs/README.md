@@ -96,13 +96,15 @@ summer-parent (pom)
 ├── summer-ai              大模型对话抽象：ChatModel/ChatClient，OpenAI 兼容，同步与 SSE 流式，纯 JDK；AI 自动配置（cn.jiebaba.summer.boot.ai 包）随本模块发布，依赖 summer-boot
 ├── summer-boot-loader     可执行 jar 启动器 JarLauncher（java -jar 入口），由插件内置打包
 ├── summer-pack-maven-plugin  mvn package 自动产出 BOOT-INF 可执行 jar
-├── summer-sample          示例应用（Application + controller/service/repository/aspect）
-└── build-test              集中式测试：AOP 单测/集成测试 + sample 冒烟测试
+└── build-test              集中式测试：AOP 单测/集成测试 + 内聚的 sample 测试夹具（原 summer-sample 已迁入，包名保留 cn.jiebaba.summer.sample）
+
+summer-admin/                独立管理后台示例（不加入根 reactor，单独构建，见 summer-admin/README.md）
 ```
 
 > summer-boot 不编译期依赖 summer-ai / summer-support（避免循环依赖），二者由 SummerApplication
 > 按 classpath 探测（`isClassPresent`）+ `Class.forName` 反射注册自动配置。
 > summer-support 仅依赖 summer-core（不依赖 summer-boot），OCR 为可选模块。
+> 面向使用者的完整可运行示例是独立工程 summer-admin；build-test 内的 sample 包仅为框架测试夹具。
 
 ## 一句话定位
 

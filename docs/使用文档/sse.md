@@ -76,7 +76,7 @@ LLM 场景的 `data: [DONE]` 终结帧由业务流自行发送（可用 `SseEven
 ## 与 summer-ai 流式模型结合
 
 `ChatModel.stream()` 返回 `Stream<ChatResponse>`，在后台虚拟线程中消费并经 emitter 转发即可实现
-LLM 输出的浏览器流式呈现（完整示例见 summer-sample 的 `/ai/stream` 端点）：
+LLM 输出的浏览器流式呈现（完整示例见 build-test 的 sample 测试夹具 `/ai/stream` 端点）：
 
 ```java
 @GetMapping("/ai/stream")

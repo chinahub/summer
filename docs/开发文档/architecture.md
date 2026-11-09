@@ -19,18 +19,17 @@ summer-parent (pom)
 ├── summer-ai              大模型对话抽象：ChatModel/ChatClient，OpenAI 兼容（DeepSeek/GLM/MiniMax/Kimi），同步与 SSE 流式，纯 JDK；AI 自动配置（cn.jiebaba.summer.boot.ai 包）随本模块发布
 ├── summer-boot-loader     可执行 jar 启动器 JarLauncher（java -jar 入口，BOOT-INF 解压+类路径重建），由 summer-pack-maven-plugin 内置打包
 ├── summer-pack-maven-plugin  repackage goal：mvn package 自动产出 BOOT-INF 可执行 jar
-├── summer-sample          示例应用（Application + controller/service/repository/aspect），端到端验证
-└── build-test              集中式测试：AOP 单测/集成测试 + sample 冒烟测试（依赖 summer-sample）
+└── build-test              集中式测试：AOP 单测/集成测试 + 内聚的 sample 测试夹具（原 summer-sample 已迁入，包名保留 cn.jiebaba.summer.sample）
 ```
 
 ## 依赖关系（自底向上）
 
 ```
-summer-sample ──depends──> summer-boot  （零 summer-* 依赖：web/data/security/office 源码已并入，core 位于 summer-core）
-                    └──depends──> summer-ai      ──depends──> summer-boot ──depends──> summer-core
-                    └──depends──> summer-support ──depends──> summer-core
+summer-core <── summer-boot <── summer-ai
+summer-core <── summer-support
 summer-pack-maven-plugin ──depends──> summer-boot-loader  （可执行 jar 启动器，插件内置）
-build-test ──depends──> summer-sample / summer-boot / summer-ai / summer-support  （集中式测试）
+build-test ──depends──> summer-boot / summer-ai / summer-support  （集中式测试 + 内聚 sample 测试夹具）
+summer-admin（独立工程，不加入根 reactor）──depends──> summer-boot 4.2.0（Maven Central）  完整可运行管理后台示例
 ```
 
 - `summer-core` 是最底层模块，承载 `cn.jiebaba.summer.core.*` 全部包（IoC/AOP/日志/扫描/定时/env/json/util/onnx/test），零第三方运行时依赖（仅 SLF4J API / JUnit API 为 optional）；
@@ -38,7 +37,7 @@ build-test ──depends──> summer-sample / summer-boot / summer-ai / summer
 - `summer-ai` 依赖 `summer-boot`（传递依赖 summer-core，用其 `JsonUtil`/`SqlExecutor` 等 core/data 能力）；其自动配置类（`cn.jiebaba.summer.boot.ai` 包，随 summer-ai 发布）由 `summer-boot` 在启动时按 classpath 探测（`isClassPresent`）+ `Class.forName` 反射注册——summer-boot 不能编译期依赖 summer-ai，否则两模块构成 Maven 循环依赖；
 - `summer-support`（OCR）依赖 `summer-core`（用其 onnx 引擎与注解/环境体系），不依赖 summer-boot；`OcrAutoConfiguration` 由 `summer-boot` 探测 `cn.jiebaba.summer.support.ocr.Ocr` 后反射注册；
 - `summer-boot` 组装原 core + web + data + security + office，提供启动入口；`summer-boot-loader` 提供可执行 jar 启动器，作为 `summer-pack-maven-plugin` 的依赖被内置打包，应用项目无需单独声明；
-- `summer-sample` 是使用者，仅需依赖 boot（+ ai 示例显式声明 summer-ai），打包由 `summer-pack-maven-plugin` 内置 loader，业务包无需额外声明（classpath 模式，反射不受强封装限制）。
+- `summer-admin` 是面向使用者的完整可运行示例（独立工程，不加入根 reactor，依赖 Maven Central 的 summer-boot 4.2.0），打包由 `summer-pack-maven-plugin` 内置 loader，业务包无需额外声明（classpath 模式，反射不受强封装限制）；框架测试用的 sample 夹具已迁入 build-test（包名保留 `cn.jiebaba.summer.sample`）。
 
 ### 为何 summer-boot-loader 独立成模块
 
@@ -213,7 +212,7 @@ private Map<String, Object> config;
 
 ## 运行时模型
 
-- 启动：`java -jar summer-sample\target\summer-sample-4.0-boot.jar`
+- 启动：`java -jar summer-admin\target\summer-admin-1.0.0-boot.jar`
 - 每个连接一个虚拟线程，阻塞 IO 不占平台线程；
 - 定时任务体在虚拟线程上执行；
 - 单进程、单 JVM，无外部容器。

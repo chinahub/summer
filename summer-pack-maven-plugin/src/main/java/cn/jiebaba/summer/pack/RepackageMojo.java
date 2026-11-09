@@ -64,7 +64,7 @@ public class RepackageMojo extends AbstractMojo {
     public void execute() throws MojoExecutionException {
         if (startClass == null || startClass.isBlank()) {
             throw new MojoExecutionException(
-                    "startClass is required (e.g. cn.jiebaba.summer.sample.Application)");
+                    "startClass is required (e.g. cn.jiebaba.summer.admin.SummerAdminApplication)");
         }
 
         String outputDir = project.getBuild().getOutputDirectory();

@@ -1,5 +1,7 @@
 # summer-office 模块测试报告
 
+> **历史报告（2026-07）**：报告中的 `summer-office`、`summer-sample` 模块当时独立存在，现已分别并入 summer-boot（office 能力）、迁入 build-test 测试夹具（sample 包名保留 `cn.jiebaba.summer.sample`）。本文保留作历史记录，其中模块路径与构建命令不再是当前执行路径。
+
 > 测试时间：2026-07-20
 > 测试对象：summer-office 模块（`cn.jiebaba.summer:summer-office:3.0.0`）
 > 运行环境：JDK 25.0.2 (BellSoft)、Windows 11、Maven 3.9.14

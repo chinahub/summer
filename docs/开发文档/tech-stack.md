@@ -32,7 +32,7 @@
 - SLF4J 绑定为**可选**：`summer-core` 以 `optional` 引入 `slf4j-api`，仅当使用方显式引入时才由 SLF4J `ServiceLoader` 激活，框架自身运行期仍是零第三方依赖。
 - **summer-ai** 同样零第三方依赖：仅依赖 summer-boot（用其 core/data 能力）；其自动配置类随本模块发布，由 summer-boot 启动时按 classpath 探测反射激活（详见 [AI 对话](../使用文档/ai.md)）。
 - **summer-office** 已并入 summer-boot：xlsx/docx/pdf 均为自研实现（SAX/ZipOutputStream/StAX/直接生成 PDF 对象结构），零第三方依赖；OCR 独立为 summer-support 模块
-- **测试侧 JUnit 5 不进运行期**：`summer-core` 仅以 `optional` 引入 `junit-jupiter-api`（供 `@SummerTest`/`SummerExtension` 整合层编译）；`junit-jupiter`、`junit-platform-launcher` 只在 summer-sample（test scope）与 build-test（不发布模块）中使用，均不进入框架运行期的传递依赖。
+- **测试侧 JUnit 5 不进运行期**：`summer-core` 仅以 `optional` 引入 `junit-jupiter-api`（供 `@SummerTest`/`SummerExtension` 整合层编译）；`junit-jupiter`、`junit-platform-launcher` 只在 build-test（不发布模块，含迁入的 sample 测试夹具）与 summer-admin 测试中使用，均不进入框架运行期的传递依赖。
 
 ## 为什么不走 junit-like（自研测试框架）
 
@@ -48,7 +48,7 @@
 - 测试用例写真实的 `org.junit.jupiter.api.Test`，跑在真实 Jupiter 引擎上，IDEA 绿色三角与 `mvn test`（surefire）开箱即用；
 - 框架侧只做**整合层**而非执行引擎：`@SummerTest`（元注解 `@ExtendWith(SummerExtension.class)`）+ `SummerExtension`（每测试类启动 `DefaultApplicationContext`，支持 `@Autowired` 字段注入与 bean 类型参数注入），位于 `cn.jiebaba.summer.core.test`；
 - 旧框架 12 个类（`Test`/`TestRunner`/`Assert` 等）全部删除——JUnit 5 同名能力全覆盖；build-test 46 个用例已机械迁移（`Assert.`→`Assertions.` 等），`@Test(expected=)` 改写为 `assertThrows`；
-- 执行方式：summer-sample 走标准 `src/test` + surefire；build-test 用例在 `src/main`（非常规），surefire 配 `testClassesDirectory=${project.build.outputDirectory}` 扫描执行，exec-maven-plugin 已移除；
+- 执行方式：summer-admin 走标准 `src/test` + surefire/failsafe；build-test 用例在 `src/main`（非常规），surefire 配 `testClassesDirectory=${project.build.outputDirectory}` 扫描执行，exec-maven-plugin 已移除；
 - 配套修复：`ClassPathScanner` 除 `java.class.path` 外并入 `URLClassLoader` 的 URL 作为扫描根，覆盖 surefire 进程内隔离类加载器环境。
 
 ## 为什么不用 Servlet

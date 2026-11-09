@@ -64,4 +64,4 @@ public class PriceService {
 
 - 只能存在一个 SLF4J 绑定：请勿同时引入 logback / slf4j-simple / slf4j-jdk14 等，否则 SLF4J 会告警并二选一，可能导致日志分流。
 - 带异常的日志 `log.error("失败 {}", id, e)`：最后一个未消费的 `Throwable` 参数会作为异常挂到 JUL `LogRecord`，`SingleLineFormatter` 会打印其堆栈。
-- 包级别过滤对 SLF4J 日志同样生效，例如 `logging.level.cn.jiebaba.summer.sample=DEBUG`。
+- 包级别过滤对 SLF4J 日志同样生效，例如 `logging.level.cn.jiebaba.summer.sample=DEBUG`（sample 包现为 build-test 测试夹具）。

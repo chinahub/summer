@@ -6,7 +6,7 @@
 - [x] summer-core：IoC/DI/扫描/配置
 - [x] summer-web：ServerSocketChannel（阻塞，参考 Helidon NIMA）+ 虚拟线程 + TLS + chunked 请求体 + 路由 + JSON + 绑定 + 全局异常
 - [x] summer-boot：启动器 + 自动配置 + 关闭钩子
-- [x] summer-sample：示例 + SmokeTest（11 路由全通）
+- [x] summer-sample：示例 + SmokeTest（11 路由全通）（该模块已迁入 build-test 测试夹具，示例应用由 summer-admin 接替）
 
 ## 第二阶段：日志与运维 ✅
 
@@ -127,7 +127,7 @@
 
 ### 待开发（summer-ai）
 - [ ] DB 驱动厂商凭据（生产级）：`AiAutoConfiguration` 支持从 `ai_provider_info` 表实时读取 provider/baseurl/api-key（当前仅冒烟测试实现，未接入自动配置）
-- [ ] 示例 AI 端点：summer-sample 增加 `/ai/**` 控制器（对话/流式/RAG/工具调用示例），目前 `summer.ai.*` 段为注释状态
+- [ ] 示例 AI 端点：在 build-test 的 sample 测试夹具中提供 `/ai/**` 控制器（对话/流式/RAG/工具调用示例），目前 `summer.ai.*` 段为注释状态
 - [ ] 进程内群组协作（消息总线/wake 语义，按需触发）：多 agent 自由讨论/动态分工场景出现时，在 AgentExecutor/AgentOrchestrator 之上加"每会话 append-only 消息日志（单调 seq）+ mention/wake 触发 + Run 记录"层，`AgentTask.conversationId` 已预留；模型参考 QoderWake 取证分析与四象限协同方案（见 agent-pipeline 工作区 `docs/技术方案/`），需求出现前不实现
 
 

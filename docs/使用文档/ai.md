@@ -682,7 +682,7 @@ AgentResult revised = orchestrator.dispatch(AgentTask.begin("writer", "summer �
         .withFeedback(review.output()));
 ```
 
-summer-sample 提供离线可跑的最小示例：GET `/agent/demo?topic=...`（桩执行器纯字符串处理，
+build-test 的 sample 测试夹具提供离线可跑的最小示例：GET `/agent/demo?topic=...`（桩执行器纯字符串处理，
 演示「产出 → 审查 → 修订」完整协作链）。
 
 ## 装配解耦与动态模型注册（4.0 增强）
@@ -710,4 +710,4 @@ registry.getOptional(id);                       // 自行决定回落策略
 summer-ai 核心能力（对话/向量化/向量库/工具调用/RAG/记忆/重试/调用日志/多模态）已就绪，以下为待开发项（与 `roadmap.md` 第八阶段「待开发」同步）：
 
 - **DB 驱动厂商凭据（生产级）**：`AiAutoConfiguration` 支持从 `ai_provider_info` 表实时读取 provider/base-url/api-key（当前仅冒烟测试实现，未接入自动配置）。
-- **示例 AI 端点**：summer-sample 增加 `/ai/**` 控制器（对话/流式/RAG/工具调用示例），目前 `summer.ai.*` 段为注释状态。
+- **示例 AI 端点**：build-test 的 sample 测试夹具提供 `/ai/**` 控制器（对话/流式/RAG/工具调用示例），目前 `summer.ai.*` 段为注释状态。

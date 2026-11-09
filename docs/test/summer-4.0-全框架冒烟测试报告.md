@@ -1,5 +1,7 @@
 # summer 4.0 全框架冒烟测试报告
 
+> **历史报告（2026-09）**：报告中的 `summer-sample` 模块当时独立存在，现已迁入 build-test 测试夹具（包名保留 `cn.jiebaba.summer.sample`）；其 jar 路径（`summer-sample/target/summer-sample-4.0-boot.jar`）已被独立工程 `summer-admin/target/summer-admin-1.0.0-boot.jar` 接替。本文保留作历史记录。
+
 > 测试日期：2026-09-23
 > 被测版本：master `8526065`（summer-core 模块拆分后）+ 本次修复
 > 环境：Windows 11 / JDK 25（D:\jdk\jdk-25.0.4）/ Maven 多模块 / WSL2 docker（pgvector17、oracle-free-23、mssql2022）

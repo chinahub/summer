@@ -49,6 +49,8 @@ Object proceed(Object[] args) throws Throwable;  // 替换参数执行
 
 ## 示例
 
+> 以下示例与 build-test 模块内 sample 测试夹具的 `cn.jiebaba.summer.sample.aspect.LoggingAspect` 一致（原 summer-sample 已迁入 build-test）。
+
 ```java
 @Aspect
 public class LoggingAspect {

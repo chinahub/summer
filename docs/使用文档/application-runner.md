@@ -47,6 +47,7 @@ public class StartupRunner implements ApplicationRunner {
 ```
 
 无需任何额外配置：只要该类在 `@SummerBootApplication` 的扫描包内，框架会自动发现并执行。
+完整可运行示例见 `cn.jiebaba.summer.sample.runner.StartupRunner`（build-test 模块内的 sample 测试夹具，原 summer-sample 已迁入）。
 
 ## ApplicationArguments
 

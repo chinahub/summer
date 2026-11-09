@@ -16,10 +16,10 @@ summer 打成 Spring Boot 风格的可执行 jar：依赖以**整 jar 形式**�
 
 布局：
 ```
-summer-sample-4.1.0.jar
+summer-admin-1.0.0-boot.jar
 ├─ cn/jiebaba/summer/loader/JarLauncher.class   # 启动器（jar 根）
-├─ BOOT-INF/classes/...                          # 应用类与资源（application.yml）
-├─ BOOT-INF/lib/*.jar                            # 依赖 jar（summer-* / postgresql 等）
+├─ BOOT-INF/classes/...                          # 应用类与资源（application.yml、前端静态资源）
+├─ BOOT-INF/lib/*.jar                            # 依赖 jar（summer-* / mysql-connector-j 等）
 └─ META-INF/MANIFEST.MF                          # Main-Class / Start-Class
 ```
 
@@ -29,14 +29,14 @@ $env:JAVA_HOME='D:\jdk\jdk-25.0.4'
 $env:Path = "D:\jdk\jdk-25.0.4\bin;" + $env:Path
 mvn -s E:\summer_workspace\settings.xml -o clean package
 ```
-产出 `summer-sample/target/summer-sample-4.1.0-boot.jar`（可执行 jar）。`classifier` 默认为 `boot`，可执行 jar 作为独立 `-boot` 产物，主产物 `summer-sample-4.1.0.jar` 保持 thin jar 供 `build-test` 等模块依赖编译。
+产出 `summer-admin/target/summer-admin-1.0.0-boot.jar`（可执行 jar）。`classifier` 默认为 `boot`，可执行 jar 作为独立 `-boot` 产物，主产物 `summer-admin-1.0.0.jar` 保持 thin jar 供其他模块依赖编译。
 
 运行：
 ```powershell
-java -jar summer-sample\target\summer-sample-4.1.0-boot.jar
+java -jar summer-admin\target\summer-admin-1.0.0-boot.jar
 ```
 
-> 打包插件：`summer-sample` 的 `pom.xml` 绑定了 `summer-pack-maven-plugin:repackage`（绑定 `package` 阶段），故 `mvn package` 自动产出可执行 jar。默认 `classifier=boot`，产出独立的 `<finalName>-boot.jar`，主产物 `<finalName>.jar` 保持 thin jar 不变，可被其他模块依赖；若终端应用不需要被依赖、想要单文件，可设 `<classifier></classifier>`（空）替换主产物，原 thin jar 备份为 `<finalName>.jar.original`。`startClass` 在 `pom.xml` 的 `<configuration>` 中配置。
+> 打包插件：`summer-admin` 的 `pom.xml` 绑定了 `summer-pack-maven-plugin:repackage`（绑定 `package` 阶段），故 `mvn package` 自动产出可执行 jar。默认 `classifier=boot`，产出独立的 `<finalName>-boot.jar`，主产物 `<finalName>.jar` 保持 thin jar 不变，可被其他模块依赖；若终端应用不需要被依赖、想要单文件，可设 `<classifier></classifier>`（空）替换主产物，原 thin jar 备份为 `<finalName>.jar.original`。`startClass` 在 `pom.xml` 的 `<configuration>` 中配置。
 
 > 原理：`summer-boot-loader` 的 `JarLauncher` 是 `Main-Class`（由 `summer-pack-maven-plugin` 内置打包，应用无需声明该依赖），启动时把 `BOOT-INF/classes`、`BOOT-INF/lib/*.jar` 解压到临时目录，重建 `java.class.path`，再用 `URLClassLoader` 加载并调用 `Start-Class` 的 `main`。之所以解压而非用 `jar:...!/BOOT-INF/...` 嵌套 URL，是因为 summer 的 `ClassPathScanner` 直接读 `java.class.path` 系统属性来枚举类，不遍历 ClassLoader 的 URL。
 ## 打包插件配置
@@ -98,7 +98,7 @@ java -jar summer-sample\target\summer-sample-4.1.0-boot.jar
 </dependencies>
 ```
 
-> 数据库驱动：把 JDBC 驱动（如 `postgresql`）声明为 `summer-sample` 的依赖即可，它会被自动收入 `BOOT-INF/lib`，无需在命令行手动拼接。
+> 数据库驱动：把 JDBC 驱动（如 `mysql-connector-j`）声明为应用（如 `summer-admin`）的依赖即可，它会被自动收入 `BOOT-INF/lib`，无需在命令行手动拼接。
 ## 配置
 
 优先加载 `application.yml`，其次 `application.properties`。`application.yml`：
@@ -204,7 +204,7 @@ summer:
 | 业务代码抛出的 `IllegalArgumentException` | 400（默认映射，message 原样返回） |
 | 其余未处理异常 | 500 |
 
-业务校验异常（如 `throw new IllegalArgumentException("无效的商品SKU")`）默认返回 400。如需自定义响应结构或其他异常类型的映射，可通过 `@RestControllerAdvice` + `@ExceptionHandler` 声明（优先级高于默认映射；完整示例见 `summer-sample` 的 `GlobalExceptionHandler`）：
+业务校验异常（如 `throw new IllegalArgumentException("无效的商品SKU")`）默认返回 400。如需自定义响应结构或其他异常类型的映射，可通过 `@RestControllerAdvice` + `@ExceptionHandler` 声明（优先级高于默认映射；完整示例见 build-test 的 sample 测试夹具中 `cn.jiebaba.summer.sample.advice.GlobalExceptionHandler`）：
 
 ```java
 @RestControllerAdvice
@@ -332,7 +332,9 @@ SummerUtil.unregisterBean(MyService.class);          // 按类型批量注销
 ```
 
 > `registerBean` 在同名 Bean 已存在时抛 `BeansException`，需先 `unregisterBean` 再注册以替换。
-## 示例（summer-sample）
+## 示例（build-test 的 sample 测试夹具）
+
+> 原 `summer-sample` 模块已迁入 build-test 作为测试夹具，包名保留 `cn.jiebaba.summer.sample`；面向使用者的完整可运行示例见独立工程 `summer-admin`。
 
 ```java
 @RestController

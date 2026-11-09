@@ -7,13 +7,14 @@
 
 ### 1. 构建可执行 jar
 ```bash
-mvn clean package -DskipTests
+# summer-admin 是独立工程，不在根 reactor 内，需进入其目录构建
+cd summer-admin && mvn clean package -DskipTests
 ```
-在 `summer-sample/target/`（或你的应用模块）下会生成可执行 jar。
+在 `summer-admin/target/` 下会生成可执行 jar（`summer-admin-1.0.0-boot.jar`）。
 
 ### 2. 验证 jar 结构
 ```bash
-jar tf summer-sample/target/*.jar | head -20
+jar tf summer-admin/target/summer-admin-1.0.0-boot.jar | head -20
 ```
 确认包含：
 - `BOOT-INF/classes/` —— 应用类
@@ -22,7 +23,7 @@ jar tf summer-sample/target/*.jar | head -20
 
 ### 3. 本地运行验证
 ```bash
-java -jar summer-sample/target/summer-sample-*.jar
+java -jar summer-admin/target/summer-admin-1.0.0-boot.jar
 ```
 确认应用启动成功，端口正常监听（默认 8080）。
 
