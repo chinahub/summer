@@ -9,7 +9,12 @@ export const NOT_FOUND_KEY = 'error/404';
  */
 export const pageRegistry: Record<string, () => Promise<{ default: ComponentType }>> = {
   index: () => import('./index'),
+  'system/user/index': () => import('./system/user'),
   'system/user/profile/index': () => import('./system/user/profile'),
+  'system/role/index': () => import('./system/role'),
+  'system/menu/index': () => import('./system/menu'),
+  'system/dept/index': () => import('./system/dept'),
+  'system/post/index': () => import('./system/post'),
   [NOT_FOUND_KEY]: () => import('./error/404'),
 };
 

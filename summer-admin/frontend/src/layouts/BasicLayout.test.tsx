@@ -102,6 +102,11 @@ describe('BasicLayout 菜单导航回归', () => {
         createTime: '2026-11-01 10:00:00',
       },
     });
+    // 用户管理页（Task 14 注册的真实页面）所需的列表接口
+    mock.onGet('/system/depts/visible').reply(200, { code: 200, msg: '操作成功', data: [] });
+    mock.onGet('/system/roles/list').reply(200, { code: 200, msg: '查询成功', rows: [], total: 0 });
+    mock.onGet('/system/posts/list').reply(200, { code: 200, msg: '查询成功', rows: [], total: 0 });
+    mock.onGet('/system/users/list').reply(200, { code: 200, msg: '查询成功', rows: [], total: 0 });
     // 登录态与动态路由直接入 store（本测试聚焦布局导航，不测登录流）
     useUserStore.setState({
       token: 'test-token',
@@ -157,8 +162,9 @@ describe('BasicLayout 菜单导航回归', () => {
     await clickText('用户管理');
     // 路径必须是完整 hash 路由 /system/user
     expect(history.location.pathname).toBe('/system/user');
-    // 内容必须变化：system/user/index 未注册，应显示安全 404 而非停留首页
-    await waitForText('页面不存在或没有访问权限');
+    // 内容切换到 Task 14 注册的真实用户管理页（ProTable 表头与新增按钮）
+    await waitForText('用户列表');
+    expect(document.body.textContent).toContain('新增用户');
     // 页签栏同步出现目标页签
     expect(document.body.textContent).toContain('首页');
   });
