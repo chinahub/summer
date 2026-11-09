@@ -15,6 +15,12 @@ export const pageRegistry: Record<string, () => Promise<{ default: ComponentType
   'system/menu/index': () => import('./system/menu'),
   'system/dept/index': () => import('./system/dept'),
   'system/post/index': () => import('./system/post'),
+  'system/dict/index': () => import('./system/dict'),
+  'system/dict/data/index': () => import('./system/dict/data'),
+  'system/config/index': () => import('./system/config'),
+  'system/notice/index': () => import('./system/notice'),
+  'monitor/operlog/index': () => import('./monitor/log/operation'),
+  'monitor/logininfor/index': () => import('./monitor/log/login'),
   [NOT_FOUND_KEY]: () => import('./error/404'),
 };
 
@@ -24,6 +30,7 @@ export const pageRegistry: Record<string, () => Promise<{ default: ComponentType
  */
 export const FRONTEND_STATIC_PAGES: Record<string, { componentKey: string; title: string }> = {
   '/system/user/profile/index': { componentKey: 'system/user/profile/index', title: '个人中心' },
+  '/system/dict/data/index': { componentKey: 'system/dict/data/index', title: '字典数据' },
 };
 
 // 解析结果缓存，保证同一组件多次解析返回同一 lazy 引用

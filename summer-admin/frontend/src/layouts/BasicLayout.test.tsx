@@ -107,6 +107,8 @@ describe('BasicLayout 菜单导航回归', () => {
     mock.onGet('/system/roles/list').reply(200, { code: 200, msg: '查询成功', rows: [], total: 0 });
     mock.onGet('/system/posts/list').reply(200, { code: 200, msg: '查询成功', rows: [], total: 0 });
     mock.onGet('/system/users/list').reply(200, { code: 200, msg: '查询成功', rows: [], total: 0 });
+    // 操作日志页（Task 15 注册的真实页面）所需的列表接口
+    mock.onGet('/system/logs/operations/list').reply(200, { code: 200, msg: '查询成功', rows: [], total: 0 });
     // 登录态与动态路由直接入 store（本测试聚焦布局导航，不测登录流）
     useUserStore.setState({
       token: 'test-token',
@@ -181,7 +183,8 @@ describe('BasicLayout 菜单导航回归', () => {
     });
     await clickText('操作日志');
     expect(history.location.pathname).toBe('/system/log/operlog');
-    await waitForText('页面不存在或没有访问权限');
+    // Task 15 注册的真实操作日志页（ProTable 表头）
+    await waitForText('操作日志列表');
   });
 
   it('用户菜单进入个人中心：跳转到 /system/user/profile/index 且渲染资料', async () => {
@@ -245,7 +248,8 @@ describe('BasicLayout 菜单导航回归', () => {
       await waitForText('操作日志');
       await clickText('操作日志');
       expect(history.location.pathname).toBe('/system/log/operlog');
-      await waitForText('页面不存在或没有访问权限');
+      // 内容切换到 Task 15 注册的真实操作日志页
+      await waitForText('操作日志列表');
     });
   });
 });

@@ -4,12 +4,18 @@ import { pageRegistry, resolvePage, resolvePageKey } from '@/pages/pageRegistry'
 describe('pageRegistry 白名单注册表', () => {
   it('当前已注册键必须指向本任务创建的页面文件', () => {
     const keys = Object.keys(pageRegistry);
-    // 首页、个人中心、五个系统管理页与安全 404，后续任务在此追加
+    // 首页、个人中心、五个系统管理页、字典/参数/公告/日志页与字典数据主从页、安全 404
     expect(keys.sort()).toEqual([
       'error/404',
       'index',
+      'monitor/logininfor/index',
+      'monitor/operlog/index',
+      'system/config/index',
       'system/dept/index',
+      'system/dict/data/index',
+      'system/dict/index',
       'system/menu/index',
+      'system/notice/index',
       'system/post/index',
       'system/role/index',
       'system/user/index',
@@ -18,7 +24,7 @@ describe('pageRegistry 白名单注册表', () => {
   });
 
   it('未知组件解析为安全 404', () => {
-    expect(resolvePageKey('system/dict/index')).toBe('error/404');
+    expect(resolvePageKey('system/dict/unknown')).toBe('error/404');
     expect(resolvePageKey('not/exist')).toBe('error/404');
   });
 

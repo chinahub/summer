@@ -470,6 +470,7 @@ FROM (
     UNION ALL SELECT 7, 2, '公告', '2', 'sys_notice_type', 'success', 'N', '0', 'admin', NOW()
     UNION ALL SELECT 8, 1, '正常', '0', 'sys_notice_status', 'primary', 'Y', '0', 'admin', NOW()
     UNION ALL SELECT 9, 2, '关闭', '1', 'sys_notice_status', 'danger', 'N', '0', 'admin', NOW()
+    UNION ALL SELECT 12, 3, '草稿', '2', 'sys_notice_status', 'warning', 'N', '0', 'admin', NOW()
     UNION ALL SELECT 10, 1, '成功', '0', 'sys_common_status', 'primary', 'Y', '0', 'admin', NOW()
     UNION ALL SELECT 11, 2, '失败', '1', 'sys_common_status', 'danger', 'N', '0', 'admin', NOW()
 ) s

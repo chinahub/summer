@@ -47,6 +47,14 @@ class SqlInitializationTest {
             assertTrue(password != null && password.startsWith("$2"),
                     "admin 密码必须保存为 BCrypt 哈希，实际为: " + password);
         }
+        // 公告状态字典种子须与 NoticeService 状态语义一致：0正常 1关闭 2草稿
+        try (Connection conn = testConnection(); Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(
+                     "SELECT dict_label FROM sys_dict_data"
+                             + " WHERE dict_type = 'sys_notice_status' AND dict_value = '2'")) {
+            assertTrue(rs.next(), "种子数据应包含 sys_notice_status 草稿（值 2）字典项");
+            assertEquals("草稿", rs.getString(1));
+        }
     }
 
     @Test
