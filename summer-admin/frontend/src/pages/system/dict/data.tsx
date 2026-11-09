@@ -36,6 +36,10 @@ const LIST_CLASS_OPTIONS = ['primary', 'success', 'warning', 'danger', 'info'].m
 /**
  * 字典数据（从表）：由字典类型页跳转进入，按 query 中的 dictType 过滤；
  * 列表/详情要求 system:dict:query，维护按钮要求 system:dict:add/edit/remove。
+ * query 切换时必须同步表格：KeepAlive 按 pathname 缓存页签，search 变化不重挂载
+ * 页面组件，而 ProTable 搜索表单 initialValue 只在挂载时生效一次，因此以
+ * dictType 作为 ProTable 的 key，查询参数变化即重置表格（回到第一页、按新类型请求），
+ * 绝不把上一个 dictType 的过期行当作当前数据展示。
  */
 export default function DictDataPage() {
   const { message } = AntdApp.useApp();
@@ -101,10 +105,14 @@ export default function DictDataPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteDictDataApi,
-    onSuccess: () => {
+    // 返回被删行所属类型，onSuccess 据此精确失效该类型的字典缓存
+    mutationFn: async (row: DictDataVo) => {
+      await deleteDictDataApi(row.dictCode!);
+      return row.dictType;
+    },
+    onSuccess: (dictType) => {
       message.success('字典数据删除成功');
-      clearDictCache(initialDictType);
+      clearDictCache(dictType);
       actionRef.current?.reload();
     },
     onError: (error) => onError(error, '字典数据删除失败'),
@@ -163,7 +171,7 @@ export default function DictDataPage() {
           <Popconfirm
             key="delete"
             title={`确认删除字典项「${row.dictLabel}」？`}
-            onConfirm={() => row.dictCode !== undefined && deleteMutation.mutate(row.dictCode)}
+            onConfirm={() => deleteMutation.mutate(row)}
           >
             <Button type="link" size="small" danger loading={deleteMutation.isPending}>
               删除
@@ -177,6 +185,7 @@ export default function DictDataPage() {
   return (
     <>
       <ProTable<DictDataVo>
+        key={initialDictType ?? ''}
         headerTitle="字典数据列表"
         rowKey="dictCode"
         actionRef={actionRef}
