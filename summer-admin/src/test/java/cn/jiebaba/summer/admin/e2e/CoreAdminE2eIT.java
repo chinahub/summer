@@ -250,6 +250,43 @@ class CoreAdminE2eIT {
         assertEquals(200, published.statusCode());
         assertTrue(published.body().contains("E2E公告改"),
                 "已发布公告应对登录用户可见: " + published.body());
+
+        // 删除闭环：按关系顺序删除（字典数据先于字典类型，类型有数据时拒绝删除），
+        // 每个删除都断言 HTTP 200 且删除后查询返回 404（字典数据另断言列表为空）
+        assertEquals(200, delete("/api/system/depts/" + deptId, adminToken).statusCode(),
+                "删除 E2E 部门失败");
+        assertEquals(404, get("/api/system/depts/" + deptId, adminToken).statusCode(),
+                "部门删除后查询应 404");
+
+        assertEquals(200, delete("/api/system/posts/" + postId, adminToken).statusCode(),
+                "删除 E2E 岗位失败");
+        assertEquals(404, get("/api/system/posts/" + postId, adminToken).statusCode(),
+                "岗位删除后查询应 404");
+
+        assertEquals(200, delete("/api/system/configs/" + configId, adminToken).statusCode(),
+                "删除 E2E 参数失败");
+        assertEquals(404, get("/api/system/configs/" + configId, adminToken).statusCode(),
+                "参数删除后查询应 404");
+
+        assertEquals(200, delete("/api/system/dict/data/" + dictCode, adminToken).statusCode(),
+                "删除 E2E 字典数据失败");
+        assertEquals(404, get("/api/system/dict/data/" + dictCode, adminToken).statusCode(),
+                "字典数据删除后查询应 404");
+        HttpResponse<String> dataList = get(
+                "/api/system/dict/data/list?dictType=e2e_test_status", adminToken);
+        assertEquals(200, dataList.statusCode());
+        assertEquals(0L, Long.parseLong(String.valueOf(dataMap(dataList).get("total"))),
+                "字典数据删除后按类型查询应为空: " + dataList.body());
+
+        assertEquals(200, delete("/api/system/dict/types/" + dictTypeId, adminToken).statusCode(),
+                "删除 E2E 字典类型失败");
+        assertEquals(404, get("/api/system/dict/types/" + dictTypeId, adminToken).statusCode(),
+                "字典类型删除后查询应 404");
+
+        assertEquals(200, delete("/api/system/notices/" + noticeId, adminToken).statusCode(),
+                "删除 E2E 公告失败");
+        assertEquals(404, get("/api/system/notices/" + noticeId, adminToken).statusCode(),
+                "公告删除后查询应 404");
     }
 
     @Test
@@ -641,6 +678,18 @@ class CoreAdminE2eIT {
     private static HttpResponse<String> put(String path, String body, String token)
             throws Exception {
         return send("PUT", path, body, token);
+    }
+
+    /** 发送 DELETE 请求（无请求体）：自动附加 Bearer 令牌。 */
+    private static HttpResponse<String> delete(String path, String token) throws Exception {
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + path))
+                .timeout(Duration.ofSeconds(5))
+                .method("DELETE", HttpRequest.BodyPublishers.noBody());
+        if (token != null) {
+            builder.header("Authorization", "Bearer " + token);
+        }
+        return HTTP.send(builder.build(), HttpResponse.BodyHandlers.ofString());
     }
 
     /** 发送 JSON 请求：自动附加 Bearer 令牌与 content-type，5 秒超时。 */
