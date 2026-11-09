@@ -1,6 +1,6 @@
 import { ProTable } from '@ant-design/pro-components';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { App as AntdApp, Button, Card, Col, Popconfirm, Row, Space, Tag, Tree } from 'antd';
 import { useRef, useState } from 'react';
 import { buildDeptTree, visibleDeptApi } from '@/api/system/dept';
@@ -26,7 +26,6 @@ import { hasPermission } from '@/utils/permission';
 /** 用户管理：左侧数据范围部门树筛选，右侧分页列表与角色/岗位分配、状态、重置密码 */
 export default function UserPage() {
   const { message } = AntdApp.useApp();
-  const queryClient = useQueryClient();
   const actionRef = useRef<ActionType>(undefined);
   const permissions = useUserStore((state) => state.userInfo?.permissions ?? []);
   const can = (perm: string) => hasPermission(perm, permissions);
@@ -74,7 +73,8 @@ export default function UserPage() {
       message.success(values.userId ? '用户修改成功' : '用户新增成功');
       setFormOpen(false);
       setEditingUser(null);
-      queryClient.invalidateQueries({ queryKey: ['system-users'] });
+      // ProTable 数据自管理：必须显式 reload 才能刷新列表（TanStack 失效对其无效）
+      actionRef.current?.reload();
     },
     onError: (error) => onError(error, '用户保存失败'),
   });
@@ -84,7 +84,7 @@ export default function UserPage() {
       updateUserStatusApi(userId, status),
     onSuccess: () => {
       message.success('状态修改成功');
-      queryClient.invalidateQueries({ queryKey: ['system-users'] });
+      actionRef.current?.reload();
     },
     onError: (error) => onError(error, '状态修改失败'),
   });
@@ -93,7 +93,7 @@ export default function UserPage() {
     mutationFn: deleteUserApi,
     onSuccess: () => {
       message.success('用户删除成功');
-      queryClient.invalidateQueries({ queryKey: ['system-users'] });
+      actionRef.current?.reload();
     },
     onError: (error) => onError(error, '用户删除失败'),
   });

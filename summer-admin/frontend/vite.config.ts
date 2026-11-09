@@ -20,6 +20,7 @@ export default defineConfig({
         __dirname,
         'node_modules/@ant-design/pro-components/es/index.js',
       ),
+      // '@rc-component/virtual-list' 桩已移除：BasicLayout 的 TestBrowser 集成方式可正常渲染
       // 强制单实例 React：renderer-react 的 pnpm 嵌套依赖默认解析到 react@18 副本，
       // 这里统一指向 react@19 兼容变体（路径与 pnpm-lock 绑定，变更需同步）
       react: resolve(__dirname, 'node_modules/react'),

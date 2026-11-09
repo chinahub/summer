@@ -1,6 +1,6 @@
 import { ProTable } from '@ant-design/pro-components';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { App as AntdApp, Button, Form, Input, InputNumber, Modal, Popconfirm, Radio } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -25,7 +25,6 @@ interface PostFormValues {
 /** 岗位管理：标准分页 CRUD，支持名称/编码/状态条件查询 */
 export default function PostPage() {
   const { message } = AntdApp.useApp();
-  const queryClient = useQueryClient();
   const actionRef = useRef<ActionType>(undefined);
   const permissions = useUserStore((state) => state.userInfo?.permissions ?? []);
   const can = (perm: string) => hasPermission(perm, permissions);
@@ -65,10 +64,11 @@ export default function PostPage() {
       }
     },
     onSuccess: (_data, values) => {
-      message.success(values.postId ? '岗位修改成功' : '岗位新增成功');
+      message.success(values.postId !== undefined ? '岗位修改成功' : '岗位新增成功');
       setFormOpen(false);
       setEditingPost(null);
-      queryClient.invalidateQueries({ queryKey: ['system-posts'] });
+      // ProTable 数据自管理：必须显式 reload 才能刷新列表
+      actionRef.current?.reload();
     },
     onError: (error) => onError(error, '岗位保存失败'),
   });
@@ -77,7 +77,7 @@ export default function PostPage() {
     mutationFn: deletePostApi,
     onSuccess: () => {
       message.success('岗位删除成功');
-      queryClient.invalidateQueries({ queryKey: ['system-posts'] });
+      actionRef.current?.reload();
     },
     onError: (error) => onError(error, '岗位删除失败'),
   });

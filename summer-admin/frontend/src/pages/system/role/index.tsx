@@ -105,10 +105,11 @@ export default function RolePage() {
       }
     },
     onSuccess: (_data, values) => {
-      message.success(values.roleId ? '角色修改成功' : '角色新增成功');
+      message.success(values.roleId !== undefined ? '角色修改成功' : '角色新增成功');
       setFormOpen(false);
       setEditingRole(null);
-      queryClient.invalidateQueries({ queryKey: ['system-roles'] });
+      // ProTable 数据自管理：必须显式 reload 才能刷新列表
+      actionRef.current?.reload();
     },
     onError: (error) => onError(error, '角色保存失败'),
   });
@@ -117,7 +118,7 @@ export default function RolePage() {
     mutationFn: deleteRoleApi,
     onSuccess: () => {
       message.success('角色删除成功');
-      queryClient.invalidateQueries({ queryKey: ['system-roles'] });
+      actionRef.current?.reload();
     },
     onError: (error) => onError(error, '角色删除失败'),
   });
@@ -146,7 +147,8 @@ export default function RolePage() {
     onSuccess: () => {
       message.success('数据权限保存成功');
       setScopeTarget(null);
-      queryClient.invalidateQueries({ queryKey: ['system-roles'] });
+      // 列表展示 dataScope 列：reload 刷新；已选部门缓存供下次回填
+      actionRef.current?.reload();
       queryClient.invalidateQueries({ queryKey: ['system-role-depts'] });
     },
     onError: (error) => onError(error, '数据权限保存失败'),
